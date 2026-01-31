@@ -235,7 +235,7 @@ export function parseDate(dateString: string): Date {
  * Get current date in specific timezone
  * Note: For production, consider using a timezone library like date-fns-tz
  */
-export function getCurrentTimeInTimezone(timezone: string = TIMEZONE_DEFAULT): Date {
+export function getCurrentTimeInTimezone(_timezone: string = TIMEZONE_DEFAULT): Date {
   // For now, return current time
   // In production, implement proper timezone conversion
   return new Date();
