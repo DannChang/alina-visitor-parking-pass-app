@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
-import { Car, LayoutDashboard, AlertTriangle, Settings, LogOut, Users } from 'lucide-react';
+import { Car, LayoutDashboard, AlertTriangle, Settings, LogOut, Users, Home, Activity, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -36,6 +36,9 @@ export default async function DashboardLayout({
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/passes', label: 'Active Passes', icon: Car },
     { href: '/dashboard/violations', label: 'Violations', icon: AlertTriangle },
+    { href: '/dashboard/units', label: 'Units', icon: Home },
+    { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/dashboard/health', label: 'System Health', icon: Activity },
   ];
 
   const isAdmin = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN';

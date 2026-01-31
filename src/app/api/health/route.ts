@@ -3,40 +3,73 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+interface ServiceStatus {
+  status: 'operational' | 'degraded' | 'down';
+  latency?: number;
+  lastCheck: string;
+  message?: string;
+}
+
 interface HealthCheckResult {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: 'healthy' | 'degraded' | 'critical';
   timestamp: string;
   version: string;
+  environment: string;
   uptime: number;
-  checks: {
-    database: {
-      status: 'up' | 'down';
-      latencyMs: number;
+  services: {
+    database: ServiceStatus;
+    api: ServiceStatus;
+    email: ServiceStatus;
+  };
+  metrics: {
+    activePasses: number;
+    expiringSoon: number;
+    todayViolations: number;
+    pendingNotifications: number;
+    avgResponseTime: number;
+  };
+  resources: {
+    memory: {
+      used: number;
+      total: number;
+      percentage: number;
     };
-    activePassCount: number;
-    expiringSoonCount: number;
   };
 }
 
 export async function GET(): Promise<NextResponse<HealthCheckResult>> {
+  const now = new Date();
+  const timestamp = now.toISOString();
 
-  let dbStatus: 'up' | 'down' = 'down';
-  let dbLatency = 0;
-  let activePassCount = 0;
-  let expiringSoonCount = 0;
+  // Initialize service statuses
+  const services: HealthCheckResult['services'] = {
+    database: { status: 'down', lastCheck: timestamp },
+    api: { status: 'operational', latency: 0, lastCheck: timestamp },
+    email: { status: 'operational', lastCheck: timestamp },
+  };
 
+  // Initialize metrics
+  let activePasses = 0;
+  let expiringSoon = 0;
+  let todayViolations = 0;
+  let pendingNotifications = 0;
+
+  // Check database
   try {
-    // Check database connection
     const dbStart = Date.now();
     await prisma.$queryRaw`SELECT 1`;
-    dbLatency = Date.now() - dbStart;
-    dbStatus = 'up';
+    const dbLatency = Date.now() - dbStart;
 
-    // Get pass counts
-    const now = new Date();
+    services.database = dbLatency > 1000
+      ? { status: 'degraded', latency: dbLatency, lastCheck: timestamp, message: 'High latency detected' }
+      : { status: 'operational', latency: dbLatency, lastCheck: timestamp };
+
+    // Get metrics
     const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
 
-    const [active, expiring] = await Promise.all([
+    const [active, expiring, violations, notifications] = await Promise.all([
       prisma.parkingPass.count({
         where: {
           status: 'ACTIVE',
@@ -51,32 +84,85 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
           deletedAt: null,
         },
       }),
+      prisma.violation.count({
+        where: {
+          createdAt: { gte: todayStart },
+          deletedAt: null,
+        },
+      }),
+      prisma.notificationQueue.count({
+        where: { status: 'PENDING' },
+      }),
     ]);
 
-    activePassCount = active;
-    expiringSoonCount = expiring;
+    activePasses = active;
+    expiringSoon = expiring;
+    todayViolations = violations;
+    pendingNotifications = notifications;
   } catch (error) {
     console.error('Health check database error:', error);
+    services.database = {
+      status: 'down',
+      lastCheck: timestamp,
+      message: 'Database connection failed',
+    };
   }
 
-  const overallStatus = dbStatus === 'up' ? 'healthy' : 'unhealthy';
+  // Check email service (Resend API key presence)
+  if (!process.env.RESEND_API_KEY) {
+    services.email = {
+      status: 'degraded',
+      lastCheck: timestamp,
+      message: 'Email service not configured',
+    };
+  }
+
+  // Calculate API response time (this request)
+  const apiLatency = Date.now() - now.getTime();
+  services.api.latency = apiLatency;
+
+  // Get memory usage
+  const memUsage = process.memoryUsage();
+  const usedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+  const totalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
+
+  // Determine overall status
+  let overallStatus: 'healthy' | 'degraded' | 'critical' = 'healthy';
+
+  if (services.database.status === 'down') {
+    overallStatus = 'critical';
+  } else if (
+    services.database.status === 'degraded' ||
+    services.email.status === 'degraded' ||
+    services.api.status === 'degraded'
+  ) {
+    overallStatus = 'degraded';
+  }
 
   const result: HealthCheckResult = {
     status: overallStatus,
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
+    timestamp,
+    version: process.env.npm_package_version || '0.2.0',
+    environment: process.env.NODE_ENV || 'development',
     uptime: process.uptime(),
-    checks: {
-      database: {
-        status: dbStatus,
-        latencyMs: dbLatency,
+    services,
+    metrics: {
+      activePasses,
+      expiringSoon,
+      todayViolations,
+      pendingNotifications,
+      avgResponseTime: apiLatency,
+    },
+    resources: {
+      memory: {
+        used: usedMB,
+        total: totalMB,
+        percentage: Math.round((usedMB / totalMB) * 100),
       },
-      activePassCount,
-      expiringSoonCount,
     },
   };
 
   return NextResponse.json(result, {
-    status: overallStatus === 'healthy' ? 200 : 503,
+    status: overallStatus === 'critical' ? 503 : 200,
   });
 }
