@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Lato } from 'next/font/google';
 import './globals.css';
+import { SessionProvider } from '@/components/providers/session-provider';
+import { Toaster } from '@/components/ui/sonner';
 
 const lato = Lato({
   subsets: ['latin'],
@@ -21,7 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={lato.variable} suppressHydrationWarning>
-        {children}
+        <SessionProvider>
+          {children}
+          <Toaster />
+        </SessionProvider>
       </body>
     </html>
   );

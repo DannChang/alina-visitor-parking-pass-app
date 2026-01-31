@@ -35,47 +35,57 @@
 - [x] This SETUP guide
 - [x] Inline code documentation
 
-### 🚧 Next Steps (To Complete Full Application)
+### ✅ Completed (Application Layer)
 
 **Authentication & Authorization:**
-- [ ] Auth.js v5 configuration
-- [ ] Login/logout pages
-- [ ] Protected route middleware
-- [ ] Role-based access control
-- [ ] Session management
+- [x] Auth.js v5 configuration with credentials provider
+- [x] Login page with form validation
+- [x] Protected route middleware (Edge-compatible)
+- [x] Role-based access control
+- [x] Session management with JWT
+- [x] Audit logging for login/logout events
 
 **UI Components (shadcn/ui):**
-- [ ] Install shadcn/ui CLI and base components
-- [ ] Create custom form components
-- [ ] Build dashboard layout components
-- [ ] Create data tables
-- [ ] Build charts for analytics
+- [x] shadcn/ui initialized with 25 components
+- [x] Button, Card, Input, Label, Select
+- [x] Dialog, Badge, Toast, Sonner
+- [x] Form, Tabs, Avatar, Dropdown Menu
+- [x] Alert, Separator, Skeleton, Table
+- [x] Textarea, Checkbox, Radio Group, Switch
+- [x] Scroll Area, Sheet
 
 **API Routes:**
-- [ ] Pass CRUD endpoints (/api/passes)
-- [ ] Vehicle endpoints (/api/vehicles)
-- [ ] Violation endpoints (/api/violations)
-- [ ] Unit management endpoints
-- [ ] Analytics endpoints
-- [ ] Health check endpoint
-- [ ] QR code generation endpoint
+- [x] Pass CRUD endpoints (/api/passes)
+- [x] Pass extension endpoint (/api/passes/extend)
+- [x] Vehicle search & update (/api/vehicles)
+- [x] Violation CRUD endpoints (/api/violations)
+- [x] Units endpoint (/api/units)
+- [x] Health check endpoint (/api/health)
 
 **Frontend Pages:**
-- [ ] Public visitor registration page
-- [ ] Pass confirmation/status page
-- [ ] Login page
-- [ ] Manager dashboard home
-- [ ] Active passes view
-- [ ] Violations management
-- [ ] Unit management
-- [ ] Settings/configuration
-- [ ] Analytics dashboard
+- [x] Public visitor registration page (/register/[slug])
+- [x] Pass confirmation with success state
+- [x] Login page
+- [x] Manager dashboard home
+- [x] Active passes view
+- [x] Violations management
 
 **Additional Services:**
-- [ ] Notification service (email with Resend)
-- [ ] Audit logging service
-- [ ] Health monitoring service
+- [x] Notification service (email with Resend)
+- [x] Email templates (confirmation, expiration warning)
+- [x] Session provider for client-side auth
+
+### 🚧 Remaining Tasks
+
+**Frontend Pages:**
+- [ ] Unit management page
+- [ ] Settings/configuration page
+- [ ] Analytics dashboard
+- [ ] User management page (admin only)
+
+**Additional Services:**
 - [ ] Export service (CSV/PDF)
+- [ ] Health monitoring service (frontend display)
 
 **Testing:**
 - [ ] Unit tests for services
@@ -91,7 +101,7 @@
 
 ---
 
-## 🚀 Quick Start (Current State)
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -102,9 +112,9 @@ Ensure you have installed:
 
 ### Step 1: Install Dependencies
 
-\`\`\`bash
+```bash
 pnpm install
-\`\`\`
+```
 
 Expected result: All packages installed successfully
 
@@ -115,25 +125,28 @@ Expected result: All packages installed successfully
    - Create new project: "Alina Parking"
    - Copy connection string
 
-2. Update \`.env.local\`:
+2. Update `.env.local`:
 
-\`\`\`bash
+```bash
 # Update this with your Neon connection string
 DATABASE_URL="postgresql://user:password@host.neon.tech/alina_parking?sslmode=require"
 
 # Generate a secure secret (run: openssl rand -base64 32)
 NEXTAUTH_SECRET="REPLACE_THIS_WITH_GENERATED_SECRET"
 
+# Set the base URL for auth callbacks
+NEXTAUTH_URL="http://localhost:3000"
+
 # Encryption key (run: openssl rand -base64 32)
 ENCRYPTION_KEY="REPLACE_THIS_WITH_GENERATED_KEY"
 
 # Resend API key (already configured)
 RESEND_API_KEY="re_fRRPFaoh_95EXuahtQyyGm3vKnbrsrMFw"
-\`\`\`
+```
 
 ### Step 3: Initialize Database
 
-\`\`\`bash
+```bash
 # Generate Prisma Client
 pnpm db:generate
 
@@ -142,7 +155,7 @@ pnpm db:push
 
 # Seed with sample data
 pnpm db:seed
-\`\`\`
+```
 
 Expected output:
 ```
@@ -165,251 +178,109 @@ You'll get:
 
 ### Step 4: Start Development Server
 
-\`\`\`bash
+```bash
 pnpm dev
-\`\`\`
+```
 
 The application will start at: http://localhost:3000
 
-**Current working endpoints:**
-- Health check (will need API route): http://localhost:3000/api/health
-- Registration URL (will need page): http://localhost:3000/register/alina-visitor-parking
+**Working endpoints:**
+- Health check: http://localhost:3000/api/health
+- Login: http://localhost:3000/login
+- Dashboard: http://localhost:3000/dashboard (requires login)
+- Registration: http://localhost:3000/register/alina-visitor-parking
 
 ---
 
 ## 📂 What Has Been Built
 
-### 1. **Database Schema** (\`prisma/schema.prisma\`)
+### 1. **Authentication System** (`src/lib/auth.ts`)
 
-A comprehensive, production-ready schema with:
+- Auth.js v5 with credentials provider
+- JWT-based session strategy
+- Login tracking and failed attempt counting
+- Audit logging for sign-in/sign-out events
+- Type-safe session with user roles
 
-**Core Entities:**
-- Buildings & Units
-- Parking Zones
-- Vehicles & Parking Passes
-- Violations
-- Users & Authentication
+### 2. **Protected Routes** (`src/middleware.ts`)
 
-**Key Features:**
-- Soft deletes (data safety)
-- Audit logging
-- Multi-building support
-- Role-based access control
-- Notification queue
-- System health monitoring
+Edge-compatible middleware that:
+- Protects dashboard routes
+- Redirects unauthenticated users to login
+- Role-based access control (admin-only routes)
+- Public API routes for visitor registration
 
-### 2. **Validation Service** (\`src/services/validation-service.ts\`)
+### 3. **API Endpoints**
 
-Hospital-grade business logic enforcement:
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/health` | GET | No | System health check |
+| `/api/passes` | GET | Yes | List all passes |
+| `/api/passes` | POST | No | Create new pass (visitor) |
+| `/api/passes/[id]` | GET | No | Get pass details |
+| `/api/passes/[id]` | PATCH | Yes | Update pass |
+| `/api/passes/[id]` | DELETE | Yes | Cancel pass |
+| `/api/passes/extend` | POST | No | Extend pass duration |
+| `/api/vehicles` | GET | Yes | Search vehicles |
+| `/api/vehicles` | PATCH | Yes | Update/blacklist vehicle |
+| `/api/violations` | GET | Yes | List violations |
+| `/api/violations` | POST | Yes | Log new violation |
+| `/api/violations` | PATCH | Yes | Update/resolve violation |
+| `/api/units` | GET | No | Get units for building |
 
-**Validates:**
-- ✅ Blacklist checking (security)
-- ✅ Max vehicles per unit
-- ✅ Consecutive hours limit
-- ✅ Cooldown period
-- ✅ Allowed durations
-- ✅ Operating hours
-- ✅ Pass extension rules
+### 4. **Frontend Pages**
 
-**Returns:**
-- Detailed error messages
-- Warning messages
-- Metadata for debugging
+**Public Pages:**
+- `/register/[slug]` - Mobile-optimized visitor registration
+- `/login` - Manager/admin login
 
-### 3. **Utility Functions**
+**Dashboard Pages:**
+- `/dashboard` - Overview with stats and recent activity
+- `/dashboard/passes` - Active passes table
+- `/dashboard/violations` - Violations management
 
-**License Plate Utils** (\`src/lib/utils/license-plate.ts\`):
-- Normalization (ABC123)
-- Formatting (ABC 123)
-- Validation
-- Sanitization for input fields
-- Masking for privacy
+### 5. **UI Components**
 
-**Date/Time Utils** (\`src/lib/utils/date-time.ts\`):
-- Pass expiration calculations
-- Consecutive hours calculation
-- Cooldown period checks
-- Time formatting
-- Duration formatting
+25 shadcn/ui components installed and configured:
+- Form elements (Input, Label, Select, Checkbox, etc.)
+- Layout components (Card, Dialog, Sheet, Tabs)
+- Feedback components (Toast, Alert, Badge, Skeleton)
+- Navigation components (Dropdown Menu, Avatar)
 
-**QR Code Utils** (\`src/lib/utils/qr-code.ts\`):
-- QR code generation (Data URL, Buffer, SVG)
-- Printable QR codes with labels
-- URL validation and parsing
+### 6. **Notification Service** (`src/services/notification-service.ts`)
 
-### 4. **Configuration**
-
-**TypeScript Config** (\`tsconfig.json\`):
-- Strict mode enabled (maximum type safety)
-- Path aliases (@/*)
-- Latest ECMAScript features
-
-**ESLint Config** (\`.eslintrc.json\`):
-- Next.js best practices
-- TypeScript rules
-- No unused variables
-- No explicit any
-
-**Tailwind Config** (\`tailwind.config.ts\`):
-- shadcn/ui compatible
-- Custom color system
-- Animations
-- Responsive breakpoints
-
-### 5. **Security Configuration**
-
-**Next.js Config** (\`next.config.js\`):
-- Security headers (CSP, HSTS, X-Frame-Options)
-- Image optimization
-- Compression enabled
-- Production optimizations
+- Email sending via Resend API
+- Pass confirmation emails
+- Expiration warning emails
+- Notification queue with retry logic
+- Professional HTML email templates
 
 ---
 
-## 🔧 Next Implementation Steps
+## 🔧 Development Commands
 
-To complete the application, follow these phases:
+```bash
+# Start development server
+pnpm dev
 
-### Phase 1: Authentication (Priority: HIGH)
+# Type check
+pnpm type-check
 
-**Files to create:**
+# Lint code
+pnpm lint
+pnpm lint:fix
 
-1. \`src/lib/auth.ts\` - Auth.js configuration
-2. \`src/middleware.ts\` - Route protection middleware
-3. \`src/app/api/auth/[...nextauth]/route.ts\` - Auth API routes
-4. \`src/app/(auth)/login/page.tsx\` - Login page
+# Format code
+pnpm format
 
-**Commands:**
-\`\`\`bash
-# Auth.js is already in package.json
-pnpm install
-\`\`\`
-
-### Phase 2: shadcn/ui Setup (Priority: HIGH)
-
-**Initialize shadcn/ui:**
-
-\`\`\`bash
-npx shadcn@latest init
-\`\`\`
-
-Answer prompts:
-- Style: Default
-- Base color: Slate
-- CSS variables: Yes
-
-**Install required components:**
-
-\`\`\`bash
-npx shadcn@latest add button card input label select table dialog badge toast form tabs avatar dropdown-menu alert separator skeleton
-\`\`\`
-
-### Phase 3: API Routes (Priority: HIGH)
-
-Create these API endpoints:
-
-1. **Pass Management:**
-   - POST /api/passes - Create new pass
-   - GET /api/passes - List passes
-   - GET /api/passes/[id] - Get pass details
-   - PATCH /api/passes/[id] - Update pass
-   - POST /api/passes/extend - Extend pass
-   - POST /api/passes/validate - Pre-validate request
-
-2. **Vehicles:**
-   - GET /api/vehicles - Search vehicles
-   - GET /api/vehicles/[id] - Vehicle details
-
-3. **Violations:**
-   - POST /api/violations - Log violation
-   - GET /api/violations - List violations
-   - PATCH /api/violations/[id] - Update violation
-
-4. **Health:**
-   - GET /api/health - System health check
-
-### Phase 4: Frontend Pages (Priority: HIGH)
-
-**Public pages:**
-1. Registration form (mobile-optimized)
-2. Pass confirmation/status view
-3. Pass extension page
-
-**Dashboard pages:**
-1. Login
-2. Dashboard home (stats overview)
-3. Active passes table
-4. Violation management
-5. Unit management
-6. Settings
-
-### Phase 5: Services & Features (Priority: MEDIUM)
-
-1. **Notification Service** - Email with Resend
-2. **Audit Service** - Log all actions
-3. **Export Service** - CSV/PDF generation
-4. **Analytics Service** - Stats and metrics
-
-### Phase 6: Testing (Priority: MEDIUM)
-
-1. Unit tests for validation service
-2. Integration tests for API endpoints
-3. E2E tests for critical flows
-
-### Phase 7: Production Prep (Priority: HIGH before launch)
-
-1. Security audit
-2. Performance testing
-3. Accessibility testing (WCAG AA)
-4. Production environment setup
-5. CI/CD pipeline
-6. Monitoring setup (Sentry)
-
----
-
-## 💡 Development Tips
-
-### Working with Prisma
-
-**Generate client after schema changes:**
-\`\`\`bash
-pnpm db:generate
-\`\`\`
-
-**Create migration:**
-\`\`\`bash
-pnpm db:migrate
-\`\`\`
-
-**Reset database (⚠️ deletes all data):**
-\`\`\`bash
-pnpm db:reset
-\`\`\`
-
-**View data in Prisma Studio:**
-\`\`\`bash
-pnpm db:studio
-\`\`\`
-
-### Type Safety
-
-The codebase uses TypeScript strict mode. This means:
-- ✅ No \`any\` types allowed
-- ✅ All variables must be initialized
-- ✅ Null checks required
-- ✅ Unused variables cause errors
-
-This catches bugs early and improves code quality.
-
-### Code Quality
-
-**Before committing:**
-\`\`\`bash
-pnpm lint          # Check for issues
-pnpm lint:fix      # Auto-fix issues
-pnpm type-check    # TypeScript check
-pnpm format        # Format code
-\`\`\`
+# Database commands
+pnpm db:generate    # Generate Prisma client
+pnpm db:push        # Push schema changes
+pnpm db:seed        # Seed sample data
+pnpm db:studio      # Open Prisma Studio
+pnpm db:migrate     # Create migration
+pnpm db:reset       # Reset database (⚠️ deletes data)
+```
 
 ---
 
@@ -418,9 +289,9 @@ pnpm format        # Format code
 ### Issue: Prisma Client not found
 
 **Solution:**
-\`\`\`bash
+```bash
 pnpm db:generate
-\`\`\`
+```
 
 ### Issue: Database connection error
 
@@ -429,31 +300,38 @@ pnpm db:generate
 2. Neon database is running
 3. IP is allowed in Neon dashboard
 
+### Issue: Auth not working
+
+**Check:**
+1. NEXTAUTH_SECRET is set in .env.local
+2. NEXTAUTH_URL matches your development URL
+3. Run `pnpm db:push` to ensure User table exists
+
 ### Issue: Module not found errors
 
 **Solution:**
-\`\`\`bash
+```bash
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
-\`\`\`
+```
 
 ### Issue: Type errors after schema change
 
 **Solution:**
-\`\`\`bash
+```bash
 pnpm db:generate
 # Restart TypeScript server in VS Code
-\`\`\`
+```
 
 ---
 
 ## 📊 Project Statistics
 
-**Files Created:** 20+ core files
-**Lines of Code:** ~5,000+ (foundation)
+**Files Created:** 40+ files
+**Lines of Code:** ~8,000+ (application)
 **Database Tables:** 16 tables
-**Enums:** 8 enums
-**API Routes Planned:** 20+ endpoints
+**API Endpoints:** 12 endpoints
+**UI Components:** 25 shadcn/ui components
 **Test Coverage Target:** 80%+
 
 ---
@@ -502,4 +380,4 @@ For questions during implementation:
 ---
 
 **Last Updated:** 2026-01-30
-**Version:** 0.1.0 (Foundation Complete)
+**Version:** 0.2.0 (Application Layer Complete)
