@@ -68,6 +68,12 @@
     ".next",
     "out",
     "dist",
-    "build"
+    "build",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "e2e/**",
+    "src/test/**"
   ]
 }

@@ -31,7 +31,7 @@
     --error: 0 84.2% 60.2%;
     --error-foreground: 0 0% 100%;
 
-    --font-sans: var(--font-inter), system-ui, sans-serif;
+    --font-sans: 'Lato', system-ui, sans-serif;
   }
 
   .dark {
