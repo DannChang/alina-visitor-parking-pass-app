@@ -219,17 +219,17 @@ export default function HealthPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
-          <p className="text-muted-foreground">Monitor system status and performance</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">System Health</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Monitor system status and performance</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between md:justify-end gap-4">
           <span className="text-sm text-muted-foreground">
             Last updated: {format(lastRefresh, 'HH:mm:ss')}
           </span>
-          <Button variant="outline" onClick={() => fetchHealth(true)} disabled={refreshing}>
+          <Button variant="outline" onClick={() => fetchHealth(true)} disabled={refreshing} className="min-h-[44px] md:min-h-0">
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -251,7 +251,7 @@ export default function HealthPage() {
             </div>
             <StatusBadge status={health.status} />
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
             <div className="text-center">
               <p className="text-2xl font-bold">{formatUptime(health.uptime)}</p>
               <p className="text-sm text-muted-foreground">Uptime</p>
@@ -275,7 +275,7 @@ export default function HealthPage() {
       {/* Services */}
       <div>
         <h3 className="text-lg font-medium mb-4">Services</h3>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
           <ServiceCard
             name="Database"
             icon={Database}
@@ -301,7 +301,7 @@ export default function HealthPage() {
           <CardDescription>Current system activity and resource usage</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Activity</h4>
               <div className="space-y-3">

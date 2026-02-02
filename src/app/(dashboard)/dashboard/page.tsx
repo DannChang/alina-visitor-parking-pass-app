@@ -104,13 +104,13 @@ function StatCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+        <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
         <Icon className={`h-4 w-4 ${iconColors[variant]}`} />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
+      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+        <div className="text-xl md:text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground truncate">{description}</p>
       </CardContent>
     </Card>
   );
@@ -118,16 +118,16 @@ function StatCard({
 
 function StatsLoading() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
       {[...Array(4)].map((_, i) => (
         <Card key={i}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <Skeleton className="h-4 w-24" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+            <Skeleton className="h-4 w-16 md:w-24" />
             <Skeleton className="h-4 w-4" />
           </CardHeader>
-          <CardContent>
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="mt-1 h-3 w-32" />
+          <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+            <Skeleton className="h-7 md:h-8 w-12 md:w-16" />
+            <Skeleton className="mt-1 h-3 w-20 md:w-32" />
           </CardContent>
         </Card>
       ))}
@@ -139,7 +139,7 @@ async function StatsSection() {
   const stats = await getStats();
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
       <StatCard
         title="Active Passes"
         value={stats.activePasses}
@@ -263,10 +263,10 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Welcome back, {session.user.name || 'Manager'}. Here&apos;s what&apos;s happening today.
         </p>
       </div>
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
         <StatsSection />
       </Suspense>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Suspense
           fallback={
             <Card>

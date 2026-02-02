@@ -159,47 +159,51 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage building and system configuration</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage building and system configuration</p>
         </div>
-        <div className="flex items-center gap-4">
-          <Select value={selectedBuildingId} onValueChange={setSelectedBuildingId}>
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Select building" />
-            </SelectTrigger>
-            <SelectContent>
-              {buildings.map((building) => (
-                <SelectItem key={building.id} value={building.id}>
-                  {building.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={selectedBuildingId} onValueChange={setSelectedBuildingId}>
+          <SelectTrigger className="w-full md:w-[250px] h-11 md:h-10">
+            <SelectValue placeholder="Select building" />
+          </SelectTrigger>
+          <SelectContent>
+            {buildings.map((building) => (
+              <SelectItem key={building.id} value={building.id}>
+                {building.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs defaultValue="building" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="building">
-            <Building2 className="mr-2 h-4 w-4" />
-            Building
-          </TabsTrigger>
-          <TabsTrigger value="parking">
-            <Clock className="mr-2 h-4 w-4" />
-            Parking Rules
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield className="mr-2 h-4 w-4" />
-            Security
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="inline-flex w-auto min-w-full md:w-auto">
+            <TabsTrigger value="building" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+              <Building2 className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">Building</span>
+              <span className="xs:hidden">Bldg</span>
+            </TabsTrigger>
+            <TabsTrigger value="parking" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+              <Clock className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">Parking</span>
+              <span className="xs:hidden">Park</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+              <Bell className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">Notifications</span>
+              <span className="xs:hidden">Notif</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+              <Shield className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">Security</span>
+              <span className="xs:hidden">Sec</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="building" className="space-y-4">
           {loading ? (
@@ -212,13 +216,14 @@ export default function SettingsPage() {
                   <CardDescription>Basic building details and contact information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Building Name</Label>
                       <Input
                         id="name"
                         value={buildingData.name}
                         onChange={(e) => setBuildingData({ ...buildingData, name: e.target.value })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -227,6 +232,7 @@ export default function SettingsPage() {
                         id="slug"
                         value={buildingData.slug}
                         onChange={(e) => setBuildingData({ ...buildingData, slug: e.target.value })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                   </div>
@@ -236,16 +242,17 @@ export default function SettingsPage() {
                       id="address"
                       value={buildingData.address}
                       onChange={(e) => setBuildingData({ ...buildingData, address: e.target.value })}
+                      className="h-11 md:h-10 text-base md:text-sm"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="timezone">Timezone</Label>
                       <Select
                         value={buildingData.timezone}
                         onValueChange={(value) => setBuildingData({ ...buildingData, timezone: value })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 md:h-10">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -256,9 +263,9 @@ export default function SettingsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 md:block md:space-y-2">
                       <Label htmlFor="isActive">Status</Label>
-                      <div className="flex items-center space-x-2 pt-2">
+                      <div className="flex items-center space-x-2 md:pt-2">
                         <Switch
                           id="isActive"
                           checked={buildingData.isActive}
@@ -279,7 +286,7 @@ export default function SettingsPage() {
                   <CardDescription>Emergency and general contact details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="contactEmail">Contact Email</Label>
                       <Input
@@ -287,6 +294,7 @@ export default function SettingsPage() {
                         type="email"
                         value={buildingData.contactEmail || ''}
                         onChange={(e) => setBuildingData({ ...buildingData, contactEmail: e.target.value || null })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -296,6 +304,7 @@ export default function SettingsPage() {
                         type="tel"
                         value={buildingData.contactPhone || ''}
                         onChange={(e) => setBuildingData({ ...buildingData, contactPhone: e.target.value || null })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                   </div>
@@ -306,13 +315,14 @@ export default function SettingsPage() {
                       type="tel"
                       value={buildingData.emergencyPhone || ''}
                       onChange={(e) => setBuildingData({ ...buildingData, emergencyPhone: e.target.value || null })}
+                      className="h-11 md:h-10 text-base md:text-sm"
                     />
                   </div>
                 </CardContent>
               </Card>
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveBuilding} disabled={saving}>
+                <Button onClick={handleSaveBuilding} disabled={saving} className="w-full md:w-auto min-h-[44px] md:min-h-0">
                   {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Save Building Settings
                 </Button>
@@ -338,7 +348,7 @@ export default function SettingsPage() {
                   <CardDescription>Configure limits for parking passes</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="maxVehiclesPerUnit">Max Vehicles per Unit</Label>
                       <Input
@@ -348,6 +358,7 @@ export default function SettingsPage() {
                         max="10"
                         value={parkingRules.maxVehiclesPerUnit}
                         onChange={(e) => setParkingRules({ ...parkingRules, maxVehiclesPerUnit: parseInt(e.target.value) || 1 })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -359,10 +370,11 @@ export default function SettingsPage() {
                         max="168"
                         value={parkingRules.maxConsecutiveHours}
                         onChange={(e) => setParkingRules({ ...parkingRules, maxConsecutiveHours: parseInt(e.target.value) || 24 })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="cooldownHours">Cooldown Hours</Label>
                       <Input
@@ -372,6 +384,7 @@ export default function SettingsPage() {
                         max="48"
                         value={parkingRules.cooldownHours}
                         onChange={(e) => setParkingRules({ ...parkingRules, cooldownHours: parseInt(e.target.value) || 0 })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                       <p className="text-xs text-muted-foreground">Hours before same vehicle can register again</p>
                     </div>
@@ -384,6 +397,7 @@ export default function SettingsPage() {
                         max="60"
                         value={parkingRules.gracePeriodMinutes}
                         onChange={(e) => setParkingRules({ ...parkingRules, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                   </div>
@@ -396,7 +410,7 @@ export default function SettingsPage() {
                   <CardDescription>Configure pass extension settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="maxExtensions">Max Extensions</Label>
                       <Input
@@ -406,6 +420,7 @@ export default function SettingsPage() {
                         max="5"
                         value={parkingRules.maxExtensions}
                         onChange={(e) => setParkingRules({ ...parkingRules, maxExtensions: parseInt(e.target.value) || 0 })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -417,6 +432,7 @@ export default function SettingsPage() {
                         max="24"
                         value={parkingRules.extensionMaxHours}
                         onChange={(e) => setParkingRules({ ...parkingRules, extensionMaxHours: parseInt(e.target.value) || 4 })}
+                        className="h-11 md:h-10 text-base md:text-sm"
                       />
                     </div>
                   </div>
@@ -460,7 +476,7 @@ export default function SettingsPage() {
               </Card>
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveParkingRules} disabled={saving}>
+                <Button onClick={handleSaveParkingRules} disabled={saving} className="w-full md:w-auto min-h-[44px] md:min-h-0">
                   {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Save Parking Rules
                 </Button>
