@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/api-auth';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 
 const updateVehicleSchema = z.object({
@@ -13,11 +13,11 @@ const updateVehicleSchema = z.object({
   state: z.string().optional(),
 });
 
-// GET /api/vehicles - Search vehicles (requires auth)
+// GET /api/vehicles - Search vehicles (requires vehicles:view permission)
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = await requirePermission('vehicles:view');
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   const { searchParams } = new URL(request.url);
@@ -77,12 +77,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH /api/vehicles - Update a vehicle (requires auth)
+// PATCH /api/vehicles - Update a vehicle (requires vehicles:blacklist permission for blacklisting)
 export async function PATCH(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = await requirePermission('vehicles:blacklist');
+  if (!authResult.authorized) {
+    return authResult.response;
   }
+
+  const { userId } = authResult.request;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -116,7 +118,7 @@ export async function PATCH(request: NextRequest) {
       updateData.isBlacklisted = parsed.data.isBlacklisted;
       if (parsed.data.isBlacklisted) {
         updateData.blacklistedAt = new Date();
-        updateData.blacklistedBy = session.user.id;
+        updateData.blacklistedBy = userId;
         updateData.blacklistReason = parsed.data.blacklistReason || 'Blacklisted by administrator';
       } else {
         updateData.blacklistedAt = null;
@@ -142,7 +144,7 @@ export async function PATCH(request: NextRequest) {
           action: 'BLACKLIST_VEHICLE',
           entityType: 'Vehicle',
           entityId: id,
-          userId: session.user.id,
+          userId: userId,
           details: {
             isBlacklisted: parsed.data.isBlacklisted,
             reason: parsed.data.blacklistReason,
