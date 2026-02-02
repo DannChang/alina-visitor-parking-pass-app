@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -14,11 +14,12 @@ const unitSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
+// GET /api/units/manage - List units with management details (requires units:view permission)
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requirePermission('units:view');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const { searchParams } = new URL(request.url);
@@ -80,17 +81,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/units/manage - Create a new unit (requires units:manage permission)
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requirePermission('units:manage');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
-    // Check if user has admin role
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId } = authResult.request;
 
     const body = await request.json();
     const validatedData = unitSchema.parse(body);
@@ -139,7 +138,7 @@ export async function POST(request: NextRequest) {
         action: 'CREATE',
         entityType: 'Unit',
         entityId: unit.id,
-        userId: session.user.id,
+        userId: userId,
         details: { unitNumber: unit.unitNumber, buildingId: unit.buildingId },
       },
     });
@@ -160,16 +159,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PATCH /api/units/manage - Update a unit (requires units:manage permission)
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requirePermission('units:manage');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId } = authResult.request;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -238,7 +236,7 @@ export async function PATCH(request: NextRequest) {
         action: 'UPDATE',
         entityType: 'Unit',
         entityId: unit.id,
-        userId: session.user.id,
+        userId: userId,
         details: JSON.parse(JSON.stringify({ changes: updateData })),
       },
     });
@@ -259,16 +257,15 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// DELETE /api/units/manage - Delete a unit (requires units:manage permission)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requirePermission('units:manage');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId } = authResult.request;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -296,7 +293,7 @@ export async function DELETE(request: NextRequest) {
         action: 'DELETE',
         entityType: 'Unit',
         entityId: id,
-        userId: session.user.id,
+        userId: userId,
         details: { unitNumber: unit.unitNumber },
       },
     });

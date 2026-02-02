@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextResponse } from 'next/server';
 import { createMockPostRequest, createMockGetRequest } from '@/test/mocks/next-request';
 import { createMockManagerSession } from '@/test/mocks/auth';
 import {

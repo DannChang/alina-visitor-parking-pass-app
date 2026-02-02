@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/api-auth';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import { ViolationType, ViolationSeverity } from '@prisma/client';
 
@@ -24,11 +24,11 @@ const updateViolationSchema = z.object({
   severity: z.nativeEnum(ViolationSeverity).optional(),
 });
 
-// GET /api/violations - List violations (requires auth)
+// GET /api/violations - List violations (requires violations:view permission)
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = await requirePermission('violations:view');
+  if (!authResult.authorized) {
+    return authResult.response;
   }
 
   const { searchParams } = new URL(request.url);
@@ -103,12 +103,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/violations - Log a new violation (requires auth)
+// POST /api/violations - Log a new violation (requires violations:create permission)
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = await requirePermission('violations:create');
+  if (!authResult.authorized) {
+    return authResult.response;
   }
+
+  const { userId } = authResult.request;
 
   try {
     const body = await request.json();
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
         photoUrls: data.photoUrls ?? [],
         evidenceNotes: data.evidenceNotes ?? null,
         fineAmount: data.fineAmount ?? null,
-        loggedById: session.user.id,
+        loggedById: userId,
       },
       include: {
         vehicle: true,
@@ -189,7 +191,7 @@ export async function POST(request: NextRequest) {
         action: 'LOG_VIOLATION',
         entityType: 'Violation',
         entityId: violation.id,
-        userId: session.user.id,
+        userId: userId,
         details: {
           vehicleId: vehicle.id,
           licensePlate: vehicle.licensePlate,
@@ -206,12 +208,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH /api/violations - Update a violation (requires auth)
+// PATCH /api/violations - Update a violation (requires violations:update or violations:resolve permission)
 export async function PATCH(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = await requirePermission(['violations:update', 'violations:resolve']);
+  if (!authResult.authorized) {
+    return authResult.response;
   }
+
+  const { userId } = authResult.request;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -245,7 +249,7 @@ export async function PATCH(request: NextRequest) {
       updateData.isResolved = parsed.data.isResolved;
       if (parsed.data.isResolved) {
         updateData.resolvedAt = new Date();
-        updateData.resolvedBy = session.user.id;
+        updateData.resolvedBy = userId;
       }
     }
 
@@ -282,7 +286,7 @@ export async function PATCH(request: NextRequest) {
         action: parsed.data.isResolved ? 'RESOLVE_VIOLATION' : 'UPDATE',
         entityType: 'Violation',
         entityId: id,
-        userId: session.user.id,
+        userId: userId,
         details: { changes: parsed.data },
       },
     });

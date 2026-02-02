@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { format, subDays, startOfDay, endOfDay, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { TrendingUp, TrendingDown, Clock, Car, AlertTriangle, Users, Calendar, Download } from 'lucide-react';
+import { hasPermission } from '@/lib/authorization';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -447,6 +448,11 @@ export default async function AnalyticsPage() {
 
   if (!session?.user) {
     redirect('/login');
+  }
+
+  // Defense in depth: verify permission at page level
+  if (!hasPermission(session.user.role, 'analytics:view')) {
+    redirect('/dashboard?error=access_denied');
   }
 
   return (

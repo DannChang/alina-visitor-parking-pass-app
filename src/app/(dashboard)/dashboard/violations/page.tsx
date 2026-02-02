@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { AlertTriangle, Search, CheckCircle2 } from 'lucide-react';
+import { hasPermission } from '@/lib/authorization';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -150,6 +151,11 @@ export default async function ViolationsPage() {
 
   if (!session?.user) {
     redirect('/login');
+  }
+
+  // Defense in depth: verify permission at page level
+  if (!hasPermission(session.user.role, 'violations:view')) {
+    redirect('/dashboard?error=access_denied');
   }
 
   return (

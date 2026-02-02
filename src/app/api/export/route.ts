@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/api-auth';
 import { generateExport, logExport, ExportType } from '@/services/export-service';
 
 const validTypes: ExportType[] = ['passes', 'violations', 'vehicles', 'analytics', 'audit-logs'];
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as ExportType;
-    const format = searchParams.get('format') as 'csv' | 'json' | undefined;
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const buildingId = searchParams.get('buildingId');
 
     if (!type || !validTypes.includes(type)) {
       return NextResponse.json(
@@ -25,10 +16,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Only admins can export audit logs
-    if (type === 'audit-logs' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Audit logs require audit_logs:view permission, other exports require reports:export
+    const requiredPermission = type === 'audit-logs' ? 'audit_logs:view' : 'reports:export';
+    const authResult = await requirePermission(requiredPermission);
+    if (!authResult.authorized) {
+      return authResult.response;
     }
+
+    const { userId } = authResult.request;
+
+    const format = searchParams.get('format') as 'csv' | 'json' | undefined;
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const buildingId = searchParams.get('buildingId');
 
     const result = await generateExport({
       type,
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Log the export action
-    await logExport(session.user.id, type, {
+    await logExport(userId, type, {
       format: format || 'csv',
       startDate,
       endDate,

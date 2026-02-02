@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
-import { Car, LayoutDashboard, AlertTriangle, Settings, LogOut, Users, Home, Activity, BarChart3 } from 'lucide-react';
+import { Car, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getNavItemsForRole } from '@/lib/navigation';
 
 export default async function DashboardLayout({
   children,
@@ -32,23 +33,8 @@ export default async function DashboardLayout({
         .toUpperCase()
     : session.user.email?.charAt(0).toUpperCase() || 'U';
 
-  const navItems = [
-    { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-    { href: '/dashboard/passes', label: 'Active Passes', icon: Car },
-    { href: '/dashboard/violations', label: 'Violations', icon: AlertTriangle },
-    { href: '/dashboard/units', label: 'Units', icon: Home },
-    { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/dashboard/health', label: 'System Health', icon: Activity },
-  ];
-
-  const isAdmin = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN';
-
-  if (isAdmin) {
-    navItems.push(
-      { href: '/dashboard/users', label: 'Users', icon: Users },
-      { href: '/dashboard/settings', label: 'Settings', icon: Settings }
-    );
-  }
+  // Get navigation items based on user's role
+  const navItems = getNavItemsForRole(session.user.role);
 
   return (
     <div className="flex min-h-screen">
