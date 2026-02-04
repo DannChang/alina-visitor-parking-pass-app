@@ -5,6 +5,7 @@
 ### ✅ Completed (Foundation & Core Infrastructure)
 
 **Project Setup:**
+
 - [x] Next.js 15 project initialized with TypeScript
 - [x] TypeScript strict mode configuration
 - [x] ESLint & Prettier configured
@@ -14,6 +15,7 @@
 - [x] Package.json with all dependencies
 
 **Database:**
+
 - [x] Comprehensive Prisma schema (production-grade)
 - [x] Support for multi-building management
 - [x] Complete audit trail system
@@ -23,6 +25,7 @@
 - [x] Prisma client singleton
 
 **Core Services & Utilities:**
+
 - [x] License plate normalization & validation
 - [x] Date/time calculations for passes
 - [x] QR code generation utilities
@@ -31,6 +34,7 @@
 - [x] Utility functions (cn, formatting, etc.)
 
 **Documentation:**
+
 - [x] Comprehensive README
 - [x] This SETUP guide
 - [x] Inline code documentation
@@ -38,6 +42,7 @@
 ### ✅ Completed (Application Layer)
 
 **Authentication & Authorization:**
+
 - [x] Auth.js v5 configuration with credentials provider
 - [x] Login page with form validation
 - [x] Protected route middleware (Edge-compatible)
@@ -46,6 +51,7 @@
 - [x] Audit logging for login/logout events
 
 **UI Components (shadcn/ui):**
+
 - [x] shadcn/ui initialized with 25 components
 - [x] Button, Card, Input, Label, Select
 - [x] Dialog, Badge, Toast, Sonner
@@ -55,6 +61,7 @@
 - [x] Scroll Area, Sheet
 
 **API Routes:**
+
 - [x] Pass CRUD endpoints (/api/passes)
 - [x] Pass extension endpoint (/api/passes/extend)
 - [x] Vehicle search & update (/api/vehicles)
@@ -63,6 +70,7 @@
 - [x] Health check endpoint (/api/health)
 
 **Frontend Pages:**
+
 - [x] Public visitor registration page (/register/[slug])
 - [x] Pass confirmation with success state
 - [x] Login page
@@ -71,6 +79,7 @@
 - [x] Violations management
 
 **Additional Services:**
+
 - [x] Notification service (email with Resend)
 - [x] Email templates (confirmation, expiration warning)
 - [x] Session provider for client-side auth
@@ -78,24 +87,28 @@
 ### ✅ Recently Completed
 
 **Frontend Pages:**
+
 - [x] Unit management page
 - [x] Settings/configuration page
 - [x] Analytics dashboard
 - [x] User management page (admin only)
 
 **Additional Services:**
+
 - [x] Export service (CSV/JSON)
 - [x] Health monitoring service (frontend display)
 
 ### 🚧 Remaining Tasks
 
 **Testing:**
-- [ ] Unit tests for services
-- [ ] Integration tests for API
-- [ ] E2E tests with Playwright
-- [ ] Test configuration (Vitest, Playwright config)
+
+- [x] Unit tests for services
+- [x] Integration tests for API
+- [x] E2E tests with Playwright
+- [x] Test configuration (Vitest, Playwright config)
 
 **DevOps:**
+
 - [ ] GitHub Actions CI/CD pipeline
 - [ ] Vercel deployment configuration
 - [ ] Database migration workflow
@@ -108,6 +121,7 @@
 ### Prerequisites
 
 Ensure you have installed:
+
 - Node.js 20.x or higher
 - pnpm 8.x or higher (run: `npm install -g pnpm`)
 - A Neon PostgreSQL database (create at https://console.neon.tech)
@@ -160,11 +174,13 @@ pnpm db:seed
 ```
 
 Expected output:
+
 ```
 ✅ Database seed completed successfully!
 ```
 
 You'll get:
+
 - 1 building (Alina Visitor Parking)
 - 3 parking zones (Main, Emergency, North)
 - 30 sample units (101-310)
@@ -172,6 +188,7 @@ You'll get:
 - 1 sample active pass
 
 **Default Credentials:**
+
 - Admin: admin@alinahospital.com / Admin@123!
 - Manager: manager@alinahospital.com / Manager@123!
 - Resident: resident@example.com / Resident@123!
@@ -187,6 +204,7 @@ pnpm dev
 The application will start at: http://localhost:3000
 
 **Working endpoints:**
+
 - Health check: http://localhost:3000/api/health
 - Login: http://localhost:3000/login
 - Dashboard: http://localhost:3000/dashboard (requires login)
@@ -207,6 +225,7 @@ The application will start at: http://localhost:3000
 ### 2. **Protected Routes** (`src/middleware.ts`)
 
 Edge-compatible middleware that:
+
 - Protects dashboard routes
 - Redirects unauthenticated users to login
 - Role-based access control (admin-only routes)
@@ -214,29 +233,31 @@ Edge-compatible middleware that:
 
 ### 3. **API Endpoints**
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/health` | GET | No | System health check |
-| `/api/passes` | GET | Yes | List all passes |
-| `/api/passes` | POST | No | Create new pass (visitor) |
-| `/api/passes/[id]` | GET | No | Get pass details |
-| `/api/passes/[id]` | PATCH | Yes | Update pass |
-| `/api/passes/[id]` | DELETE | Yes | Cancel pass |
-| `/api/passes/extend` | POST | No | Extend pass duration |
-| `/api/vehicles` | GET | Yes | Search vehicles |
-| `/api/vehicles` | PATCH | Yes | Update/blacklist vehicle |
-| `/api/violations` | GET | Yes | List violations |
-| `/api/violations` | POST | Yes | Log new violation |
-| `/api/violations` | PATCH | Yes | Update/resolve violation |
-| `/api/units` | GET | No | Get units for building |
+| Endpoint             | Method | Auth | Description               |
+| -------------------- | ------ | ---- | ------------------------- |
+| `/api/health`        | GET    | No   | System health check       |
+| `/api/passes`        | GET    | Yes  | List all passes           |
+| `/api/passes`        | POST   | No   | Create new pass (visitor) |
+| `/api/passes/[id]`   | GET    | No   | Get pass details          |
+| `/api/passes/[id]`   | PATCH  | Yes  | Update pass               |
+| `/api/passes/[id]`   | DELETE | Yes  | Cancel pass               |
+| `/api/passes/extend` | POST   | No   | Extend pass duration      |
+| `/api/vehicles`      | GET    | Yes  | Search vehicles           |
+| `/api/vehicles`      | PATCH  | Yes  | Update/blacklist vehicle  |
+| `/api/violations`    | GET    | Yes  | List violations           |
+| `/api/violations`    | POST   | Yes  | Log new violation         |
+| `/api/violations`    | PATCH  | Yes  | Update/resolve violation  |
+| `/api/units`         | GET    | No   | Get units for building    |
 
 ### 4. **Frontend Pages**
 
 **Public Pages:**
+
 - `/register/[slug]` - Mobile-optimized visitor registration
 - `/login` - Manager/admin login
 
 **Dashboard Pages:**
+
 - `/dashboard` - Overview with stats and recent activity
 - `/dashboard/passes` - Active passes table
 - `/dashboard/violations` - Violations management
@@ -244,6 +265,7 @@ Edge-compatible middleware that:
 ### 5. **UI Components**
 
 25 shadcn/ui components installed and configured:
+
 - Form elements (Input, Label, Select, Checkbox, etc.)
 - Layout components (Card, Dialog, Sheet, Tabs)
 - Feedback components (Toast, Alert, Badge, Skeleton)
@@ -291,6 +313,7 @@ pnpm db:reset       # Reset database (⚠️ deletes data)
 ### Issue: Prisma Client not found
 
 **Solution:**
+
 ```bash
 pnpm db:generate
 ```
@@ -298,6 +321,7 @@ pnpm db:generate
 ### Issue: Database connection error
 
 **Check:**
+
 1. DATABASE_URL in .env.local is correct
 2. Neon database is running
 3. IP is allowed in Neon dashboard
@@ -305,6 +329,7 @@ pnpm db:generate
 ### Issue: Auth not working
 
 **Check:**
+
 1. NEXTAUTH_SECRET is set in .env.local
 2. NEXTAUTH_URL matches your development URL
 3. Run `pnpm db:push` to ensure User table exists
@@ -312,6 +337,7 @@ pnpm db:generate
 ### Issue: Module not found errors
 
 **Solution:**
+
 ```bash
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
@@ -320,6 +346,7 @@ pnpm install
 ### Issue: Type errors after schema change
 
 **Solution:**
+
 ```bash
 pnpm db:generate
 # Restart TypeScript server in VS Code
@@ -366,18 +393,23 @@ For questions during implementation:
 ## 🎓 Learning Resources
 
 **Next.js 15:**
+
 - https://nextjs.org/docs
 
 **Prisma:**
+
 - https://www.prisma.io/docs
 
 **Auth.js:**
+
 - https://authjs.dev
 
 **shadcn/ui:**
+
 - https://ui.shadcn.com
 
 **Tailwind CSS:**
+
 - https://tailwindcss.com/docs
 
 ---

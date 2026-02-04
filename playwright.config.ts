@@ -30,6 +30,28 @@ export default defineConfig({
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
     },
+    // iPhone device testing as specified in PR-mobile-responsive.md
+    {
+      name: 'iPhone SE',
+      use: {
+        ...devices['iPhone SE'],
+        viewport: { width: 375, height: 667 },
+      },
+    },
+    {
+      name: 'iPhone 12',
+      use: {
+        ...devices['iPhone 12'],
+        viewport: { width: 390, height: 844 },
+      },
+    },
+    {
+      name: 'iPhone 14 Pro Max',
+      use: {
+        ...devices['iPhone 14 Pro Max'],
+        viewport: { width: 428, height: 926 },
+      },
+    },
   ],
   webServer: {
     command: 'pnpm dev',
