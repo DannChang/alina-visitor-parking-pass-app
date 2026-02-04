@@ -91,4 +91,33 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400;
   }
+
+  /* Mobile-first utilities */
+
+  /* Safe area padding for notched devices (iPhone X+) */
+  .safe-area-inset {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Touch-friendly tap handling */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent pull-to-refresh interference */
+  .no-overscroll {
+    overscroll-behavior: contain;
+  }
+
+  /* Mobile horizontal scroll container */
+  .mobile-scroll-container {
+    @apply -mx-4 px-4 overflow-x-auto md:mx-0 md:px-0;
+  }
 }

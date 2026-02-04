@@ -198,7 +198,7 @@ export default function RegisterPage({
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button onClick={() => router.push('/')} className="w-full">
+            <Button onClick={() => router.push('/')} className="w-full min-h-[48px]">
               Go Home
             </Button>
           </CardFooter>
@@ -268,7 +268,7 @@ export default function RegisterPage({
                 setError(null);
               }}
               variant="outline"
-              className="w-full"
+              className="w-full min-h-[48px]"
             >
               Register Another Vehicle
             </Button>
@@ -306,6 +306,7 @@ export default function RegisterPage({
                 id="visitorName"
                 placeholder="John Smith"
                 disabled={isSubmitting}
+                className="h-11 md:h-10 text-base md:text-sm"
                 {...register('visitorName')}
               />
               {errors.visitorName && (
@@ -318,7 +319,7 @@ export default function RegisterPage({
               <Input
                 id="licensePlate"
                 placeholder="ABC1234"
-                className="uppercase"
+                className="uppercase h-11 md:h-10 text-base md:text-sm"
                 disabled={isSubmitting}
                 {...register('licensePlate', {
                   setValueAs: (v) => v?.toUpperCase().replace(/[^A-Z0-9]/g, ''),
@@ -335,7 +336,7 @@ export default function RegisterPage({
                 onValueChange={(value) => setValue('unitNumber', value)}
                 disabled={isSubmitting}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 md:h-10">
                   <SelectValue placeholder="Select a unit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -354,7 +355,7 @@ export default function RegisterPage({
 
             <div className="space-y-2">
               <Label htmlFor="duration">Parking Duration *</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 gap-2 xs:grid-cols-3 md:grid-cols-5">
                 {DURATION_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
@@ -363,7 +364,7 @@ export default function RegisterPage({
                     size="sm"
                     onClick={() => setValue('duration', option.value)}
                     disabled={isSubmitting}
-                    className="text-xs"
+                    className="text-xs min-h-[44px] touch-manipulation"
                   >
                     {option.label}
                   </Button>
@@ -371,7 +372,7 @@ export default function RegisterPage({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="visitorPhone">Phone (optional)</Label>
                 <Input
@@ -379,6 +380,7 @@ export default function RegisterPage({
                   type="tel"
                   placeholder="555-123-4567"
                   disabled={isSubmitting}
+                  className="h-11 md:h-10 text-base md:text-sm"
                   {...register('visitorPhone')}
                 />
               </div>
@@ -389,6 +391,7 @@ export default function RegisterPage({
                   type="email"
                   placeholder="you@email.com"
                   disabled={isSubmitting}
+                  className="h-11 md:h-10 text-base md:text-sm"
                   {...register('visitorEmail')}
                 />
                 {errors.visitorEmail && (
@@ -397,13 +400,14 @@ export default function RegisterPage({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-3 xs:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="vehicleMake">Make</Label>
                 <Input
                   id="vehicleMake"
                   placeholder="Toyota"
                   disabled={isSubmitting}
+                  className="h-11 md:h-10 text-base md:text-sm"
                   {...register('vehicleMake')}
                 />
               </div>
@@ -413,6 +417,7 @@ export default function RegisterPage({
                   id="vehicleModel"
                   placeholder="Camry"
                   disabled={isSubmitting}
+                  className="h-11 md:h-10 text-base md:text-sm"
                   {...register('vehicleModel')}
                 />
               </div>
@@ -422,6 +427,7 @@ export default function RegisterPage({
                   id="vehicleColor"
                   placeholder="Blue"
                   disabled={isSubmitting}
+                  className="h-11 md:h-10 text-base md:text-sm"
                   {...register('vehicleColor')}
                 />
               </div>
@@ -429,7 +435,7 @@ export default function RegisterPage({
           </CardContent>
 
           <CardFooter className="flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full min-h-[48px] text-base" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

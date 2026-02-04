@@ -13,12 +13,39 @@ import {
 import { Permission, hasAnyPermission } from '@/lib/authorization';
 
 /**
+ * Icon name type for navigation items.
+ */
+export type NavIconName =
+  | 'LayoutDashboard'
+  | 'Car'
+  | 'AlertTriangle'
+  | 'Home'
+  | 'BarChart3'
+  | 'Activity'
+  | 'Users'
+  | 'Settings';
+
+/**
+ * Map of icon names to components (for use in client components).
+ */
+export const NAV_ICONS: Record<NavIconName, LucideIcon> = {
+  LayoutDashboard,
+  Car,
+  AlertTriangle,
+  Home,
+  BarChart3,
+  Activity,
+  Users,
+  Settings,
+};
+
+/**
  * Navigation item definition.
  */
 export interface NavItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  iconName: NavIconName;
   permissions: Permission[]; // Empty array = all authenticated users
 }
 
@@ -30,49 +57,49 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/dashboard',
     label: 'Overview',
-    icon: LayoutDashboard,
+    iconName: 'LayoutDashboard',
     permissions: [], // All authenticated users
   },
   {
     href: '/dashboard/passes',
     label: 'Active Passes',
-    icon: Car,
+    iconName: 'Car',
     permissions: ['passes:view_all', 'passes:view_own'],
   },
   {
     href: '/dashboard/violations',
     label: 'Violations',
-    icon: AlertTriangle,
+    iconName: 'AlertTriangle',
     permissions: ['violations:view'],
   },
   {
     href: '/dashboard/units',
     label: 'Units',
-    icon: Home,
+    iconName: 'Home',
     permissions: ['units:view'],
   },
   {
     href: '/dashboard/analytics',
     label: 'Analytics',
-    icon: BarChart3,
+    iconName: 'BarChart3',
     permissions: ['analytics:view'],
   },
   {
     href: '/dashboard/health',
     label: 'System Health',
-    icon: Activity,
+    iconName: 'Activity',
     permissions: ['health:view'],
   },
   {
     href: '/dashboard/users',
     label: 'Users',
-    icon: Users,
+    iconName: 'Users',
     permissions: ['users:view'],
   },
   {
     href: '/dashboard/settings',
     label: 'Settings',
-    icon: Settings,
+    iconName: 'Settings',
     permissions: ['settings:view'],
   },
 ];

@@ -96,6 +96,7 @@ function LoginForm() {
                 placeholder="you@example.com"
                 autoComplete="email"
                 disabled={isLoading}
+                className="h-11 md:h-10 text-base md:text-sm"
                 {...register('email')}
               />
               {errors.email && (
@@ -111,6 +112,7 @@ function LoginForm() {
                 placeholder="Enter your password"
                 autoComplete="current-password"
                 disabled={isLoading}
+                className="h-11 md:h-10 text-base md:text-sm"
                 {...register('password')}
               />
               {errors.password && (
@@ -120,7 +122,7 @@ function LoginForm() {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full min-h-[48px] text-base" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

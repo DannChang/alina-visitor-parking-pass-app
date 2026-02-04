@@ -120,7 +120,7 @@ async function getAnalytics() {
     ),
     // Peak registration hours
     prisma.$queryRaw`
-      SELECT EXTRACT(HOUR FROM "createdAt") as hour, COUNT(*)::int as count
+      SELECT EXTRACT(HOUR FROM "createdAt")::int as hour, COUNT(*)::int as count
       FROM parking_passes
       WHERE "deletedAt" IS NULL AND "createdAt" >= ${monthAgo}
       GROUP BY hour
@@ -200,13 +200,13 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+        <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
         <div className="flex items-baseline space-x-2">
-          <span className="text-2xl font-bold">{value}</span>
+          <span className="text-xl md:text-2xl font-bold">{value}</span>
           {change !== undefined && (
             <span className={`flex items-center text-xs ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {change >= 0 ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
@@ -214,7 +214,7 @@ function StatCard({
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-xs text-muted-foreground truncate">{description}</p>
       </CardContent>
     </Card>
   );
@@ -244,20 +244,20 @@ function SimpleBarChart({ data, label }: { data: { date: string; count: number }
 function AnalyticsLoading() {
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-24" />
+            <CardHeader className="pb-2 p-4 md:p-6 md:pb-2">
+              <Skeleton className="h-4 w-16 md:w-24" />
             </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="mt-1 h-3 w-32" />
+            <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+              <Skeleton className="h-7 md:h-8 w-12 md:w-16" />
+              <Skeleton className="mt-1 h-3 w-20 md:w-32" />
             </CardContent>
           </Card>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
             <Skeleton className="h-5 w-32" />
@@ -296,9 +296,9 @@ async function AnalyticsContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
         <StatCard
           title="This Month's Passes"
           value={analytics.passes.thisMonth}
@@ -328,7 +328,7 @@ async function AnalyticsContent() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Passes (Last 7 Days)</CardTitle>
@@ -350,7 +350,7 @@ async function AnalyticsContent() {
       </div>
 
       {/* Detailed Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Pass Durations</CardTitle>
@@ -456,13 +456,13 @@ export default async function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground">Parking system insights and trends</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Analytics</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Parking system insights and trends</p>
         </div>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="w-full md:w-auto min-h-[44px] md:min-h-0">
           <a href="/api/export?type=analytics" download>
             <Download className="mr-2 h-4 w-4" />
             Export Report

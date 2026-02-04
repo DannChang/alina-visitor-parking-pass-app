@@ -158,26 +158,26 @@ export default async function PassesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Parking Passes</h1>
-          <p className="text-muted-foreground">View and manage all parking passes</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Parking Passes</h1>
+          <p className="text-sm md:text-base text-muted-foreground">View and manage all parking passes</p>
         </div>
-        <div className="relative w-72">
+        <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search by plate or name..." className="pl-9" />
+          <Input placeholder="Search by plate or name..." className="pl-9 h-11 md:h-10 text-base md:text-sm" />
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>All Passes</CardTitle>
+        <CardHeader className="px-4 md:px-6">
+          <CardTitle className="text-lg md:text-xl">All Passes</CardTitle>
           <CardDescription>
             A list of all registered parking passes across all buildings
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 md:px-6">
           <Suspense fallback={<PassesLoading />}>
             <PassesTable />
           </Suspense>

@@ -201,30 +201,30 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">Manage system users and their permissions</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">User Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage system users and their permissions</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto min-h-[44px] md:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
           Add User
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        <div className="relative w-full md:flex-1 md:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by email or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-11 md:h-10 text-base md:text-sm"
           />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full md:w-[180px] h-11 md:h-10">
             <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
           <SelectContent>
@@ -239,13 +239,13 @@ export default function UsersPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
+        <CardHeader className="px-4 md:px-6">
+          <CardTitle className="text-lg md:text-xl">Users</CardTitle>
           <CardDescription>
             {users.length} user{users.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 md:px-6">
           {loading ? (
             <UsersLoading />
           ) : (
@@ -363,55 +363,47 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  Email
-                </Label>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="col-span-3"
+                  className="h-11 md:h-10 text-base md:text-sm"
                   required
                   disabled={!!editingUser}
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="col-span-3"
+                  className="h-11 md:h-10 text-base md:text-sm"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="password" className="text-right">
-                  Password
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="col-span-3"
+                  className="h-11 md:h-10 text-base md:text-sm"
                   placeholder={editingUser ? 'Leave blank to keep current' : 'Required'}
                   required={!editingUser}
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="role" className="text-right">
-                  Role
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value) => setFormData({ ...formData, role: value })}
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="h-11 md:h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -422,11 +414,9 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="isActive" className="text-right">
-                  Active
-                </Label>
-                <div className="col-span-3 flex items-center space-x-2">
+              <div className="flex items-center justify-between py-2">
+                <Label htmlFor="isActive">Active</Label>
+                <div className="flex items-center space-x-2">
                   <Switch
                     id="isActive"
                     checked={formData.isActive}
@@ -439,10 +429,10 @@ export default function UsersPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="min-h-[44px] md:min-h-0">
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" className="min-h-[44px] md:min-h-0">
                 {editingUser ? 'Save Changes' : 'Create User'}
               </Button>
             </DialogFooter>
