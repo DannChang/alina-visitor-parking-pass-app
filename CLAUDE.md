@@ -102,10 +102,18 @@ Mobile-first enforcement tool for security personnel to scan and verify vehicles
 
 ### OCR Features
 
-- **Hybrid processing**: Server-side primary, client-side fallback (Tesseract.js both)
+- **Client-side by default**: Uses Tesseract.js in browser for reliability (no server dependency)
+- **Server-side opt-in**: Set `preferServer: true` in options to use server processing with client fallback
 - **Offline support**: IndexedDB caching for lookups when network unavailable
 - **License plate patterns**: Supports common US formats (ABC123, 123ABC, etc.)
 - **Confidence scoring**: Reports OCR confidence percentage
+
+### CSP Configuration
+
+Tesseract.js requires specific Content Security Policy settings in `next.config.js`:
+- `script-src`: Must include `blob:` and `https://cdn.jsdelivr.net` for worker scripts
+- `worker-src`: Must include `blob:` for web workers
+- `connect-src`: Must include `blob:` and `https://cdn.jsdelivr.net` for WASM/data fetches
 
 ### Access Control
 
