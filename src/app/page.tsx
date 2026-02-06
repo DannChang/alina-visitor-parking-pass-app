@@ -1,4 +1,51 @@
-export default function HomePage() {
+import { redirect } from 'next/navigation';
+import { auth, signOut } from '@/lib/auth';
+import { hasPermission } from '@/lib/authorization';
+import { getNavItemsForRole } from '@/lib/navigation';
+import { PatrolDashboard } from '@/components/patrol/patrol-dashboard';
+
+export default async function HomePage() {
+  const session = await auth();
+
+  // If user is logged in and has patrol permissions, show patrol dashboard
+  if (session?.user) {
+    const canPatrol = hasPermission(session.user.role, 'passes:view_all');
+
+    if (canPatrol) {
+      const navItems = getNavItemsForRole(session.user.role);
+      const initials = session.user.name
+        ? session.user.name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+        : session.user.email?.charAt(0).toUpperCase() || 'U';
+
+      // Server action for sign out
+      async function handleSignOut() {
+        'use server';
+        await signOut({ redirectTo: '/login' });
+      }
+
+      return (
+        <PatrolDashboard
+          user={{
+            name: session.user.name,
+            email: session.user.email,
+            role: session.user.role,
+          }}
+          initials={initials}
+          navItems={navItems}
+          signOutAction={handleSignOut}
+        />
+      );
+    }
+
+    // Logged in but no patrol permission - redirect to dashboard
+    redirect('/dashboard');
+  }
+
+  // Not logged in - show landing page
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
       <div className="max-w-2xl text-center">
@@ -7,90 +54,33 @@ export default function HomePage() {
             Alina Visitor Parking
           </h1>
           <p className="text-xl text-slate-600">
-            Welcome to the visitor parking management system
+            Mission-critical parking management for healthcare facilities
           </p>
         </div>
 
         <div className="rounded-lg bg-white p-8 shadow-lg">
           <h2 className="mb-6 text-2xl font-semibold text-slate-800">
-            🏥 System Status
+            Welcome
           </h2>
 
-          <div className="space-y-4 text-left">
-            <div className="flex items-center justify-between rounded-md bg-green-50 p-4">
-              <span className="font-medium text-green-900">Foundation</span>
-              <span className="rounded-full bg-green-500 px-3 py-1 text-sm font-semibold text-white">
-                ✓ Complete
-              </span>
-            </div>
+          <div className="space-y-4">
+            <p className="text-slate-600">
+              Scan a QR code in the parking lot to register your vehicle, or log in to access the management dashboard.
+            </p>
 
-            <div className="flex items-center justify-between rounded-md bg-yellow-50 p-4">
-              <span className="font-medium text-yellow-900">Database Setup</span>
-              <span className="rounded-full bg-yellow-500 px-3 py-1 text-sm font-semibold text-white">
-                ⚠ Required
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-md bg-gray-50 p-4">
-              <span className="font-medium text-gray-900">Authentication</span>
-              <span className="rounded-full bg-gray-400 px-3 py-1 text-sm font-semibold text-white">
-                ○ Pending
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-8 space-y-3">
-            <div className="rounded-md bg-blue-50 p-4 text-left">
-              <h3 className="mb-2 font-semibold text-blue-900">Next Steps:</h3>
-              <ol className="list-inside list-decimal space-y-1 text-sm text-blue-800">
-                <li>Update DATABASE_URL in .env.local</li>
-                <li>Run: pnpm db:generate</li>
-                <li>Run: pnpm db:push</li>
-                <li>Run: pnpm db:seed</li>
-              </ol>
-            </div>
-
-            <div className="rounded-md border-2 border-slate-200 p-4 text-left">
-              <h3 className="mb-2 font-semibold text-slate-900">Quick Links:</h3>
-              <ul className="space-y-1 text-sm text-slate-600">
-                <li>
-                  📖{' '}
-                  <a
-                    href="/README.md"
-                    className="text-blue-600 hover:underline"
-                    target="_blank"
-                  >
-                    Project Overview
-                  </a>
-                </li>
-                <li>
-                  🚀{' '}
-                  <a
-                    href="/SETUP.md"
-                    className="text-blue-600 hover:underline"
-                    target="_blank"
-                  >
-                    Setup Guide
-                  </a>
-                </li>
-                <li>
-                  📊{' '}
-                  <a
-                    href="/IMPLEMENTATION_STATUS.md"
-                    className="text-blue-600 hover:underline"
-                    target="_blank"
-                  >
-                    Implementation Status
-                  </a>
-                </li>
-              </ul>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <a
+                href="/login"
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
+              >
+                Staff Login
+              </a>
             </div>
           </div>
         </div>
 
         <div className="mt-8 text-sm text-slate-500">
-          <p>Mission-critical parking management for healthcare facilities</p>
-          <p className="mt-2">Built with Next.js 15 • TypeScript • Prisma • Tailwind CSS</p>
+          <p>Built with Next.js 15 • TypeScript • Prisma • Tailwind CSS</p>
         </div>
       </div>
     </main>

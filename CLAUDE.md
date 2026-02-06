@@ -46,6 +46,8 @@ pnpm vitest run src/lib/utils/__tests__/license-plate.test.ts
 - **Validation Service** (`src/services/validation-service.ts`) - Core business logic for pass validation. Enforces blacklist checks, max vehicles per unit, consecutive hours limits, cooldown periods, and operating hours.
 - **Notification Service** (`src/services/notification-service.ts`) - Email notifications via Resend
 - **Export Service** (`src/services/export-service.ts`) - CSV/PDF report generation
+- **OCR Service** (`src/services/ocr-service.ts`) - License plate recognition with hybrid approach (server-side primary, client-side offline fallback)
+- **Offline Cache Service** (`src/services/offline-cache-service.ts`) - IndexedDB-based caching for offline patrol mode
 
 ### Authorization System
 
@@ -75,6 +77,47 @@ Business rules are enforced per-building via `ParkingRule` model:
 - `cooldownHours` - Required wait time between passes for same vehicle (default: 2)
 - `allowedDurations` - Available pass durations in hours (default: [2, 4, 8, 12, 24])
 - Emergency override bypasses most restrictions when enabled
+
+## Patrol Mode (License Plate OCR)
+
+Mobile-first enforcement tool for security personnel to scan and verify vehicles.
+
+### Components
+
+- **Patrol Dashboard** (`src/components/patrol/patrol-dashboard.tsx`) - Main scanner UI at `/` for authenticated users
+- **Camera Capture** (`src/components/patrol/camera-capture.tsx`) - Web camera integration with plate guides
+- **Scan Result Card** (`src/components/patrol/scan-result-card.tsx`) - Color-coded status display (green=valid, red=violation, yellow=expiring)
+- **Quick Violation Dialog** (`src/components/patrol/quick-violation-dialog.tsx`) - One-tap violation logging with photo evidence
+- **Patrol FAB** (`src/components/patrol/patrol-fab.tsx`) - Floating action button for quick access
+
+### Hooks
+
+- **useCamera** (`src/hooks/use-camera.ts`) - Camera stream management, capture, permissions
+- **usePatrolScanner** (`src/hooks/use-patrol-scanner.ts`) - Full scan workflow (OCR → lookup → display)
+
+### API Endpoints
+
+- `POST /api/ocr/recognize` - Server-side OCR processing using Tesseract.js
+- `POST /api/patrol/lookup` - Full vehicle lookup (passes, blacklist, violations, history)
+
+### OCR Features
+
+- **Client-side by default**: Uses Tesseract.js in browser for reliability (no server dependency)
+- **Server-side opt-in**: Set `preferServer: true` in options to use server processing with client fallback
+- **Offline support**: IndexedDB caching for lookups when network unavailable
+- **License plate patterns**: Supports common US formats (ABC123, 123ABC, etc.)
+- **Confidence scoring**: Reports OCR confidence percentage
+
+### CSP Configuration
+
+Tesseract.js requires specific Content Security Policy settings in `next.config.js`:
+- `script-src`: Must include `blob:` and `https://cdn.jsdelivr.net` for worker scripts
+- `worker-src`: Must include `blob:` for web workers
+- `connect-src`: Must include `blob:` and `https://cdn.jsdelivr.net` for WASM/data fetches
+
+### Access Control
+
+Patrol mode available to: `SUPER_ADMIN`, `MANAGER`, `SECURITY` roles (requires `passes:view_all` permission)
 
 ## Testing
 
