@@ -3,11 +3,20 @@ import { prisma } from '@/lib/prisma';
 
 // POST /api/passes/[id]/exit - Record vehicle exit
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const body = await request.json();
+    const { confirmationCode } = body;
+
+    if (!confirmationCode) {
+      return NextResponse.json(
+        { error: 'Confirmation code required' },
+        { status: 401 }
+      );
+    }
 
     const pass = await prisma.parkingPass.findUnique({
       where: { id },
@@ -15,6 +24,14 @@ export async function POST(
 
     if (!pass) {
       return NextResponse.json({ error: 'Pass not found' }, { status: 404 });
+    }
+
+    // Verify confirmation code matches this pass
+    if (pass.confirmationCode !== confirmationCode) {
+      return NextResponse.json(
+        { error: 'Invalid confirmation code' },
+        { status: 403 }
+      );
     }
 
     if (!pass.isInOutEnabled) {
