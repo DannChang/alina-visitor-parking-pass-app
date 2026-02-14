@@ -267,6 +267,46 @@ export function getTimestamp(): Date {
 }
 
 /**
+ * Calculate the number of consecutive calendar days a vehicle has had passes.
+ * Used to enforce maxConsecutiveDays rule.
+ */
+export function calculateConsecutiveDays(
+  passes: Array<{ startTime: Date }>,
+  now: Date = new Date()
+): number {
+  if (passes.length === 0) return 0;
+
+  // Get unique calendar dates (in local timezone)
+  const dateSet = new Set<string>();
+  for (const pass of passes) {
+    dateSet.add(pass.startTime.toISOString().slice(0, 10));
+  }
+  // Add today
+  dateSet.add(now.toISOString().slice(0, 10));
+
+  // Sort dates descending
+  const dates = [...dateSet].sort().reverse();
+
+  // Count consecutive days from today backwards
+  let consecutiveDays = 0;
+  const today = now.toISOString().slice(0, 10);
+
+  for (let i = 0; i < dates.length; i++) {
+    const expected = new Date(today);
+    expected.setDate(expected.getDate() - i);
+    const expectedStr = expected.toISOString().slice(0, 10);
+
+    if (dates[i] === expectedStr) {
+      consecutiveDays++;
+    } else {
+      break;
+    }
+  }
+
+  return consecutiveDays;
+}
+
+/**
  * Check if two date ranges overlap
  */
 export function doDateRangesOverlap(

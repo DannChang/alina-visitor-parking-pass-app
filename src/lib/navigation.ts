@@ -8,6 +8,7 @@ import {
   Home,
   Activity,
   BarChart3,
+  ClipboardList,
   LucideIcon,
 } from 'lucide-react';
 import { Permission, hasAnyPermission } from '@/lib/authorization';
@@ -23,7 +24,8 @@ export type NavIconName =
   | 'BarChart3'
   | 'Activity'
   | 'Users'
-  | 'Settings';
+  | 'Settings'
+  | 'ClipboardList';
 
 /**
  * Map of icon names to components (for use in client components).
@@ -37,6 +39,7 @@ export const NAV_ICONS: Record<NavIconName, LucideIcon> = {
   Activity,
   Users,
   Settings,
+  ClipboardList,
 };
 
 /**
@@ -71,6 +74,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Violations',
     iconName: 'AlertTriangle',
     permissions: ['violations:view'],
+  },
+  {
+    href: '/dashboard/patrol-log',
+    label: 'Patrol Log',
+    iconName: 'ClipboardList',
+    permissions: ['passes:view_all'],
   },
   {
     href: '/dashboard/units',

@@ -1,7 +1,7 @@
 {
   "name": "alina-visitor-parking-pass-app",
   "version": "1.0.0",
-  "description": "Mission-critical parking pass management system for Alina Hospital",
+  "description": "Mission-critical parking pass management system for residential facilities",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -63,6 +63,7 @@
     "nanoid": "^5.0.9",
     "next": "^15.5.11",
     "next-auth": "^5.0.0-beta.25",
+    "next-intl": "^4.8.2",
     "next-themes": "^0.4.6",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",

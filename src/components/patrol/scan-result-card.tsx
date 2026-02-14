@@ -13,6 +13,8 @@ import {
   Building,
   AlertOctagon,
   History,
+  Timer,
+  Home,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +88,22 @@ const STATUS_CONFIG: Record<
     textColor: 'text-red-900',
     iconColor: 'text-red-700',
     label: 'BLACKLISTED',
+  },
+  IN_GRACE_PERIOD: {
+    icon: Timer,
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-500',
+    textColor: 'text-amber-900',
+    iconColor: 'text-amber-600',
+    label: 'In Grace Period',
+  },
+  RESIDENT_IN_VISITOR: {
+    icon: Home,
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-500',
+    textColor: 'text-purple-900',
+    iconColor: 'text-purple-600',
+    label: 'Resident Vehicle',
   },
 };
 

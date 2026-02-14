@@ -71,6 +71,7 @@ export async function middleware(request: NextRequest) {
     '/',
     '/login',
     '/register',
+    '/resident/login',
     '/api/health',
     '/api/passes/validate',
   ];
@@ -87,6 +88,8 @@ export async function middleware(request: NextRequest) {
     '/api/passes',
     '/api/auth',
     '/api/units',
+    '/api/buildings',
+    '/api/resident/auth',
   ];
   const isPublicApi = publicApiRoutes.some((route) => pathname.startsWith(route));
 
@@ -97,6 +100,15 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     return NextResponse.next();
+  }
+
+  // Resident routes require authentication
+  if (pathname.startsWith('/resident') && pathname !== '/resident/login') {
+    if (!isLoggedIn) {
+      const loginUrl = new URL('/resident/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   // Dashboard routes require authentication AND authorization
