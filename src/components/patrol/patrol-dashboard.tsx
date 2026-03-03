@@ -239,6 +239,36 @@ export function PatrolDashboard({
         {/* Camera */}
         <CameraCapture onCapture={handleCapture} isProcessing={isProcessing} />
 
+        {/* Manual Plate Entry - always visible in idle state */}
+        {scanState === 'idle' && (
+          <Card>
+            <CardContent className="pt-5 pb-4">
+              <form onSubmit={handleManualSubmit} className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Keyboard className="h-4 w-4" />
+                  Manual Plate Lookup
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. ABC 1234"
+                    value={manualPlate}
+                    onChange={(e) => setManualPlate(e.target.value.toUpperCase())}
+                    className="flex-1 font-mono text-lg tracking-wider h-12"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!manualPlate.trim() || isProcessing}
+                    className="h-12 px-5"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Lookup
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
         {/* OCR Result Indicator */}
         {ocrResult && (
           <Card className="bg-white">

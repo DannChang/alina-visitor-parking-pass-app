@@ -31,7 +31,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const rawCallbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  // Prevent redirect loops — if callbackUrl points back to login, go to dashboard
+  const callbackUrl = rawCallbackUrl.includes('/login') ? '/dashboard' : rawCallbackUrl;
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,7 +50,7 @@ function LoginForm() {
     setError(null);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn('staff-credentials', {
         email: data.email,
         password: data.password,
         redirect: false,

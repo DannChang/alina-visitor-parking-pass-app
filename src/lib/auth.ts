@@ -192,7 +192,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // signOut receives either { session } or { token } depending on strategy
       if ('token' in message && message.token?.id) {
         const userId = message.token.id as string;
-        await prisma.auditLog.create({
+        // Fire-and-forget: don't await to avoid connection closed errors during sign-out
+        prisma.auditLog.create({
           data: {
             action: 'LOGOUT',
             entityType: 'User',
@@ -200,7 +201,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             userId: userId,
           },
         }).catch(() => {
-          // Resident users may not have a User record, skip audit log
+          // Connection may be closed or resident users may not have a User record
         });
       }
     },
