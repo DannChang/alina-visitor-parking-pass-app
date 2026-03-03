@@ -262,6 +262,11 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
+  // Residents don't need the admin overview — send them to their passes
+  if (session.user.role === 'RESIDENT') {
+    redirect('/dashboard/passes');
+  }
+
   return (
     <div className="space-y-6 md:space-y-8">
       <div>
