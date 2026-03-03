@@ -46,6 +46,14 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
   const [buildingSlug, setBuildingSlug] = useState('');
   const [unitNumber, setUnitNumber] = useState('');
 
+  // Resident: load building/unit from session
+  useEffect(() => {
+    if (!isResident || !session) return;
+    const s = session as unknown as Record<string, string>;
+    if (s.buildingSlug) setBuildingSlug(s.buildingSlug);
+    if (s.unitNumber) setUnitNumber(s.unitNumber);
+  }, [isResident, session]);
+
   // Building search for staff
   useEffect(() => {
     if (isResident || buildingSearch.length < 2) {
@@ -72,10 +80,13 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
     setVisitorPhone('');
     setDuration(2);
     setError(null);
-    setBuildingSearch('');
-    setBuildings([]);
-    setBuildingSlug('');
-    setUnitNumber('');
+    // Only reset building/unit for staff — residents keep their auto-filled values
+    if (!isResident) {
+      setBuildingSearch('');
+      setBuildings([]);
+      setBuildingSlug('');
+      setUnitNumber('');
+    }
   };
 
   const handleOpenChange = (value: boolean) => {
@@ -93,8 +104,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
       return;
     }
 
-    if (!isResident && (!buildingSlug || !unitNumber.trim())) {
-      setError('Building and unit number are required');
+    if (!buildingSlug || !unitNumber.trim()) {
+      setError(isResident ? 'Unable to load your unit info. Please refresh and try again.' : 'Building and unit number are required');
       return;
     }
 
@@ -105,55 +116,32 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
       const normalizedPlate = licensePlate.toUpperCase().replace(/[^A-Z0-9]/g, '');
       const phone = visitorPhone.trim();
 
-      if (isResident) {
-        // Resident: POST to /api/resident/passes
-        const body: Record<string, string | number> = {
-          licensePlate: normalizedPlate,
-          visitorName: visitorName.trim(),
-          duration,
-        };
-        if (phone) {
-          body.visitorPhone = phone;
-        }
+      // Both residents and staff use /api/passes
+      // Residents have buildingSlug/unitNumber auto-filled from their session
+      const body: Record<string, string | number> = {
+        licensePlate: normalizedPlate,
+        visitorName: visitorName.trim(),
+        duration,
+        buildingSlug,
+        unitNumber: unitNumber.trim(),
+      };
+      if (phone) {
+        body.visitorPhone = phone;
+      }
 
-        const res = await fetch('/api/resident/passes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
+      const res = await fetch('/api/passes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-        if (!res.ok) {
-          const data = await res.json();
-          setError(data.error || 'Failed to create pass');
-          return;
-        }
-      } else {
-        // Staff: POST to /api/passes
-        const body: Record<string, string | number> = {
-          licensePlate: normalizedPlate,
-          visitorName: visitorName.trim(),
-          duration,
-          buildingSlug,
-          unitNumber: unitNumber.trim(),
-        };
-        if (phone) {
-          body.visitorPhone = phone;
-        }
-
-        const res = await fetch('/api/passes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          const errorMessage = data.errors?.length
-            ? data.errors.join('. ')
-            : data.error || 'Failed to create pass';
-          setError(errorMessage);
-          return;
-        }
+      if (!res.ok) {
+        const data = await res.json();
+        const errorMessage = data.errors?.length
+          ? data.errors.join('. ')
+          : data.error || 'Failed to create pass';
+        setError(errorMessage);
+        return;
       }
 
       resetForm();

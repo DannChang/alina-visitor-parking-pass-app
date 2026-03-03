@@ -144,6 +144,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           loginType: 'resident' as const,
           unitId: unit.id,
           residentId: resident.id,
+          buildingSlug: unit.building.slug,
+          unitNumber: unit.unitNumber,
         };
       },
     }),
@@ -156,9 +158,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const loginType = (user as Record<string, unknown>).loginType as string | undefined;
         const unitId = (user as Record<string, unknown>).unitId as string | undefined;
         const residentId = (user as Record<string, unknown>).residentId as string | undefined;
+        const buildingSlug = (user as Record<string, unknown>).buildingSlug as string | undefined;
+        const unitNumber = (user as Record<string, unknown>).unitNumber as string | undefined;
         if (loginType !== undefined) token.loginType = loginType;
         if (unitId !== undefined) token.unitId = unitId;
         if (residentId !== undefined) token.residentId = residentId;
+        if (buildingSlug !== undefined) token.buildingSlug = buildingSlug;
+        if (unitNumber !== undefined) token.unitNumber = unitNumber;
       }
       return token;
     },
@@ -169,6 +175,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.loginType !== undefined) (session as unknown as Record<string, unknown>).loginType = token.loginType;
         if (token.unitId !== undefined) (session as unknown as Record<string, unknown>).unitId = token.unitId;
         if (token.residentId !== undefined) (session as unknown as Record<string, unknown>).residentId = token.residentId;
+        if (token.buildingSlug !== undefined) (session as unknown as Record<string, unknown>).buildingSlug = token.buildingSlug;
+        if (token.unitNumber !== undefined) (session as unknown as Record<string, unknown>).unitNumber = token.unitNumber;
       }
       return session;
     },
@@ -215,6 +223,8 @@ declare module 'next-auth' {
     loginType?: 'staff' | 'resident';
     unitId?: string;
     residentId?: string;
+    buildingSlug?: string;
+    unitNumber?: string;
   }
 
   interface Session {
@@ -228,6 +238,8 @@ declare module 'next-auth' {
     loginType?: 'staff' | 'resident';
     unitId?: string;
     residentId?: string;
+    buildingSlug?: string;
+    unitNumber?: string;
   }
 }
 
@@ -238,5 +250,7 @@ declare module 'next-auth/jwt' {
     loginType?: string;
     unitId?: string;
     residentId?: string;
+    buildingSlug?: string;
+    unitNumber?: string;
   }
 }
