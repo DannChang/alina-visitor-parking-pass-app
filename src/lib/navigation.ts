@@ -61,7 +61,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard',
     label: 'Overview',
     iconName: 'LayoutDashboard',
-    permissions: [], // All authenticated users
+    permissions: ['passes:view_all'], // Staff/security only — residents go straight to passes
   },
   {
     href: '/dashboard/passes',
