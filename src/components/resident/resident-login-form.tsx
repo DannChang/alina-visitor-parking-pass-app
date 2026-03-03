@@ -66,7 +66,7 @@ export function ResidentLoginForm() {
       setError('Invalid credentials. Please check your building, unit, and password.');
       setIsSubmitting(false);
     } else {
-      router.push('/resident/passes');
+      router.push('/dashboard/passes');
     }
   };
 
