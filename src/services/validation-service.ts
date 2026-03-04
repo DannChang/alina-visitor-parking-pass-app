@@ -8,6 +8,7 @@ import prisma from '@/lib/prisma';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import {
   calculateConsecutiveHours,
+  calculateConsecutiveDays,
   isCooldownPeriodOver,
   getHoursUntilCooldownEnds,
   isWithinOperatingHours,
@@ -144,7 +145,27 @@ export async function validatePassRequest(
       }
     }
 
-    // 5. DURATION VALIDATION
+    // 5. CONSECUTIVE DAY LIMIT
+    if (recentPassesForPlate.length > 0) {
+      // Fetch passes from a wider window for day-level counting
+      const passesForDayCount = await fetchPassesForDayCount(data.licensePlate, rules.maxConsecutiveDays + 1);
+      const consecutiveDays = calculateConsecutiveDays(passesForDayCount);
+
+      if (consecutiveDays >= rules.maxConsecutiveDays) {
+        errors.push({
+          code: ERROR_CODES.MAX_CONSECUTIVE_DAYS,
+          message: `Vehicle has parked ${consecutiveDays} consecutive day${consecutiveDays !== 1 ? 's' : ''}. Maximum ${rules.maxConsecutiveDays} consecutive days allowed. Must wait ${rules.consecutiveDayCooldownHours} hours.`,
+          field: 'licensePlate',
+          metadata: {
+            consecutiveDays,
+            maxAllowed: rules.maxConsecutiveDays,
+            cooldownHours: rules.consecutiveDayCooldownHours,
+          },
+        });
+      }
+    }
+
+    // 6. DURATION VALIDATION
     if (!rules.allowedDurations.includes(data.durationHours)) {
       errors.push({
         code: ERROR_CODES.INVALID_DURATION,
@@ -157,7 +178,7 @@ export async function validatePassRequest(
       });
     }
 
-    // 6. OPERATING HOURS CHECK
+    // 7. OPERATING HOURS CHECK
     if (!isWithinOperatingHours(rules.operatingStartHour, rules.operatingEndHour)) {
       const startHour = rules.operatingStartHour ?? 0;
       const endHour = rules.operatingEndHour ?? 24;
@@ -380,6 +401,12 @@ async function fetchBuildingRules(buildingId: string): Promise<ParkingRule> {
       maxExtensions: 1,
       extensionMaxHours: 4,
       requireUnitConfirmation: false,
+      maxConsecutiveDays: 3,
+      consecutiveDayCooldownHours: 24,
+      autoExtensionEnabled: true,
+      autoExtensionThresholdHours: 6,
+      autoExtensionDurationHours: 25,
+      inOutPrivileges: true,
       operatingStartHour: null,
       operatingEndHour: null,
       allowedDurations: [2, 4, 8, 12, 24],
@@ -442,6 +469,72 @@ async function fetchRecentPassesForPlate(licensePlate: string) {
       duration: true,
     },
   });
+}
+
+/**
+ * Fetch passes for day-level consecutive counting
+ */
+async function fetchPassesForDayCount(licensePlate: string, days: number) {
+  const normalizedPlate = normalizeLicensePlate(licensePlate);
+  const lookbackTime = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  return prisma.parkingPass.findMany({
+    where: {
+      vehicle: { normalizedPlate },
+      createdAt: { gte: lookbackTime },
+      deletedAt: null,
+    },
+    select: {
+      startTime: true,
+    },
+  });
+}
+
+/**
+ * Check if auto-extension is eligible for a pass
+ */
+export async function checkAutoExtensionEligibility(passId: string): Promise<{
+  eligible: boolean;
+  reason?: string;
+  extensionHours?: number;
+}> {
+  const pass = await prisma.parkingPass.findUnique({
+    where: { id: passId },
+    include: {
+      unit: {
+        include: {
+          building: {
+            include: { parkingRules: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!pass) return { eligible: false, reason: 'Pass not found' };
+  if (pass.status !== 'ACTIVE') return { eligible: false, reason: 'Pass is not active' };
+
+  const rules = pass.unit.building.parkingRules;
+  if (!rules || !rules.autoExtensionEnabled) {
+    return { eligible: false, reason: 'Auto-extension not enabled' };
+  }
+
+  const now = new Date();
+  const remainingMs = pass.endTime.getTime() - now.getTime();
+  const remainingHours = remainingMs / (1000 * 60 * 60);
+
+  if (remainingHours > rules.autoExtensionThresholdHours) {
+    return { eligible: false, reason: 'Too much time remaining' };
+  }
+
+  if (remainingHours <= 0) {
+    return { eligible: false, reason: 'Pass already expired' };
+  }
+
+  return {
+    eligible: true,
+    extensionHours: rules.autoExtensionDurationHours,
+  };
 }
 
 /**

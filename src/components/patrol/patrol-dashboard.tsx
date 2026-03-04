@@ -28,8 +28,8 @@ import {
 import { CameraCapture } from './camera-capture';
 import { ScanResultCard } from './scan-result-card';
 import { QuickViolationDialog } from './quick-violation-dialog';
+import { VehicleHistoryDialog } from './vehicle-history-dialog';
 import { usePatrolScanner } from '@/hooks/use-patrol-scanner';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { NAV_ICONS, type NavItem } from '@/lib/navigation';
 
@@ -65,6 +65,7 @@ export function PatrolDashboard({
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualPlate, setManualPlate] = useState('');
   const [showViolationDialog, setShowViolationDialog] = useState(false);
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleCapture = async (imageData: string) => {
@@ -84,7 +85,7 @@ export function PatrolDashboard({
   };
 
   const handleViewHistory = () => {
-    toast.info('History view coming soon');
+    setShowHistoryDialog(true);
   };
 
   const handleViolationSuccess = () => {
@@ -238,6 +239,36 @@ export function PatrolDashboard({
         {/* Camera */}
         <CameraCapture onCapture={handleCapture} isProcessing={isProcessing} />
 
+        {/* Manual Plate Entry - always visible in idle state */}
+        {scanState === 'idle' && (
+          <Card>
+            <CardContent className="pt-5 pb-4">
+              <form onSubmit={handleManualSubmit} className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Keyboard className="h-4 w-4" />
+                  Manual Plate Lookup
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. ABC 1234"
+                    value={manualPlate}
+                    onChange={(e) => setManualPlate(e.target.value.toUpperCase())}
+                    className="flex-1 font-mono text-lg tracking-wider h-12"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!manualPlate.trim() || isProcessing}
+                    className="h-12 px-5"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Lookup
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
         {/* OCR Result Indicator */}
         {ocrResult && (
           <Card className="bg-white">
@@ -346,6 +377,14 @@ export function PatrolDashboard({
           onSuccess={handleViolationSuccess}
         />
       )}
+
+      {/* Vehicle History Dialog */}
+      <VehicleHistoryDialog
+        open={showHistoryDialog}
+        onOpenChange={setShowHistoryDialog}
+        vehicleId={lookupResult?.vehicle?.id || null}
+        licensePlate={lookupResult?.vehicle?.licensePlate || ocrResult?.licensePlate || ''}
+      />
     </div>
   );
 }

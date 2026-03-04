@@ -33,6 +33,11 @@ export type Permission =
   | 'analytics:view'
   | 'reports:export'
   | 'audit_logs:view'
+  // Resident
+  | 'resident:manage_guests'
+  | 'resident:manage_vehicles'
+  | 'resident:send_pass'
+  | 'resident:view_activity'
   // System
   | 'health:view'
   | 'system:admin';
@@ -121,8 +126,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   RESIDENT: [
     'passes:view_own',
-    'passes:create', // For pre-registration
-    'passes:extend', // Own passes only - enforced at data level
+    'passes:create',
+    'passes:extend',
+    'resident:manage_guests',
+    'resident:manage_vehicles',
+    'resident:send_pass',
+    'resident:view_activity',
   ],
 };
 
@@ -139,6 +148,12 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/health': ['health:view'],
   '/dashboard/users': ['users:view'],
   '/dashboard/settings': ['settings:view'],
+  '/dashboard/patrol-log': ['passes:view_all'],
+  '/resident': ['resident:manage_guests'],
+  '/resident/passes': ['passes:view_own'],
+  '/resident/guests': ['resident:manage_guests'],
+  '/resident/activity': ['resident:view_activity'],
+  '/resident/settings': ['resident:manage_vehicles'],
 };
 
 /**

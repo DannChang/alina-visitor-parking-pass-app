@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { AlertTriangle, Search, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Search, CheckCircle2, ArrowUpCircle } from 'lucide-react';
 import { hasPermission } from '@/lib/authorization';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +76,7 @@ async function ViolationsTable() {
           <TableHead>Vehicle</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Severity</TableHead>
+          <TableHead>Escalation</TableHead>
           <TableHead>Location</TableHead>
           <TableHead>Logged By</TableHead>
           <TableHead>Status</TableHead>
@@ -85,7 +86,7 @@ async function ViolationsTable() {
       <TableBody>
         {violations.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center text-muted-foreground">
+            <TableCell colSpan={8} className="text-center text-muted-foreground">
               No violations found
             </TableCell>
           </TableRow>
@@ -114,6 +115,18 @@ async function ViolationsTable() {
                 <Badge variant={getSeverityVariant(violation.severity)}>
                   {violation.severity}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                {violation.escalationLevel !== 'NONE' ? (
+                  <div className="flex items-center space-x-1">
+                    <ArrowUpCircle className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm">
+                      {violation.escalationLevel.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-sm">None</span>
+                )}
               </TableCell>
               <TableCell>
                 {violation.location || (

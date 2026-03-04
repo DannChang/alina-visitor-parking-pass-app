@@ -11,6 +11,12 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+const residentLoginSchema = z.object({
+  buildingSlug: z.string().min(1),
+  unitNumber: z.string().min(1),
+  password: z.string().min(1),
+});
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
@@ -23,7 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   providers: [
     Credentials({
-      name: 'credentials',
+      id: 'staff-credentials',
+      name: 'Staff Login',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
@@ -86,6 +93,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           role: user.role,
           image: user.image,
+          loginType: 'staff' as const,
+        };
+      },
+    }),
+    Credentials({
+      id: 'resident-credentials',
+      name: 'Resident Login',
+      credentials: {
+        buildingSlug: { label: 'Building', type: 'text' },
+        unitNumber: { label: 'Unit Number', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        const parsed = residentLoginSchema.safeParse(credentials);
+        if (!parsed.success) return null;
+
+        const { buildingSlug, unitNumber, password } = parsed.data;
+
+        // Find building + unit
+        const unit = await prisma.unit.findFirst({
+          where: {
+            building: { slug: buildingSlug, isActive: true, deletedAt: null },
+            unitNumber,
+            isActive: true,
+            deletedAt: null,
+          },
+          include: {
+            building: true,
+            residents: {
+              where: { isPrimary: true, isActive: true, deletedAt: null },
+              take: 1,
+            },
+          },
+        });
+
+        if (!unit || unit.residents.length === 0) return null;
+
+        const resident = unit.residents[0]!;
+        if (!resident.passwordHash) return null;
+
+        const isValid = await bcrypt.compare(password, resident.passwordHash);
+        if (!isValid) return null;
+
+        return {
+          id: resident.id,
+          email: resident.email,
+          name: resident.name,
+          role: 'RESIDENT' as UserRole,
+          loginType: 'resident' as const,
+          unitId: unit.id,
+          residentId: resident.id,
+          buildingSlug: unit.building.slug,
+          unitNumber: unit.unitNumber,
         };
       },
     }),
@@ -95,6 +155,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user && user.id) {
         token.id = user.id;
         token.role = user.role as UserRole;
+        const loginType = (user as Record<string, unknown>).loginType as string | undefined;
+        const unitId = (user as Record<string, unknown>).unitId as string | undefined;
+        const residentId = (user as Record<string, unknown>).residentId as string | undefined;
+        const buildingSlug = (user as Record<string, unknown>).buildingSlug as string | undefined;
+        const unitNumber = (user as Record<string, unknown>).unitNumber as string | undefined;
+        if (loginType !== undefined) token.loginType = loginType;
+        if (unitId !== undefined) token.unitId = unitId;
+        if (residentId !== undefined) token.residentId = residentId;
+        if (buildingSlug !== undefined) token.buildingSlug = buildingSlug;
+        if (unitNumber !== undefined) token.unitNumber = unitNumber;
       }
       return token;
     },
@@ -102,6 +172,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        if (token.loginType !== undefined) (session as unknown as Record<string, unknown>).loginType = token.loginType;
+        if (token.unitId !== undefined) (session as unknown as Record<string, unknown>).unitId = token.unitId;
+        if (token.residentId !== undefined) (session as unknown as Record<string, unknown>).residentId = token.residentId;
+        if (token.buildingSlug !== undefined) (session as unknown as Record<string, unknown>).buildingSlug = token.buildingSlug;
+        if (token.unitNumber !== undefined) (session as unknown as Record<string, unknown>).unitNumber = token.unitNumber;
       }
       return session;
     },
@@ -116,6 +191,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             entityId: user.id,
             userId: user.id,
           },
+        }).catch(() => {
+          // Resident users may not have a User record, skip audit log
         });
       }
     },
@@ -123,13 +200,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // signOut receives either { session } or { token } depending on strategy
       if ('token' in message && message.token?.id) {
         const userId = message.token.id as string;
-        await prisma.auditLog.create({
+        // Fire-and-forget: don't await to avoid connection closed errors during sign-out
+        prisma.auditLog.create({
           data: {
             action: 'LOGOUT',
             entityType: 'User',
             entityId: userId,
             userId: userId,
           },
+        }).catch(() => {
+          // Connection may be closed or resident users may not have a User record
         });
       }
     },
@@ -140,6 +220,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 declare module 'next-auth' {
   interface User {
     role?: UserRole;
+    loginType?: 'staff' | 'resident';
+    unitId?: string;
+    residentId?: string;
+    buildingSlug?: string;
+    unitNumber?: string;
   }
 
   interface Session {
@@ -150,6 +235,11 @@ declare module 'next-auth' {
       image?: string | null;
       role: UserRole;
     };
+    loginType?: 'staff' | 'resident';
+    unitId?: string;
+    residentId?: string;
+    buildingSlug?: string;
+    unitNumber?: string;
   }
 }
 
@@ -157,5 +247,10 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
     role?: UserRole;
+    loginType?: string;
+    unitId?: string;
+    residentId?: string;
+    buildingSlug?: string;
+    unitNumber?: string;
   }
 }

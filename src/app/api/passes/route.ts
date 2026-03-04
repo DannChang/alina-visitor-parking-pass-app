@@ -44,6 +44,12 @@ export async function GET(request: NextRequest) {
     deletedAt: null,
   };
 
+  // Scope to resident's unit if they are a RESIDENT
+  const unitId = (session as unknown as Record<string, string>).unitId;
+  if (session.user.role === 'RESIDENT' && unitId) {
+    where.unitId = unitId;
+  }
+
   if (status) {
     where.status = status;
   }

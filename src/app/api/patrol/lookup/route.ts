@@ -12,9 +12,11 @@ export type VehicleStatus =
   | 'VALID' // Active pass exists
   | 'EXPIRED' // Pass recently expired
   | 'EXPIRING_SOON' // Pass expires within 30 minutes
+  | 'IN_GRACE_PERIOD' // Expired but within grace period
   | 'NOT_FOUND' // No vehicle record
   | 'UNREGISTERED' // Vehicle exists but no active pass
-  | 'BLACKLISTED'; // Vehicle is blacklisted
+  | 'BLACKLISTED' // Vehicle is blacklisted
+  | 'RESIDENT_IN_VISITOR'; // Resident vehicle in visitor parking
 
 export interface PassInfo {
   id: string;
@@ -167,13 +169,72 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     }
 
+    // Check if this is a resident vehicle in visitor parking
+    if (vehicle.isResidentVehicle) {
+      const result: PatrolLookupResult = {
+        status: 'RESIDENT_IN_VISITOR',
+        statusMessage: 'Resident vehicle detected in visitor parking area',
+        vehicle: {
+          id: vehicle.id,
+          licensePlate: vehicle.licensePlate,
+          make: vehicle.make,
+          model: vehicle.model,
+          color: vehicle.color,
+          isBlacklisted: vehicle.isBlacklisted,
+          blacklistReason: vehicle.blacklistReason,
+          violationCount: vehicle.violationCount,
+          riskScore: vehicle.riskScore,
+        },
+        activePass: null,
+        recentPasses: vehicle.parkingPasses.slice(0, 5).map((pass) => ({
+          id: pass.id,
+          status: pass.status,
+          startTime: pass.startTime.toISOString(),
+          endTime: pass.endTime.toISOString(),
+          visitorName: pass.visitorName,
+          unitNumber: pass.unit.unitNumber,
+          buildingName: pass.unit.building.name,
+          passType: pass.passType,
+          isEmergency: pass.isEmergency,
+          confirmationCode: pass.confirmationCode,
+        })),
+        violations: vehicle.violations.map((v) => ({
+          id: v.id,
+          type: v.type,
+          severity: v.severity,
+          createdAt: v.createdAt.toISOString(),
+          isResolved: v.isResolved,
+          location: v.location,
+        })),
+        lookupTime: now.toISOString(),
+      };
+      return NextResponse.json(result);
+    }
+
     // Find active pass
     const activePass = vehicle.parkingPasses.find(
       (pass) =>
-        pass.status === 'ACTIVE' &&
+        (pass.status === 'ACTIVE' || pass.status === 'EXTENDED') &&
         pass.startTime <= now &&
         pass.endTime > now
     );
+
+    // Fetch building rules for grace period
+    const buildingForRules = activePass
+      ? null
+      : await prisma.building.findFirst({
+          where: {
+            units: {
+              some: {
+                parkingPasses: {
+                  some: { vehicleId: vehicle.id },
+                },
+              },
+            },
+          },
+          include: { parkingRules: true },
+        });
+    const gracePeriodMinutes = buildingForRules?.parkingRules?.gracePeriodMinutes ?? 15;
 
     // Determine status
     let status: VehicleStatus;
@@ -191,20 +252,28 @@ export async function POST(request: NextRequest) {
         statusMessage = `Valid pass until ${activePass.endTime.toLocaleTimeString()}`;
       }
     } else {
-      // Check for recently expired pass (within last hour)
+      // Check for recently expired pass
       const recentExpired = vehicle.parkingPasses.find(
         (pass) =>
-          (pass.status === 'EXPIRED' || pass.status === 'ACTIVE') &&
+          (pass.status === 'EXPIRED' || pass.status === 'ACTIVE' || pass.status === 'EXTENDED') &&
           pass.endTime <= now &&
           pass.endTime > new Date(now.getTime() - 60 * 60 * 1000)
       );
 
       if (recentExpired) {
-        status = 'EXPIRED';
         const minutesAgo = Math.round(
           (now.getTime() - recentExpired.endTime.getTime()) / 60000
         );
-        statusMessage = `Pass expired ${minutesAgo} minutes ago`;
+
+        // Check grace period
+        if (minutesAgo <= gracePeriodMinutes) {
+          status = 'IN_GRACE_PERIOD';
+          const graceRemaining = gracePeriodMinutes - minutesAgo;
+          statusMessage = `Pass expired ${minutesAgo} min ago. Grace period: ${graceRemaining} min remaining`;
+        } else {
+          status = 'EXPIRED';
+          statusMessage = `Pass expired ${minutesAgo} minutes ago`;
+        }
       } else {
         status = 'UNREGISTERED';
         statusMessage = 'Vehicle has no active parking pass';

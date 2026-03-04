@@ -8,8 +8,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ============================================
@@ -80,6 +81,10 @@ model Unit {
   primaryPhone    String?
   primaryEmail    String?
 
+  // Access code for suite verification
+  accessCode      String?  // Display/raw value (optional)
+  accessCodeHash  String?  // bcrypt hash of the PIN
+
   // Status
   isOccupied      Boolean  @default(true)
   isActive        Boolean  @default(true)
@@ -110,6 +115,7 @@ model Resident {
   // Authentication
   userId    String? @unique
   user      User?   @relation(fields: [userId], references: [id])
+  passwordHash String?  // For resident portal login (building+suite+password)
 
   // Status
   isPrimary Boolean @default(false)  // Primary contact for unit
@@ -121,6 +127,11 @@ model Resident {
 
   // Soft delete
   deletedAt DateTime?
+
+  // Relations
+  authorizedGuests AuthorizedGuest[]
+  vehicles         Vehicle[]        @relation("ResidentVehicles")
+  createdPasses    ParkingPass[]    @relation("ResidentCreatedPasses")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -180,6 +191,18 @@ model ParkingRule {
   extensionMaxHours         Int      @default(4)
   requireUnitConfirmation   Boolean  @default(false)
 
+  // Consecutive day limits
+  maxConsecutiveDays           Int      @default(3)
+  consecutiveDayCooldownHours  Int      @default(24)
+
+  // Auto-extension settings
+  autoExtensionEnabled         Boolean  @default(true)
+  autoExtensionThresholdHours  Int      @default(6)
+  autoExtensionDurationHours   Int      @default(25)
+
+  // In-Out privileges
+  inOutPrivileges              Boolean  @default(true)
+
   // Operating hours (null = 24/7)
   operatingStartHour  Int?     // 0-23
   operatingEndHour    Int?     // 0-23
@@ -216,6 +239,11 @@ model Vehicle {
   color         String?
   state         String?  // License plate state/province
 
+  // Resident vehicle tracking
+  isResidentVehicle Boolean  @default(false)
+  residentId        String?
+  resident          Resident? @relation("ResidentVehicles", fields: [residentId], references: [id])
+
   // Blacklist
   isBlacklisted Boolean  @default(false)
   blacklistReason String?
@@ -229,8 +257,9 @@ model Vehicle {
   // Soft delete
   deletedAt DateTime?
 
-  parkingPasses ParkingPass[]
-  violations    Violation[]
+  parkingPasses  ParkingPass[]
+  violations     Violation[]
+  patrolLogEntries PatrolLogEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -238,6 +267,7 @@ model Vehicle {
   @@index([normalizedPlate])
   @@index([isBlacklisted])
   @@index([riskScore])
+  @@index([residentId])
   @@map("vehicles")
 }
 
@@ -262,6 +292,12 @@ model ParkingPass {
   originalEndTime DateTime
   extensionCount  Int       @default(0)
   lastExtendedAt  DateTime?
+
+  // In-Out privileges
+  isInOutEnabled Boolean   @default(true)
+  lastExitTime   DateTime?
+  lastEntryTime  DateTime?
+  reactivatedAt  DateTime?
 
   // Status
   status      PassStatus @default(ACTIVE)
@@ -293,10 +329,15 @@ model ParkingPass {
   userAgent       String?
   deviceInfo      String?
 
+  // Created by resident (if applicable)
+  createdByResidentId String?
+  createdByResident   Resident? @relation("ResidentCreatedPasses", fields: [createdByResidentId], references: [id])
+
   // Notifications
   confirmationSent    Boolean   @default(false)
   confirmationSentAt  DateTime?
   expirationWarningSent Boolean @default(false)
+  smsNotificationSent Boolean   @default(false)
 
   // Approval workflow (if required)
   requiresApproval    Boolean   @default(false)
@@ -323,6 +364,7 @@ model ParkingPass {
   @@index([confirmationCode])
   @@index([isEmergency])
   @@index([createdAt])
+  @@index([createdByResidentId])
   @@map("parking_passes")
 }
 
@@ -359,6 +401,13 @@ model Violation {
   description String?
   severity    ViolationSeverity @default(MEDIUM)
 
+  // Escalation workflow
+  escalationLevel      EscalationLevel @default(NONE)
+  warningIssuedAt      DateTime?
+  formalLetterIssuedAt DateTime?
+  towNoticeIssuedAt    DateTime?
+  parentViolationId    String?  // Chain violations together
+
   // Location
   location    String?
   parkingZoneId String?
@@ -393,6 +442,8 @@ model Violation {
   @@index([severity])
   @@index([isResolved])
   @@index([createdAt])
+  @@index([escalationLevel])
+  @@index([parentViolationId])
   @@map("violations")
 }
 
@@ -414,6 +465,13 @@ enum ViolationSeverity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum EscalationLevel {
+  NONE
+  WARNING
+  FORMAL_LETTER
+  TOW_NOTICE
 }
 
 // ============================================
@@ -456,6 +514,7 @@ model User {
   resident         Resident?
   accounts         Account[]
   sessions         Session[]
+  patrolLogs       PatrolLogEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -536,6 +595,63 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ============================================
+// AUTHORIZED GUESTS & PATROL LOG
+// ============================================
+
+model AuthorizedGuest {
+  id          String   @id @default(cuid())
+  residentId  String
+  resident    Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  name         String
+  phone        String?
+  email        String?
+  licensePlate String?
+
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([residentId])
+  @@map("authorized_guests")
+}
+
+model PatrolLogEntry {
+  id              String          @id @default(cuid())
+  vehicleId       String?
+  vehicle         Vehicle?        @relation(fields: [vehicleId], references: [id])
+
+  licensePlate    String
+  normalizedPlate String
+
+  entryType       PatrolEntryType
+  location        String?
+  notes           String?
+  photoUrls       String[]
+
+  patrollerId     String
+  patroller       User            @relation(fields: [patrollerId], references: [id])
+
+  buildingId      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([normalizedPlate])
+  @@index([patrollerId])
+  @@index([createdAt])
+  @@index([buildingId])
+  @@map("patrol_log_entries")
+}
+
+enum PatrolEntryType {
+  ENTRY
+  EXIT
+  SPOT_CHECK
+  NOTE
 }
 
 // ============================================

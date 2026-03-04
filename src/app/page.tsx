@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { auth, signOut } from '@/lib/auth';
 import { hasPermission } from '@/lib/authorization';
 import { getNavItemsForRole } from '@/lib/navigation';
 import { PatrolDashboard } from '@/components/patrol/patrol-dashboard';
+import { Car, Send } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 export default async function HomePage() {
   const session = await auth();
@@ -45,42 +48,49 @@ export default async function HomePage() {
     redirect('/dashboard');
   }
 
-  // Not logged in - show landing page
+  // Not logged in - show visitor landing page
+  const t = await getTranslations('landing');
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
-      <div className="max-w-2xl text-center">
-        <div className="mb-8">
-          <h1 className="mb-4 text-5xl font-bold tracking-tight text-slate-900">
-            Alina Visitor Parking
+      <div className="w-full max-w-sm space-y-6">
+        {/* Branding */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            {t('title')}
           </h1>
-          <p className="text-xl text-slate-600">
-            Mission-critical parking management for healthcare facilities
+          <p className="mt-1 text-slate-600">
+            {t('subtitle')}
           </p>
         </div>
 
-        <div className="rounded-lg bg-white p-8 shadow-lg">
-          <h2 className="mb-6 text-2xl font-semibold text-slate-800">
-            Welcome
-          </h2>
+        {/* Main Actions */}
+        <div className="space-y-3">
+          <Link
+            href="/register/guest"
+            className="flex items-center justify-center gap-3 w-full rounded-xl bg-primary px-6 py-5 text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors min-h-[64px] touch-manipulation"
+          >
+            <Car className="h-6 w-6" />
+            {t('getPass')}
+          </Link>
 
-          <div className="space-y-4">
-            <p className="text-slate-600">
-              Scan a QR code in the parking lot to register your vehicle, or log in to access the management dashboard.
-            </p>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <a
-                href="/login"
-                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-              >
-                Staff Login
-              </a>
-            </div>
-          </div>
+          <Link
+            href="/resident/login"
+            className="flex items-center justify-center gap-3 w-full rounded-xl border-2 border-primary bg-white px-6 py-5 text-lg font-semibold text-primary shadow hover:bg-primary/5 transition-colors min-h-[64px] touch-manipulation"
+          >
+            <Send className="h-6 w-6" />
+            {t('sendPass')}
+          </Link>
         </div>
 
-        <div className="mt-8 text-sm text-slate-500">
-          <p>Built with Next.js 15 • TypeScript • Prisma • Tailwind CSS</p>
+        {/* Staff Login */}
+        <div className="text-center pt-4">
+          <Link
+            href="/login"
+            className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-4"
+          >
+            {t('staffLogin')}
+          </Link>
         </div>
       </div>
     </main>

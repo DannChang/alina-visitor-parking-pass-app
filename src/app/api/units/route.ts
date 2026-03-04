@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Building not found' }, { status: 404 });
     }
 
-    const units = await prisma.unit.findMany({
+    const rawUnits = await prisma.unit.findMany({
       where: {
         buildingId: building.id,
         isActive: true,
@@ -30,9 +30,16 @@ export async function GET(request: NextRequest) {
         unitNumber: true,
         floor: true,
         section: true,
+        accessCodeHash: true,
       },
       orderBy: [{ floor: 'asc' }, { unitNumber: 'asc' }],
     });
+
+    // Never expose the actual access code hash - only whether one exists
+    const units = rawUnits.map(({ accessCodeHash, ...unit }) => ({
+      ...unit,
+      hasAccessCode: !!accessCodeHash,
+    }));
 
     return NextResponse.json({ units, building: { id: building.id, name: building.name } });
   } catch (error) {
