@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
@@ -8,27 +8,23 @@ const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   name: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY', 'RESIDENT']).default('MANAGER'),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY']).default('MANAGER'),
   isActive: z.boolean().default(true),
 });
 
 const updateUserSchema = z.object({
   name: z.string().optional(),
   password: z.string().min(8).optional(),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY', 'RESIDENT']).optional(),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY']).optional(),
   isActive: z.boolean().optional(),
   isSuspended: z.boolean().optional(),
 });
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const authResult = await requirePermission('users:view');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const { searchParams } = new URL(request.url);
@@ -37,6 +33,7 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {
       deletedAt: null,
+      role: { not: 'RESIDENT' },
     };
 
     if (search) {
@@ -47,6 +44,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (role && role !== 'all') {
+      if (role === 'RESIDENT') {
+        return NextResponse.json({ users: [] });
+      }
       where.role = role;
     }
 
@@ -83,13 +83,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const authResult = await requirePermission('users:manage');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const body = await request.json();
@@ -108,7 +104,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Prevent non-super admins from creating super admins
-    if (validatedData.role === 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    if (
+      validatedData.role === 'SUPER_ADMIN' &&
+      authResult.request.role !== 'SUPER_ADMIN'
+    ) {
       return NextResponse.json(
         { error: 'Only super admins can create super admin accounts' },
         { status: 403 }
@@ -140,7 +139,7 @@ export async function POST(request: NextRequest) {
         action: 'CREATE',
         entityType: 'User',
         entityId: user.id,
-        userId: session.user.id,
+        userId: authResult.request.userId,
         details: { email: user.email, role: user.role },
       },
     });
@@ -163,13 +162,9 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const authResult = await requirePermission('users:manage');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const { searchParams } = new URL(request.url);
@@ -190,8 +185,18 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    if (existingUser.role === 'RESIDENT') {
+      return NextResponse.json(
+        { error: 'Resident accounts are managed through registration passes' },
+        { status: 403 }
+      );
+    }
+
     // Prevent non-super admins from modifying super admin accounts
-    if (existingUser.role === 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    if (
+      existingUser.role === 'SUPER_ADMIN' &&
+      authResult.request.role !== 'SUPER_ADMIN'
+    ) {
       return NextResponse.json(
         { error: 'Only super admins can modify super admin accounts' },
         { status: 403 }
@@ -199,7 +204,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Prevent changing own role or suspending self
-    if (id === session.user.id) {
+    if (id === authResult.request.userId) {
       if (validatedData.role && validatedData.role !== existingUser.role) {
         return NextResponse.json(
           { error: 'Cannot change your own role' },
@@ -252,7 +257,7 @@ export async function PATCH(request: NextRequest) {
         action: 'UPDATE',
         entityType: 'User',
         entityId: id,
-        userId: session.user.id,
+        userId: authResult.request.userId,
         details: { changes: Object.keys(validatedData) },
       },
     });
@@ -275,13 +280,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const authResult = await requirePermission('users:manage');
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const { searchParams } = new URL(request.url);
@@ -292,7 +293,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Prevent deleting self
-    if (id === session.user.id) {
+    if (id === authResult.request.userId) {
       return NextResponse.json(
         { error: 'Cannot delete your own account' },
         { status: 400 }
@@ -307,8 +308,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    if (user.role === 'RESIDENT') {
+      return NextResponse.json(
+        { error: 'Resident accounts are managed through registration passes' },
+        { status: 403 }
+      );
+    }
+
     // Prevent non-super admins from deleting super admin accounts
-    if (user.role === 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    if (
+      user.role === 'SUPER_ADMIN' &&
+      authResult.request.role !== 'SUPER_ADMIN'
+    ) {
       return NextResponse.json(
         { error: 'Only super admins can delete super admin accounts' },
         { status: 403 }
@@ -326,7 +337,7 @@ export async function DELETE(request: NextRequest) {
         action: 'DELETE',
         entityType: 'User',
         entityId: id,
-        userId: session.user.id,
+        userId: authResult.request.userId,
         details: { email: user.email },
       },
     });

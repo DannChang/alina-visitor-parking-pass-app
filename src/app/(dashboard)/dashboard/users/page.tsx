@@ -55,7 +55,6 @@ const roleLabels: Record<string, { label: string; color: string }> = {
   ADMIN: { label: 'Admin', color: 'default' },
   MANAGER: { label: 'Manager', color: 'secondary' },
   SECURITY: { label: 'Security', color: 'outline' },
-  RESIDENT: { label: 'Resident', color: 'outline' },
 };
 
 function UsersLoading() {
@@ -205,7 +204,7 @@ export default function UsersPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage system users and their permissions</p>
+          <p className="text-sm md:text-base text-muted-foreground">Manage staff users and their permissions</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto min-h-[44px] md:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
@@ -233,7 +232,6 @@ export default function UsersPage() {
             <SelectItem value="ADMIN">Admin</SelectItem>
             <SelectItem value="MANAGER">Manager</SelectItem>
             <SelectItem value="SECURITY">Security</SelectItem>
-            <SelectItem value="RESIDENT">Resident</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -410,7 +408,6 @@ export default function UsersPage() {
                     <SelectItem value="MANAGER">Manager</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="SECURITY">Security</SelectItem>
-                    <SelectItem value="RESIDENT">Resident</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

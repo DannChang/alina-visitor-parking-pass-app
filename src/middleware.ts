@@ -19,6 +19,7 @@ const ROUTE_ACCESS: Record<string, UserRole[]> = {
   '/dashboard/analytics': ['SUPER_ADMIN', 'ADMIN', 'MANAGER'],
   '/dashboard/health': ['SUPER_ADMIN', 'ADMIN'],
   '/dashboard/users': ['SUPER_ADMIN', 'ADMIN'],
+  '/dashboard/registration-passes': ['SUPER_ADMIN', 'MANAGER'],
   '/dashboard/settings': ['SUPER_ADMIN', 'ADMIN'],
 };
 
@@ -90,6 +91,7 @@ export async function middleware(request: NextRequest) {
     '/api/units',
     '/api/buildings',
     '/api/resident/auth',
+    '/api/resident-invites/consume',
   ];
   const isPublicApi = publicApiRoutes.some((route) => pathname.startsWith(route));
 

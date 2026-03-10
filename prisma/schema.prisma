@@ -61,6 +61,7 @@ model Building {
   parkingZones  ParkingZone[]
   parkingRules  ParkingRule?
   managers      BuildingManager[]
+  residentInvites ResidentInvite[]
 
   @@index([slug])
   @@index([isActive])
@@ -94,6 +95,7 @@ model Unit {
 
   residents     Resident[]
   parkingPasses ParkingPass[]
+  residentInvites ResidentInvite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,6 +134,7 @@ model Resident {
   authorizedGuests AuthorizedGuest[]
   vehicles         Vehicle[]        @relation("ResidentVehicles")
   createdPasses    ParkingPass[]    @relation("ResidentCreatedPasses")
+  registrationInvite ResidentInvite? @relation("ConsumedResidentInviteResident")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -515,6 +518,8 @@ model User {
   accounts         Account[]
   sessions         Session[]
   patrolLogs       PatrolLogEntry[]
+  issuedResidentInvites ResidentInvite[] @relation("IssuedResidentInvites")
+  consumedResidentInvite ResidentInvite? @relation("ConsumedResidentInviteUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -530,6 +535,44 @@ enum UserRole {
   MANAGER
   SECURITY
   RESIDENT
+}
+
+model ResidentInvite {
+  id             String   @id @default(cuid())
+  issuerId       String
+  issuer         User     @relation("IssuedResidentInvites", fields: [issuerId], references: [id], onDelete: Cascade)
+  buildingId     String
+  building       Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unitId         String
+  unit           Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  recipientName  String
+  recipientEmail String
+  recipientPhone String?
+
+  tokenHash      String   @unique
+  expiresAt      DateTime
+  sentAt         DateTime?
+  consumedAt     DateTime?
+  revokedAt      DateTime?
+  revokeReason   String?
+  consumedIp     String?
+  consumedUserAgent String?
+
+  userId         String?  @unique
+  user           User?    @relation("ConsumedResidentInviteUser", fields: [userId], references: [id])
+  residentId     String?  @unique
+  resident       Resident? @relation("ConsumedResidentInviteResident", fields: [residentId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([issuerId, createdAt])
+  @@index([buildingId, createdAt])
+  @@index([unitId, createdAt])
+  @@index([recipientEmail])
+  @@index([expiresAt])
+  @@map("resident_invites")
 }
 
 model BuildingManager {
@@ -699,6 +742,9 @@ enum AuditAction {
   EXPORT_DATA
   SETTING_CHANGE
   EMERGENCY_ACCESS
+  ISSUE_RESIDENT_INVITE
+  REVOKE_RESIDENT_INVITE
+  CONSUME_RESIDENT_INVITE
 }
 
 model QRCodeScan {

@@ -38,6 +38,7 @@ export type Permission =
   | 'resident:manage_vehicles'
   | 'resident:send_pass'
   | 'resident:view_activity'
+  | 'resident_invites:manage'
   // System
   | 'health:view'
   | 'system:admin';
@@ -74,6 +75,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'audit_logs:view',
     'health:view',
     'system:admin',
+    'resident_invites:manage',
   ],
   ADMIN: [
     'passes:view_all',
@@ -116,6 +118,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'vehicles:blacklist',
     'analytics:view',
     'reports:export',
+    'resident_invites:manage',
   ],
   SECURITY: [
     'passes:view_all',
@@ -149,6 +152,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/users': ['users:view'],
   '/dashboard/settings': ['settings:view'],
   '/dashboard/patrol-log': ['passes:view_all'],
+  '/dashboard/registration-passes': ['resident_invites:manage'],
   '/resident': ['resident:manage_guests'],
   '/resident/passes': ['passes:view_own'],
   '/resident/guests': ['resident:manage_guests'],

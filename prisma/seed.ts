@@ -247,11 +247,18 @@ async function main() {
 
   const residentUser = await prisma.user.upsert({
     where: { email: 'resident@example.com' },
-    update: {},
+    update: {
+      name: 'John Doe',
+      passwordHash: null,
+      role: 'RESIDENT',
+      emailVerified: new Date(),
+      isActive: true,
+      deletedAt: null,
+    },
     create: {
       email: 'resident@example.com',
       name: 'John Doe',
-      passwordHash: residentPassword,
+      passwordHash: null,
       role: 'RESIDENT',
       emailVerified: new Date(),
       isActive: true,
@@ -263,13 +270,23 @@ async function main() {
   if (unit101) {
     await prisma.resident.upsert({
       where: { userId: residentUser.id },
-      update: {},
+      update: {
+        name: 'John Doe',
+        email: 'resident@example.com',
+        phone: '(555) 234-5678',
+        unitId: unit101.id,
+        passwordHash: residentPassword,
+        isPrimary: true,
+        isActive: true,
+        deletedAt: null,
+      },
       create: {
         name: 'John Doe',
         email: 'resident@example.com',
         phone: '(555) 234-5678',
         unitId: unit101.id,
         userId: residentUser.id,
+        passwordHash: residentPassword,
         isPrimary: true,
         isActive: true,
       },

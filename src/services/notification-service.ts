@@ -34,6 +34,16 @@ interface PassExpirationWarningData {
   passId: string;
 }
 
+interface ResidentInviteEmailData {
+  inviteId: string;
+  recipientEmail: string;
+  recipientName: string;
+  buildingName: string;
+  unitNumber: string;
+  registrationUrl: string;
+  expiresAt: Date;
+}
+
 const FROM_EMAIL = 'Alina Parking <noreply@alinahospital.com>';
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
@@ -212,6 +222,88 @@ Alina Hospital Parking Management
     text,
     entityType: 'ParkingPass',
     entityId: data.passId,
+  });
+}
+
+export async function sendResidentInviteEmail(
+  data: ResidentInviteEmailData
+): Promise<boolean> {
+  const formattedExpiry = data.expiresAt.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Complete Your Resident Registration</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Complete Your Resident Registration</h1>
+      </div>
+
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p style="margin-top: 0;">Hi ${data.recipientName},</p>
+
+        <p>
+          You have been invited to activate your resident account for
+          <strong>${data.buildingName}</strong>, unit <strong>${data.unitNumber}</strong>.
+        </p>
+
+        <p>
+          This registration link is one-time use and expires on <strong>${formattedExpiry}</strong>.
+        </p>
+
+        <div style="margin: 24px 0; text-align: center;">
+          <a
+            href="${data.registrationUrl}"
+            style="display: inline-block; background: #1d4ed8; color: white; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600;"
+          >
+            Complete Registration
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #475569;">
+          If the button above does not work, copy and paste this link into your browser:
+        </p>
+        <p style="font-size: 14px; word-break: break-word; color: #1e293b;">
+          ${data.registrationUrl}
+        </p>
+
+        <p style="font-size: 14px; color: #475569; margin-bottom: 0;">
+          If you were not expecting this invitation, please contact your building management team.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+Complete your resident registration
+
+Hi ${data.recipientName},
+
+You have been invited to activate your resident account for ${data.buildingName}, unit ${data.unitNumber}.
+
+This link is one-time use and expires on ${formattedExpiry}.
+
+Complete registration: ${data.registrationUrl}
+  `.trim();
+
+  return sendEmail({
+    to: data.recipientEmail,
+    subject: `Resident registration for ${data.buildingName}`,
+    html,
+    text,
+    entityType: 'ResidentInvite',
+    entityId: data.inviteId,
   });
 }
 
