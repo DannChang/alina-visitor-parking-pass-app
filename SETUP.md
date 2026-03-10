@@ -183,7 +183,7 @@ You'll get:
 
 - 1 building (Alina Visitor Parking)
 - 3 parking zones (Main, Emergency, North)
-- 30 sample units (101-310)
+- 246 pre-seeded units (Levels 1 and 4-28)
 - 3 users (admin, manager, resident)
 - 1 sample active pass
 

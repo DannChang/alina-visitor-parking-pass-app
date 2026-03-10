@@ -6,6 +6,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
+import { ALINA_SEEDED_UNIT_COUNT, ALINA_UNIT_SEEDS } from './seed-data/units';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -115,36 +117,62 @@ async function main() {
   console.log(`✅ Created ${zones.length} parking zones\n`);
 
   // ============================================
-  // 4. CREATE SAMPLE UNITS
+  // 4. CREATE PRE-SEEDED UNITS
   // ============================================
 
-  console.log('🏠 Creating sample units...');
+  console.log('🏠 Creating pre-seeded units...');
 
-  const sampleUnits = [];
+  const seededUnitNumbers = ALINA_UNIT_SEEDS.map(({ unitNumber }) => unitNumber);
+  const seededUnits: Array<{ id: string; unitNumber: string }> = [];
 
-  // Create units 101-110, 201-210, 301-310
-  for (const floor of [1, 2, 3]) {
-    for (let num = 1; num <= 10; num++) {
-      const unitNumber = `${floor}${num.toString().padStart(2, '0')}`;
+  for (const { floor, unitNumber } of ALINA_UNIT_SEEDS) {
+    const unit = await prisma.unit.upsert({
+      where: { buildingId_unitNumber: { buildingId: building.id, unitNumber } },
+      update: {
+        floor,
+        section: null,
+        isOccupied: true,
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        buildingId: building.id,
+        unitNumber,
+        floor,
+        isOccupied: true,
+        isActive: true,
+      },
+    });
 
-      const unit = await prisma.unit.upsert({
-        where: { buildingId_unitNumber: { buildingId: building.id, unitNumber } },
-        update: {},
-        create: {
-          buildingId: building.id,
-          unitNumber,
-          floor,
-          section: floor === 1 ? 'Ground' : floor === 2 ? 'Second' : 'Third',
-          isOccupied: true,
-          isActive: true,
-        },
-      });
-
-      sampleUnits.push(unit);
-    }
+    seededUnits.push(unit);
   }
 
-  console.log(`✅ Created ${sampleUnits.length} units\n`);
+  const unitsToArchive = await prisma.unit.findMany({
+    where: {
+      buildingId: building.id,
+      deletedAt: null,
+      unitNumber: { notIn: seededUnitNumbers },
+    },
+    select: { id: true },
+  });
+
+  if (unitsToArchive.length > 0) {
+    await prisma.unit.updateMany({
+      where: {
+        id: { in: unitsToArchive.map((unit) => unit.id) },
+      },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+      },
+    });
+  }
+
+  console.log(`✅ Seeded ${seededUnits.length} units`);
+  if (unitsToArchive.length > 0) {
+    console.log(`🧹 Archived ${unitsToArchive.length} units not in the current seed list`);
+  }
+  console.log('');
 
   // ============================================
   // 5. CREATE ADMIN USER
@@ -231,7 +259,7 @@ async function main() {
   });
 
   // Link resident to unit 101
-  const unit101 = sampleUnits.find((u) => u.unitNumber === '101');
+  const unit101 = seededUnits.find((u) => u.unitNumber === '101');
   if (unit101) {
     await prisma.resident.upsert({
       where: { userId: residentUser.id },
@@ -261,8 +289,17 @@ async function main() {
   const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
 
   // Create a sample active pass
-  const vehicle1 = await prisma.vehicle.create({
-    data: {
+  const vehicle1 = await prisma.vehicle.upsert({
+    where: { licensePlate: 'ABC 123' },
+    update: {
+      normalizedPlate: 'ABC123',
+      make: 'Toyota',
+      model: 'Camry',
+      color: 'Silver',
+      state: 'NY',
+      deletedAt: null,
+    },
+    create: {
       licensePlate: 'ABC 123',
       normalizedPlate: 'ABC123',
       make: 'Toyota',
@@ -273,25 +310,40 @@ async function main() {
   });
 
   if (unit101) {
-    await prisma.parkingPass.create({
-      data: {
+    const existingSamplePass = await prisma.parkingPass.findFirst({
+      where: {
         vehicleId: vehicle1.id,
         unitId: unit101.id,
-        parkingZoneId: zones[0]?.id,
-        startTime: now,
-        endTime: fourHoursFromNow,
-        originalEndTime: fourHoursFromNow,
-        duration: 4,
-        status: 'ACTIVE',
         visitorName: 'Jane Smith',
-        visitorPhone: '(555) 345-6789',
-        passType: 'VISITOR',
-        registeredVia: 'QR_SCAN',
-        confirmationSent: true,
+        status: 'ACTIVE',
+        deletedAt: null,
       },
+      select: { id: true },
     });
 
-    console.log(`✅ Created active pass for ${vehicle1.licensePlate} (Unit ${unit101.unitNumber})\n`);
+    if (!existingSamplePass) {
+      await prisma.parkingPass.create({
+        data: {
+          vehicleId: vehicle1.id,
+          unitId: unit101.id,
+          parkingZoneId: zones[0]?.id,
+          startTime: now,
+          endTime: fourHoursFromNow,
+          originalEndTime: fourHoursFromNow,
+          duration: 4,
+          status: 'ACTIVE',
+          visitorName: 'Jane Smith',
+          visitorPhone: '(555) 345-6789',
+          passType: 'VISITOR',
+          registeredVia: 'QR_SCAN',
+          confirmationSent: true,
+        },
+      });
+
+      console.log(`✅ Created active pass for ${vehicle1.licensePlate} (Unit ${unit101.unitNumber})\n`);
+    } else {
+      console.log(`✅ Sample active pass already exists for ${vehicle1.licensePlate} (Unit ${unit101.unitNumber})\n`);
+    }
   }
 
   // ============================================
@@ -305,7 +357,7 @@ async function main() {
   console.log('📊 Summary:');
   console.log(`   • Building: ${building.name}`);
   console.log(`   • Parking Zones: ${zones.length}`);
-  console.log(`   • Units: ${sampleUnits.length}`);
+  console.log(`   • Units: ${seededUnits.length}/${ALINA_SEEDED_UNIT_COUNT} seeded`);
   console.log(`   • Admin User: admin@alinahospital.com`);
   console.log(`   • Manager User: manager@alinahospital.com`);
   console.log(`   • Resident User: resident@example.com`);
