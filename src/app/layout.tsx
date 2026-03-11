@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Lato } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -47,6 +48,7 @@ export default async function RootLayout({
             {children}
             <Toaster />
             <ServiceWorkerRegister />
+            <Analytics />
           </SessionProvider>
         </NextIntlClientProvider>
       </body>
