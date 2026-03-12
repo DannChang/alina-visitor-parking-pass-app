@@ -16,9 +16,7 @@ interface ResidentLoginFormProps {
   showResetSuccess?: boolean;
 }
 
-export function ResidentLoginForm({
-  showResetSuccess = false,
-}: ResidentLoginFormProps) {
+export function ResidentLoginForm({ showResetSuccess = false }: ResidentLoginFormProps) {
   const router = useRouter();
   const [unitNumber, setUnitNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +44,7 @@ export function ResidentLoginForm({
       setError('Invalid credentials. Please check your unit number and password.');
       setIsSubmitting(false);
     } else {
-      router.push('/dashboard/passes');
+      router.push('/resident/passes');
     }
   };
 
@@ -74,12 +72,15 @@ export function ResidentLoginForm({
           )}
 
           <div className="rounded-lg bg-muted/40 p-3 text-center text-sm text-muted-foreground">
-            Building: <span className="font-medium text-foreground">{APP_CONFIG.resident.defaultBuildingName}</span>
+            Building:{' '}
+            <span className="font-medium text-foreground">
+              {APP_CONFIG.resident.defaultBuildingName}
+            </span>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="unitNumber">
-              <Home className="h-3 w-3 inline mr-1" />
+              <Home className="mr-1 inline h-3 w-3" />
               Unit Number
             </Label>
             <Input
@@ -94,7 +95,7 @@ export function ResidentLoginForm({
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="password">
-                <Lock className="h-3 w-3 inline mr-1" />
+                <Lock className="mr-1 inline h-3 w-3" />
                 Password
               </Label>
               <Link
@@ -114,10 +115,10 @@ export function ResidentLoginForm({
             />
           </div>
 
-          <Button type="submit" className="w-full min-h-[48px]" disabled={isSubmitting}>
+          <Button type="submit" className="min-h-[48px] w-full" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
               </>
             ) : (
