@@ -71,16 +71,20 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/login',
+    '/forgot-password',
     '/register',
+    '/reset-password',
     '/resident/login',
+    '/resident/forgot-password',
     '/api/health',
     '/api/passes/validate',
   ];
 
   // Check if current path is public
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith('/register/')
-  );
+  const isPublicRoute =
+    publicRoutes.some((route) => pathname === route) ||
+    pathname.startsWith('/register/') ||
+    pathname.startsWith('/reset-password/');
 
   // API routes that don't need auth (public endpoints for visitor self-service)
   const publicApiRoutes = [
@@ -92,6 +96,7 @@ export async function middleware(request: NextRequest) {
     '/api/buildings',
     '/api/resident/auth',
     '/api/resident-invites/consume',
+    '/api/password-reset',
   ];
   const isPublicApi = publicApiRoutes.some((route) => pathname.startsWith(route));
 
@@ -105,7 +110,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Resident routes require authentication
-  if (pathname.startsWith('/resident') && pathname !== '/resident/login') {
+  if (pathname.startsWith('/resident') && !isPublicRoute) {
     if (!isLoggedIn) {
       const loginUrl = new URL('/resident/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);

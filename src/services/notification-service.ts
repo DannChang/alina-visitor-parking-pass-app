@@ -44,7 +44,24 @@ interface ResidentInviteEmailData {
   expiresAt: Date;
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM?.trim();
+interface PasswordResetEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  resetUrl: string;
+  expiresAt: Date;
+  accountType: 'staff' | 'resident';
+  buildingName?: string;
+  unitNumber?: string;
+}
+
+interface PasswordChangedConfirmationEmailData {
+  recipientEmail: string;
+  recipientName?: string;
+  accountType: 'staff' | 'resident';
+}
+
+const FROM_EMAIL =
+  process.env.EMAIL_FROM?.trim() || 'Alina Parking <noreply@alinaparking.com>';
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   // Create notification queue entry
@@ -302,6 +319,145 @@ Complete registration: ${data.registrationUrl}
     text,
     entityType: 'ResidentInvite',
     entityId: data.inviteId,
+  });
+}
+
+export async function sendPasswordResetEmail(
+  data: PasswordResetEmailData
+): Promise<boolean> {
+  const formattedExpiry = data.expiresAt.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  const accountLabel =
+    data.accountType === 'resident'
+      ? `${data.buildingName}, unit ${data.unitNumber}`
+      : 'your staff account';
+  const greeting = data.recipientName ? `Hi ${data.recipientName},` : 'Hello,';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Reset Your Password</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Reset Your Password</h1>
+      </div>
+
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p style="margin-top: 0;">${greeting}</p>
+
+        <p>We received a request to reset the password for <strong>${accountLabel}</strong>.</p>
+
+        <p>
+          This secure link expires on <strong>${formattedExpiry}</strong> and can only be used once.
+        </p>
+
+        <div style="margin: 24px 0; text-align: center;">
+          <a
+            href="${data.resetUrl}"
+            style="display: inline-block; background: #1d4ed8; color: white; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600;"
+          >
+            Reset Password
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #475569;">
+          If the button above does not work, copy and paste this link into your browser:
+        </p>
+        <p style="font-size: 14px; word-break: break-word; color: #1e293b;">
+          ${data.resetUrl}
+        </p>
+
+        <p style="font-size: 14px; color: #475569; margin-bottom: 0;">
+          If you did not request this change, you can ignore this message.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+Reset your password
+
+${greeting}
+
+We received a request to reset the password for ${accountLabel}.
+
+This link expires on ${formattedExpiry}.
+
+Reset password: ${data.resetUrl}
+  `.trim();
+
+  return sendEmail({
+    to: data.recipientEmail,
+    subject:
+      data.accountType === 'resident'
+        ? 'Reset your resident portal password'
+        : 'Reset your account password',
+    html,
+    text,
+    entityType: 'PasswordReset',
+  });
+}
+
+export async function sendPasswordChangedConfirmationEmail(
+  data: PasswordChangedConfirmationEmailData
+): Promise<boolean> {
+  const greeting = data.recipientName ? `Hi ${data.recipientName},` : 'Hello,';
+  const accountLabel =
+    data.accountType === 'resident' ? 'resident portal' : 'staff account';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Password Changed</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #14532d 0%, #16a34a 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Password Updated</h1>
+      </div>
+
+      <div style="background: #f0fdf4; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p style="margin-top: 0;">${greeting}</p>
+
+        <p>The password for your <strong>${accountLabel}</strong> was changed successfully.</p>
+
+        <p style="font-size: 14px; color: #166534; margin-bottom: 0;">
+          If you did not make this change, contact support or building management immediately.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+Password updated
+
+${greeting}
+
+The password for your ${accountLabel} was changed successfully.
+
+If you did not make this change, contact support or building management immediately.
+  `.trim();
+
+  return sendEmail({
+    to: data.recipientEmail,
+    subject: 'Your password was changed',
+    html,
+    text,
+    entityType: 'PasswordReset',
   });
 }
 

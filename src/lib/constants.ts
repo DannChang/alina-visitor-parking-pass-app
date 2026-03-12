@@ -7,6 +7,12 @@ export const APP_CONFIG = {
   name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Alina Visitor Parking',
   url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   description: 'Visitor parking pass management system',
+  resident: {
+    defaultBuildingName:
+      process.env.NEXT_PUBLIC_DEFAULT_BUILDING_NAME ?? 'Alina Visitor Parking',
+    defaultBuildingSlug:
+      process.env.NEXT_PUBLIC_DEFAULT_BUILDING_SLUG ?? 'alina-visitor-parking',
+  },
 } as const;
 
 export const PASS_CONFIG = {

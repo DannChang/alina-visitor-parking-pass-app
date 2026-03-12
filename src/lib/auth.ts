@@ -4,6 +4,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { APP_CONFIG } from '@/lib/constants';
 import type { UserRole } from '@prisma/client';
 
 const loginSchema = z.object({
@@ -12,7 +13,7 @@ const loginSchema = z.object({
 });
 
 const residentLoginSchema = z.object({
-  buildingSlug: z.string().min(1),
+  buildingSlug: z.string().min(1).default(APP_CONFIG.resident.defaultBuildingSlug),
   unitNumber: z.string().min(1),
   password: z.string().min(1),
 });
@@ -105,7 +106,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: 'resident-credentials',
       name: 'Resident Login',
       credentials: {
-        buildingSlug: { label: 'Building', type: 'text' },
         unitNumber: { label: 'Unit Number', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },

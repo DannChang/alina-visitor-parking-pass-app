@@ -1,12 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Car, Shield } from 'lucide-react';
+import { Loader2, Car, Mail, Shield } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const resetSuccess = searchParams.get('reset') === 'success';
   // Prevent redirect loops — if callbackUrl points back to login, go to dashboard
   const callbackUrl = rawCallbackUrl.includes('/login') ? '/dashboard' : rawCallbackUrl;
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,15 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
+            {resetSuccess ? (
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  Your password has been changed. Sign in with your new password.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -107,7 +118,15 @@ function LoginForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -139,6 +158,10 @@ function LoginForm() {
               <Shield className="h-4 w-4" />
               <span>Secure login for authorized personnel only</span>
             </div>
+
+            <Button asChild variant="ghost" className="w-full">
+              <Link href="/resident/login">Resident Portal</Link>
+            </Button>
           </CardFooter>
         </form>
       </Card>
