@@ -11,7 +11,6 @@ import {
   Loader2,
   Plus,
   Ticket,
-  Trash2,
   UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -167,7 +166,6 @@ export function ResidentPassesHub() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedPassId, setSelectedPassId] = useState<string | null>(null);
-  const [cancellingPassId, setCancellingPassId] = useState<string | null>(null);
 
   const fetchPasses = useCallback(async () => {
     setIsLoading(true);
@@ -212,39 +210,6 @@ export function ResidentPassesHub() {
   const selectedPass = selectedPassId
     ? (sortedPasses.find((pass) => pass.id === selectedPassId) ?? null)
     : null;
-
-  const handleCancelPass = useCallback(
-    async (passId: string) => {
-      if (!confirm('Cancel this parking pass?')) {
-        return;
-      }
-
-      setCancellingPassId(passId);
-
-      try {
-        const res = await fetch(`/api/resident/passes/${passId}`, { method: 'DELETE' });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.error || 'Failed to cancel parking pass');
-        }
-
-        if (selectedPassId === passId) {
-          setSelectedPassId(null);
-        }
-
-        toast.success('Parking pass cancelled');
-        await fetchPasses();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to cancel parking pass';
-
-        toast.error(message);
-      } finally {
-        setCancellingPassId(null);
-      }
-    },
-    [fetchPasses, selectedPassId]
-  );
 
   return (
     <>

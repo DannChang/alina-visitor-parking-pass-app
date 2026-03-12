@@ -52,6 +52,17 @@ function canAccessRoute(role: UserRole, pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Never run auth/redirect logic for framework assets or public files.
+  // In dev, intercepting these requests can surface as MIME-type errors when
+  // JS/CSS chunks receive redirect or JSON responses instead of asset bytes.
+  if (
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico' ||
+    /\.[^/]+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   // Get the token using JWT strategy (Edge-compatible)
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) {
@@ -148,7 +159,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files and _next
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match application routes and APIs, but skip framework assets and files.
+    '/((?!_next|favicon.ico|.*\\.[^/]+$).*)',
   ],
 };
