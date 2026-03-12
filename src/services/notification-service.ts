@@ -44,7 +44,7 @@ interface ResidentInviteEmailData {
   expiresAt: Date;
 }
 
-const FROM_EMAIL = 'Alina Parking <noreply@alinahospital.com>';
+const FROM_EMAIL = process.env.EMAIL_FROM?.trim();
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   // Create notification queue entry
@@ -225,9 +225,7 @@ Alina Hospital Parking Management
   });
 }
 
-export async function sendResidentInviteEmail(
-  data: ResidentInviteEmailData
-): Promise<boolean> {
+export async function sendResidentInviteEmail(data: ResidentInviteEmailData): Promise<boolean> {
   const formattedExpiry = data.expiresAt.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -307,9 +305,7 @@ Complete registration: ${data.registrationUrl}
   });
 }
 
-export async function sendPassExpirationWarning(
-  data: PassExpirationWarningData
-): Promise<boolean> {
+export async function sendPassExpirationWarning(data: PassExpirationWarningData): Promise<boolean> {
   const formattedEnd = data.endTime.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
