@@ -5,10 +5,6 @@ export const metadata: Metadata = {
   description: 'Manage visitor parking passes for your unit',
 };
 
-export default function ResidentLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <>{children}</>;
+export default function ResidentLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

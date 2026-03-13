@@ -19,6 +19,7 @@ const ROUTE_ACCESS: Record<string, UserRole[]> = {
   '/dashboard/analytics': ['SUPER_ADMIN', 'ADMIN', 'MANAGER'],
   '/dashboard/health': ['SUPER_ADMIN', 'ADMIN'],
   '/dashboard/users': ['SUPER_ADMIN', 'ADMIN'],
+  '/dashboard/registration-passes': ['SUPER_ADMIN', 'MANAGER'],
   '/dashboard/settings': ['SUPER_ADMIN', 'ADMIN'],
 };
 
@@ -51,6 +52,17 @@ function canAccessRoute(role: UserRole, pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Never run auth/redirect logic for framework assets or public files.
+  // In dev, intercepting these requests can surface as MIME-type errors when
+  // JS/CSS chunks receive redirect or JSON responses instead of asset bytes.
+  if (
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico' ||
+    /\.[^/]+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   // Get the token using JWT strategy (Edge-compatible)
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) {
@@ -70,16 +82,20 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/login',
+    '/forgot-password',
     '/register',
+    '/reset-password',
     '/resident/login',
+    '/resident/forgot-password',
     '/api/health',
     '/api/passes/validate',
   ];
 
   // Check if current path is public
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith('/register/')
-  );
+  const isPublicRoute =
+    publicRoutes.some((route) => pathname === route) ||
+    pathname.startsWith('/register/') ||
+    pathname.startsWith('/reset-password/');
 
   // API routes that don't need auth (public endpoints for visitor self-service)
   const publicApiRoutes = [
@@ -90,6 +106,8 @@ export async function middleware(request: NextRequest) {
     '/api/units',
     '/api/buildings',
     '/api/resident/auth',
+    '/api/resident-invites/consume',
+    '/api/password-reset',
   ];
   const isPublicApi = publicApiRoutes.some((route) => pathname.startsWith(route));
 
@@ -103,7 +121,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Resident routes require authentication
-  if (pathname.startsWith('/resident') && pathname !== '/resident/login') {
+  if (pathname.startsWith('/resident') && !isPublicRoute) {
     if (!isLoggedIn) {
       const loginUrl = new URL('/resident/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
@@ -141,7 +159,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files and _next
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match application routes and APIs, but skip framework assets and files.
+    '/((?!_next|favicon.ico|.*\\.[^/]+$).*)',
   ],
 };

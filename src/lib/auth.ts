@@ -4,6 +4,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { APP_CONFIG } from '@/lib/constants';
 import type { UserRole } from '@prisma/client';
 
 const loginSchema = z.object({
@@ -12,7 +13,7 @@ const loginSchema = z.object({
 });
 
 const residentLoginSchema = z.object({
-  buildingSlug: z.string().min(1),
+  buildingSlug: z.string().min(1).default(APP_CONFIG.resident.defaultBuildingSlug),
   unitNumber: z.string().min(1),
   password: z.string().min(1),
 });
@@ -61,6 +62,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        if (user.role === 'RESIDENT') {
+          return null;
+        }
+
         if (!user.isActive || user.isSuspended) {
           return null;
         }
@@ -101,7 +106,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: 'resident-credentials',
       name: 'Resident Login',
       credentials: {
-        buildingSlug: { label: 'Building', type: 'text' },
         unitNumber: { label: 'Unit Number', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
@@ -124,6 +128,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             residents: {
               where: { isPrimary: true, isActive: true, deletedAt: null },
               take: 1,
+              select: {
+                id: true,
+                userId: true,
+                email: true,
+                name: true,
+                passwordHash: true,
+                user: {
+                  select: {
+                    id: true,
+                    isActive: true,
+                    isSuspended: true,
+                  },
+                },
+              },
             },
           },
         });
@@ -133,12 +151,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const resident = unit.residents[0]!;
         if (!resident.passwordHash) return null;
 
+        if (resident.user && (!resident.user.isActive || resident.user.isSuspended)) {
+          return null;
+        }
+
         const isValid = await bcrypt.compare(password, resident.passwordHash);
         if (!isValid) return null;
 
         return {
-          id: resident.id,
-          email: resident.email,
+          id: resident.userId ?? resident.id,
+          email: resident.email ?? '',
           name: resident.name,
           role: 'RESIDENT' as UserRole,
           loginType: 'resident' as const,

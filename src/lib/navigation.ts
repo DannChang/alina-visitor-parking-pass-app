@@ -106,6 +106,12 @@ export const NAV_ITEMS: NavItem[] = [
     permissions: ['users:view'],
   },
   {
+    href: '/dashboard/registration-passes',
+    label: 'Registration Passes',
+    iconName: 'ClipboardList',
+    permissions: ['resident_invites:manage'],
+  },
+  {
     href: '/dashboard/settings',
     label: 'Settings',
     iconName: 'Settings',
