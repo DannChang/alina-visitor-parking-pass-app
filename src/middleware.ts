@@ -63,24 +63,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get the token using JWT strategy (Edge-compatible)
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    console.error('NEXTAUTH_SECRET is not set');
-    return NextResponse.redirect(new URL('/error', request.url));
-  }
-
-  const token = await getToken({
-    req: request,
-    secret,
-  });
-
-  const isLoggedIn = !!token;
-  const userRole = token?.role as UserRole | undefined;
-
   // Public routes - always accessible
   const publicRoutes = [
     '/',
+    '/error',
     '/login',
     '/forgot-password',
     '/register',
@@ -110,6 +96,34 @@ export async function middleware(request: NextRequest) {
     '/api/password-reset',
   ];
   const isPublicApi = publicApiRoutes.some((route) => pathname.startsWith(route));
+
+  // Get the token using JWT strategy (Edge-compatible)
+  // Auth.js v5 commonly uses AUTH_SECRET; keep NEXTAUTH_SECRET for compatibility.
+  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    console.error('AUTH_SECRET/NEXTAUTH_SECRET is not set');
+
+    if (isPublicRoute || pathname === '/error') {
+      return NextResponse.next();
+    }
+
+    if (pathname.startsWith('/api')) {
+      return NextResponse.json(
+        { error: 'Authentication is not configured for this deployment.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.redirect(new URL('/error', request.url));
+  }
+
+  const token = await getToken({
+    req: request,
+    secret,
+  });
+
+  const isLoggedIn = !!token;
+  const userRole = token?.role as UserRole | undefined;
 
   // If accessing a public route, allow
   if (isPublicRoute || isPublicApi) {
