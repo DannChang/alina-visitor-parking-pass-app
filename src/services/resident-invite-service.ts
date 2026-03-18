@@ -3,6 +3,10 @@ import { createHash, randomBytes } from 'crypto';
 import { Prisma, UserRole } from '@prisma/client';
 import { getBaseUrl } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
+import {
+  normalizeLicensePlate,
+  validateLicensePlate,
+} from '@/lib/utils/license-plate';
 import { sendResidentInviteEmail } from '@/services/notification-service';
 
 type ScopedClient = Prisma.TransactionClient | typeof prisma;
@@ -124,6 +128,9 @@ interface ReissueResidentInviteInput {
 interface ConsumeResidentInviteInput {
   token: string;
   password: string;
+  strataLotNumber: string;
+  assignedStallNumbers: string[];
+  personalLicensePlates: string[];
   ipAddress?: string | null;
   userAgent?: string | null;
 }
@@ -997,6 +1004,69 @@ export async function consumeResidentInvite(
   buildingSlug: string;
   unitNumber: string;
 }> {
+  const strataLotNumber = input.strataLotNumber.trim();
+  const assignedStallNumbers = input.assignedStallNumbers
+    .map((stallNumber) => stallNumber.trim())
+    .filter(Boolean);
+  const personalLicensePlates = input.personalLicensePlates
+    .map((licensePlate) => licensePlate.trim())
+    .filter(Boolean);
+
+  if (!strataLotNumber) {
+    throw new ResidentInviteError(
+      'Strata lot number is required',
+      400,
+      'STRATA_LOT_REQUIRED'
+    );
+  }
+
+  if (assignedStallNumbers.length === 0) {
+    throw new ResidentInviteError(
+      'At least one assigned stall number is required',
+      400,
+      'STALL_REQUIRED'
+    );
+  }
+
+  if (personalLicensePlates.length === 0) {
+    throw new ResidentInviteError(
+      'At least one personal license plate is required',
+      400,
+      'LICENSE_PLATE_REQUIRED'
+    );
+  }
+
+  const uniqueAssignedStallNumbers = Array.from(new Set(assignedStallNumbers));
+  const normalizedLicensePlates = personalLicensePlates.map((licensePlate) => ({
+    raw: licensePlate.toUpperCase(),
+    normalized: normalizeLicensePlate(licensePlate),
+  }));
+  const uniqueNormalizedLicensePlates = Array.from(
+    new Map(
+      normalizedLicensePlates.map((licensePlate) => [licensePlate.normalized, licensePlate])
+    ).values()
+  );
+
+  if (uniqueNormalizedLicensePlates.length !== normalizedLicensePlates.length) {
+    throw new ResidentInviteError(
+      'Duplicate personal license plates are not allowed',
+      400,
+      'DUPLICATE_LICENSE_PLATES'
+    );
+  }
+
+  const invalidLicensePlate = uniqueNormalizedLicensePlates.find(
+    (licensePlate) => !validateLicensePlate(licensePlate.raw).isValid
+  );
+
+  if (invalidLicensePlate) {
+    throw new ResidentInviteError(
+      `License plate ${invalidLicensePlate.raw} is invalid`,
+      400,
+      'INVALID_LICENSE_PLATE'
+    );
+  }
+
   const tokenHash = hashResidentInviteToken(input.token);
   const invite = await prisma.residentInvite.findUnique({
     where: { tokenHash },
@@ -1098,6 +1168,32 @@ export async function consumeResidentInvite(
         currentInvite.id
       );
 
+      const existingVehicles = await tx.vehicle.findMany({
+        where: {
+          normalizedPlate: {
+            in: uniqueNormalizedLicensePlates.map((licensePlate) => licensePlate.normalized),
+          },
+        },
+        select: {
+          id: true,
+          licensePlate: true,
+          normalizedPlate: true,
+          residentId: true,
+        },
+      });
+
+      const conflictingVehicle = existingVehicles.find(
+        (vehicle) => vehicle.residentId !== null
+      );
+
+      if (conflictingVehicle) {
+        throw new ResidentInviteError(
+          `License plate ${conflictingVehicle.licensePlate} is already registered to another resident`,
+          409,
+          'LICENSE_PLATE_ALREADY_ASSIGNED'
+        );
+      }
+
       const user = await tx.user.create({
         data: {
           email: currentInvite.recipientEmail,
@@ -1114,6 +1210,8 @@ export async function consumeResidentInvite(
           name: currentInvite.recipientName,
           email: currentInvite.recipientEmail,
           phone: currentInvite.recipientPhone,
+          strataLotNumber,
+          assignedStallNumbers: uniqueAssignedStallNumbers,
           unitId: currentInvite.unitId,
           userId: user.id,
           passwordHash,
@@ -1121,6 +1219,34 @@ export async function consumeResidentInvite(
           isActive: true,
         },
       });
+
+      await Promise.all(
+        uniqueNormalizedLicensePlates.map((licensePlate) => {
+          const existingVehicle = existingVehicles.find(
+            (vehicle) => vehicle.normalizedPlate === licensePlate.normalized
+          );
+
+          if (existingVehicle) {
+            return tx.vehicle.update({
+              where: { id: existingVehicle.id },
+              data: {
+                residentId: resident.id,
+                isResidentVehicle: true,
+                licensePlate: licensePlate.raw,
+              },
+            });
+          }
+
+          return tx.vehicle.create({
+            data: {
+              licensePlate: licensePlate.raw,
+              normalizedPlate: licensePlate.normalized,
+              isResidentVehicle: true,
+              residentId: resident.id,
+            },
+          });
+        })
+      );
 
       await tx.residentInvite.update({
         where: { id: currentInvite.id },
@@ -1143,6 +1269,11 @@ export async function consumeResidentInvite(
             residentId: resident.id,
             unitId: currentInvite.unitId,
             buildingId: currentInvite.buildingId,
+            strataLotNumber,
+            assignedStallNumbers: uniqueAssignedStallNumbers,
+            personalLicensePlates: uniqueNormalizedLicensePlates.map(
+              (licensePlate) => licensePlate.raw
+            ),
           },
         },
       });

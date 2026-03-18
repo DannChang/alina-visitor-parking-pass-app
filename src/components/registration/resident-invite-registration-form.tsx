@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { formatDistanceToNow } from 'date-fns';
-import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,6 +86,9 @@ export function ResidentInviteRegistrationForm({
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [strataLotNumber, setStrataLotNumber] = useState('');
+  const [assignedStallNumbers, setAssignedStallNumbers] = useState(['']);
+  const [personalLicensePlates, setPersonalLicensePlates] = useState(['']);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -110,9 +114,59 @@ export function ResidentInviteRegistrationForm({
     );
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function updateListValue(
+    setter: Dispatch<SetStateAction<string[]>>,
+    index: number,
+    value: string
+  ) {
+    setter((currentValues) =>
+      currentValues.map((currentValue, currentIndex) =>
+        currentIndex === index ? value : currentValue
+      )
+    );
+  }
+
+  function addListValue(setter: Dispatch<SetStateAction<string[]>>) {
+    setter((currentValues) => [...currentValues, '']);
+  }
+
+  function removeListValue(
+    setter: Dispatch<SetStateAction<string[]>>,
+    index: number
+  ) {
+    setter((currentValues) =>
+      currentValues.length === 1
+        ? currentValues
+        : currentValues.filter((_, currentIndex) => currentIndex !== index)
+    );
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    const cleanedStrataLotNumber = strataLotNumber.trim();
+    const cleanedAssignedStallNumbers = assignedStallNumbers
+      .map((stallNumber) => stallNumber.trim())
+      .filter(Boolean);
+    const cleanedPersonalLicensePlates = personalLicensePlates
+      .map((licensePlate) => licensePlate.trim().toUpperCase())
+      .filter(Boolean);
+
+    if (!cleanedStrataLotNumber) {
+      setError('Strata lot number is required.');
+      return;
+    }
+
+    if (cleanedAssignedStallNumbers.length === 0) {
+      setError('At least one assigned stall number is required.');
+      return;
+    }
+
+    if (cleanedPersonalLicensePlates.length === 0) {
+      setError('At least one personal license plate is required.');
+      return;
+    }
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters long.');
@@ -133,6 +187,9 @@ export function ResidentInviteRegistrationForm({
         body: JSON.stringify({
           token,
           password,
+          strataLotNumber: cleanedStrataLotNumber,
+          assignedStallNumbers: cleanedAssignedStallNumbers,
+          personalLicensePlates: cleanedPersonalLicensePlates,
         }),
       });
       const data = await response.json();
@@ -185,7 +242,7 @@ export function ResidentInviteRegistrationForm({
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-2xl">
       <CardHeader className="text-center">
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
           <ShieldCheck className="h-7 w-7 text-primary" />
@@ -215,6 +272,118 @@ export function ResidentInviteRegistrationForm({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="resident-registration-strata-lot">Strata Lot #</Label>
+            <Input
+              id="resident-registration-strata-lot"
+              value={strataLotNumber}
+              onChange={(event) => setStrataLotNumber(event.target.value)}
+              className="h-11 md:h-10"
+              placeholder="Enter your strata lot number"
+              required
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Assigned Stall Number(s)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Add each stall assigned to your home.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addListValue(setAssignedStallNumbers)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Stall
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {assignedStallNumbers.map((stallNumber, index) => (
+                <div key={`stall-${index}`} className="flex items-center gap-2">
+                  <Input
+                    value={stallNumber}
+                    onChange={(event) =>
+                      updateListValue(
+                        setAssignedStallNumbers,
+                        index,
+                        event.target.value
+                      )
+                    }
+                    className="h-11 md:h-10"
+                    placeholder={`Assigned stall #${index + 1}`}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeListValue(setAssignedStallNumbers, index)}
+                    disabled={assignedStallNumbers.length === 1}
+                    aria-label={`Remove assigned stall ${index + 1}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Personal License Plate(s)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Add every vehicle plate registered to your household.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addListValue(setPersonalLicensePlates)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Plate
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {personalLicensePlates.map((licensePlate, index) => (
+                <div key={`plate-${index}`} className="flex items-center gap-2">
+                  <Input
+                    value={licensePlate}
+                    onChange={(event) =>
+                      updateListValue(
+                        setPersonalLicensePlates,
+                        index,
+                        event.target.value.toUpperCase()
+                      )
+                    }
+                    className="h-11 uppercase md:h-10"
+                    placeholder={`License plate #${index + 1}`}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeListValue(setPersonalLicensePlates, index)}
+                    disabled={personalLicensePlates.length === 1}
+                    aria-label={`Remove license plate ${index + 1}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="resident-registration-password">Password</Label>
             <Input
