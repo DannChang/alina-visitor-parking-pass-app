@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 
 export function ServiceWorkerRegister() {
-  useEffect(() => {
+  useMountEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {
         // Service worker registration failed silently
       });
     }
-  }, []);
+  });
 
   return null;
 }

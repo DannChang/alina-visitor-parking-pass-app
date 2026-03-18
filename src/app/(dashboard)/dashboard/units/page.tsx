@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Building2, Home, Phone, Mail, Search, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -110,7 +111,7 @@ export default function UnitsPage() {
     }
   }, [selectedBuilding, search]);
 
-  useEffect(() => {
+  useFetchOnChange(() => {
     fetchUnits();
   }, [fetchUnits]);
 

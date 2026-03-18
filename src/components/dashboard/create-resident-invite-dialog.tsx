@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -50,22 +50,21 @@ export function CreateResidentInviteDialog({
   units,
   onCreated,
 }: CreateResidentInviteDialogProps) {
+  const defaultBuildingId = buildings[0]?.id ?? '';
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
+  const handleOpenChange = (value: boolean) => {
+    if (!value) {
       setForm(EMPTY_FORM);
       setError(null);
       setIsSubmitting(false);
-      return;
+    } else if (!form.buildingId && defaultBuildingId) {
+      setForm((current) => ({ ...current, buildingId: defaultBuildingId }));
     }
-
-    if (!form.buildingId && buildings[0]) {
-      setForm((current) => ({ ...current, buildingId: buildings[0]!.id }));
-    }
-  }, [buildings, form.buildingId, open]);
+    onOpenChange(value);
+  };
 
   const availableUnits = useMemo(
     () =>
@@ -75,16 +74,10 @@ export function CreateResidentInviteDialog({
     [form.buildingId, units]
   );
 
-  useEffect(() => {
-    if (!form.unitId) {
-      return;
-    }
-
-    const isStillAvailable = availableUnits.some((unit) => unit.id === form.unitId);
-    if (!isStillAvailable) {
-      setForm((current) => ({ ...current, unitId: '' }));
-    }
-  }, [availableUnits, form.unitId]);
+  // Derive effective unitId — clear if no longer available
+  const effectiveUnitId = form.unitId && availableUnits.some((unit) => unit.id === form.unitId)
+    ? form.unitId
+    : '';
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,7 +90,7 @@ export function CreateResidentInviteDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           buildingId: form.buildingId,
-          unitId: form.unitId,
+          unitId: effectiveUnitId,
           recipientName: form.recipientName.trim(),
           recipientEmail: form.recipientEmail.trim(),
           recipientPhone: form.recipientPhone.trim() || undefined,
@@ -124,7 +117,7 @@ export function CreateResidentInviteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Create Registration Pass</DialogTitle>
@@ -166,7 +159,7 @@ export function CreateResidentInviteDialog({
             <div className="space-y-2">
               <Label htmlFor="resident-invite-unit">Unit</Label>
               <Select
-                value={form.unitId}
+                value={effectiveUnitId}
                 onValueChange={(value) =>
                   setForm((current) => ({ ...current, unitId: value }))
                 }
@@ -251,7 +244,7 @@ export function CreateResidentInviteDialog({
               disabled={
                 isSubmitting ||
                 !form.buildingId ||
-                !form.unitId ||
+                !effectiveUnitId ||
                 !form.recipientName.trim() ||
                 !form.recipientEmail.trim()
               }

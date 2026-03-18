@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Users, Search, Plus, Edit2, Trash2, Ban, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -100,7 +101,7 @@ export default function UsersPage() {
     }
   }, [search, roleFilter]);
 
-  useEffect(() => {
+  useFetchOnChange(() => {
     fetchUsers();
   }, [fetchUsers]);
 

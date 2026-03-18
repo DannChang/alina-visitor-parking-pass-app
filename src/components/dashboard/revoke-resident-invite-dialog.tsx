@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -32,13 +32,14 @@ export function RevokeResidentInviteDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
+  const handleOpenChange = (value: boolean) => {
+    if (!value) {
       setReason('');
       setError(null);
       setIsSubmitting(false);
     }
-  }, [open]);
+    onOpenChange(value);
+  };
 
   async function handleSubmit() {
     if (!invite) {
@@ -74,7 +75,7 @@ export function RevokeResidentInviteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Revoke Registration Pass</DialogTitle>

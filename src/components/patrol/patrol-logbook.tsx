@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Plus, RefreshCw, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -132,7 +133,7 @@ export function PatrolLogbook() {
   };
 
   // Fetch entries on mount and when filters change
-  useEffect(() => {
+  useFetchOnChange(() => {
     fetchEntries();
   }, [fetchEntries]);
 

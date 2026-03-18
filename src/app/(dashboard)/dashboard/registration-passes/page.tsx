@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Copy,
@@ -83,7 +85,7 @@ export default function RegistrationPassesPage() {
   const [units, setUnits] = useState<ResidentInviteUnitOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [statusFilter, setStatusFilter] = useState<'all' | ResidentInviteStatus>('all');
   const [buildingFilter, setBuildingFilter] = useState('all');
   const [error, setError] = useState<string | null>(null);
@@ -91,23 +93,6 @@ export default function RegistrationPassesPage() {
   const [inviteToRevoke, setInviteToRevoke] = useState<ResidentInviteSummary | null>(null);
   const [reissuingInviteId, setReissuingInviteId] = useState<string | null>(null);
   const [latestInvite, setLatestInvite] = useState<ResidentInviteMutationResult | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 350);
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [search]);
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
@@ -146,7 +131,7 @@ export default function RegistrationPassesPage() {
     }
   }, [buildingFilter, debouncedSearch, statusFilter]);
 
-  useEffect(() => {
+  useFetchOnChange(() => {
     fetchInvites();
   }, [fetchInvites]);
 

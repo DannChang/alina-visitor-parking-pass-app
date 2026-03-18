@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Building2, Clock, Shield, Bell, Save, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,11 +67,11 @@ export default function SettingsPage() {
   const [buildingData, setBuildingData] = useState<Building | null>(null);
   const [parkingRules, setParkingRules] = useState<ParkingRules | null>(null);
 
-  useEffect(() => {
+  useMountEffect(() => {
     fetchBuildings();
-  }, []);
+  });
 
-  useEffect(() => {
+  useFetchOnChange(() => {
     if (selectedBuildingId) {
       fetchBuildingSettings(selectedBuildingId);
     }

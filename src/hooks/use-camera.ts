@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 
 export interface UseCameraOptions {
   facingMode?: 'user' | 'environment';
@@ -135,11 +136,11 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   }, [isStreaming]);
 
   // Cleanup on unmount
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       stopCamera();
     };
-  }, [stopCamera]);
+  });
 
   return {
     videoRef,

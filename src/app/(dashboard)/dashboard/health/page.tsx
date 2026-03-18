@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 import { Database, Server, RefreshCw, CheckCircle, AlertCircle, XCircle, Wifi } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -165,13 +166,13 @@ export default function HealthPage() {
     }
   }, []);
 
-  useEffect(() => {
+  useMountEffect(() => {
     fetchHealth();
 
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => fetchHealth(), 30000);
     return () => clearInterval(interval);
-  }, [fetchHealth]);
+  });
 
   if (loading) {
     return (
