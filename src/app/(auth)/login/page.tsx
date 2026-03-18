@@ -29,13 +29,20 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+function getStaffCallbackUrl(rawCallbackUrl?: string | null) {
+  if (!rawCallbackUrl || !rawCallbackUrl.startsWith('/')) {
+    return '/dashboard';
+  }
+
+  return rawCallbackUrl.includes('/login') ? '/dashboard' : rawCallbackUrl;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawCallbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const rawCallbackUrl = searchParams.get('callbackUrl');
   const resetSuccess = searchParams.get('reset') === 'success';
-  // Prevent redirect loops — if callbackUrl points back to login, go to dashboard
-  const callbackUrl = rawCallbackUrl.includes('/login') ? '/dashboard' : rawCallbackUrl;
+  const callbackUrl = getStaffCallbackUrl(rawCallbackUrl);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,12 +63,13 @@ function LoginForm() {
         email: data.email,
         password: data.password,
         redirect: false,
+        callbackUrl,
       });
 
       if (result?.error) {
         setError('Invalid email or password. Please try again.');
       } else if (result?.ok) {
-        router.push(callbackUrl);
+        router.replace(result.url ?? callbackUrl);
         router.refresh();
       }
     } catch {
