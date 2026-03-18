@@ -1,9 +1,9 @@
 {
   "landing": {
     "title": "Alina Visitor Parking",
-    "subtitle": "Register your vehicle for visitor parking",
+    "subtitle": "Residents can send parking passes to their guests",
     "getPass": "Get A Parking Pass",
-    "sendPass": "Send A Parking Pass",
+    "sendPass": "Resident Login",
     "staffLogin": "Staff Login"
   },
   "registration": {

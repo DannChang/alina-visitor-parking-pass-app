@@ -1,7 +1,7 @@
 import { UserRole } from '@prisma/client';
 
 /**
- * Fine-grained permissions for the hospital visitor parking pass application.
+ * Fine-grained permissions for the visitor parking pass application.
  * Following the principle of least privilege.
  */
 export type Permission =
@@ -171,20 +171,14 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 /**
  * Check if a role has any of the specified permissions.
  */
-export function hasAnyPermission(
-  role: UserRole,
-  permissions: Permission[]
-): boolean {
+export function hasAnyPermission(role: UserRole, permissions: Permission[]): boolean {
   return permissions.some((permission) => hasPermission(role, permission));
 }
 
 /**
  * Check if a role has all of the specified permissions.
  */
-export function hasAllPermissions(
-  role: UserRole,
-  permissions: Permission[]
-): boolean {
+export function hasAllPermissions(role: UserRole, permissions: Permission[]): boolean {
   return permissions.every((permission) => hasPermission(role, permission));
 }
 
@@ -240,10 +234,7 @@ export interface AuthorizationContext {
 /**
  * Create an authorization context for a user.
  */
-export function createAuthContext(
-  userId: string,
-  role: UserRole
-): AuthorizationContext {
+export function createAuthContext(userId: string, role: UserRole): AuthorizationContext {
   return {
     userId,
     role,

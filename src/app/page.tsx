@@ -4,7 +4,7 @@ import { auth, signOut } from '@/lib/auth';
 import { hasPermission } from '@/lib/authorization';
 import { getNavItemsForRole } from '@/lib/navigation';
 import { PatrolDashboard } from '@/components/patrol/patrol-dashboard';
-import { Car, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
 export default async function HomePage() {
@@ -67,16 +67,8 @@ export default async function HomePage() {
         {/* Main Actions */}
         <div className="space-y-3">
           <Link
-            href="/register/guest"
-            className="flex items-center justify-center gap-3 w-full rounded-xl bg-primary px-6 py-5 text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors min-h-[64px] touch-manipulation"
-          >
-            <Car className="h-6 w-6" />
-            {t('getPass')}
-          </Link>
-
-          <Link
             href="/resident/login"
-            className="flex items-center justify-center gap-3 w-full rounded-xl border-2 border-primary bg-white px-6 py-5 text-lg font-semibold text-primary shadow hover:bg-primary/5 transition-colors min-h-[64px] touch-manipulation"
+            className="flex items-center justify-center gap-3 w-full rounded-xl bg-primary px-6 py-5 text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors min-h-[64px] touch-manipulation"
           >
             <Send className="h-6 w-6" />
             {t('sendPass')}

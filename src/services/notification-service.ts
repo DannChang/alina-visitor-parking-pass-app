@@ -60,8 +60,7 @@ interface PasswordChangedConfirmationEmailData {
   accountType: 'staff' | 'resident';
 }
 
-const FROM_EMAIL =
-  process.env.EMAIL_FROM?.trim() || 'Alina Parking <noreply@alinaparking.com>';
+const FROM_EMAIL = process.env.EMAIL_FROM?.trim() || 'Alina Parking <noreply@alinaparking.com>';
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   // Create notification queue entry
@@ -199,7 +198,7 @@ export async function sendPassConfirmation(data: PassConfirmationData): Promise<
 
         <p style="font-size: 14px; color: #666; margin-bottom: 0;">
           Thank you for visiting!<br>
-          <strong>Alina Hospital Parking Management</strong>
+          <strong>Alina Parking Management</strong>
         </p>
       </div>
 
@@ -229,7 +228,7 @@ Details:
 Please ensure you move your vehicle before the pass expires to avoid any violations or citations.
 
 Thank you for visiting!
-Alina Hospital Parking Management
+Alina Parking Management
   `.trim();
 
   return sendEmail({
@@ -322,9 +321,7 @@ Complete registration: ${data.registrationUrl}
   });
 }
 
-export async function sendPasswordResetEmail(
-  data: PasswordResetEmailData
-): Promise<boolean> {
+export async function sendPasswordResetEmail(data: PasswordResetEmailData): Promise<boolean> {
   const formattedExpiry = data.expiresAt.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -413,8 +410,7 @@ export async function sendPasswordChangedConfirmationEmail(
   data: PasswordChangedConfirmationEmailData
 ): Promise<boolean> {
   const greeting = data.recipientName ? `Hi ${data.recipientName},` : 'Hello,';
-  const accountLabel =
-    data.accountType === 'resident' ? 'resident portal' : 'staff account';
+  const accountLabel = data.accountType === 'resident' ? 'resident portal' : 'staff account';
 
   const html = `
     <!DOCTYPE html>
@@ -501,7 +497,7 @@ export async function sendPassExpirationWarning(data: PassExpirationWarningData)
 
         <p style="font-size: 14px; color: #666; margin-bottom: 0;">
           Thank you,<br>
-          <strong>Alina Hospital Parking Management</strong>
+          <strong>Alina Parking Management</strong>
         </p>
       </div>
     </body>

@@ -1,9 +1,9 @@
 {
   "landing": {
     "title": "Stationnement Visiteurs Alina",
-    "subtitle": "Enregistrez votre véhicule pour le stationnement visiteurs",
+    "subtitle": "Les résidents peuvent envoyer des laissez-passer à leurs invités",
     "getPass": "Obtenir un Laissez-Passer",
-    "sendPass": "Envoyer un Laissez-Passer",
+    "sendPass": "Connexion Résident",
     "staffLogin": "Connexion Personnel"
   },
   "registration": {

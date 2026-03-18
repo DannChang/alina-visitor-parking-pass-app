@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright Configuration
- * E2E testing for critical hospital visitor parking flows
+ * E2E testing for visitor parking flows
  */
 export default defineConfig({
   testDir: './e2e',
