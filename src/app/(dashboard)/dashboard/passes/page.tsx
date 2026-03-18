@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -79,34 +81,18 @@ export default function PassesPage() {
   const [passes, setPasses] = useState<Pass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(searchValue, 400);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const role = session?.user?.role;
   const canCreate = role ? PASSES_CREATE_ROLES.includes(role) : false;
 
   // Redirect if not authenticated
-  useEffect(() => {
+  useFetchOnChange(() => {
     if (sessionStatus === 'unauthenticated') {
       router.push('/login');
     }
   }, [sessionStatus, router]);
-
-  // Debounce search input
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(searchValue);
-    }, 400);
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [searchValue]);
 
   const fetchPasses = useCallback(async (search: string) => {
     setIsLoading(true);
@@ -128,7 +114,7 @@ export default function PassesPage() {
   }, []);
 
   // Fetch passes when search changes
-  useEffect(() => {
+  useFetchOnChange(() => {
     if (sessionStatus === 'authenticated') {
       fetchPasses(debouncedSearch);
     }

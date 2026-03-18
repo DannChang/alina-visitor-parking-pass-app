@@ -1,9 +1,9 @@
 {
   "landing": {
     "title": "Estacionamiento de Visitantes Alina",
-    "subtitle": "Registre su vehículo para estacionamiento de visitantes",
+    "subtitle": "Los residentes pueden enviar pases de estacionamiento a sus invitados",
     "getPass": "Obtener un Pase de Estacionamiento",
-    "sendPass": "Enviar un Pase de Estacionamiento",
+    "sendPass": "Inicio de Sesión de Residente",
     "staffLogin": "Inicio de Sesión del Personal"
   },
   "registration": {

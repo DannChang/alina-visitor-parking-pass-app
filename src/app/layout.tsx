@@ -13,7 +13,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Alina Visitor Parking',
-  description: 'Visitor parking pass management system for Alina Hospital',
+  description: 'Visitor parking pass management system',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

@@ -1,6 +1,6 @@
 /**
  * License Plate Utilities Tests
- * Critical for vehicle identification in hospital parking
+ * Critical for vehicle identification in visitor parking
  * Target coverage: 95%+
  */
 

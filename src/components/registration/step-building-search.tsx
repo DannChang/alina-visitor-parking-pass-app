@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Search, Building, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,20 +25,18 @@ export function StepBuildingSearch({ onUpdate, onNext }: StepBuildingSearchProps
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BuildingResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debouncedQuery = useDebouncedValue(query, 300);
 
-  useEffect(() => {
-    if (query.length < 2) {
+  useFetchOnChange(() => {
+    if (debouncedQuery.length < 2) {
       setResults([]);
       return;
     }
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(async () => {
+    const fetchBuildings = async () => {
       setIsSearching(true);
       try {
-        const res = await fetch(`/api/buildings/search?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/buildings/search?q=${encodeURIComponent(debouncedQuery)}`);
         if (res.ok) {
           const data = await res.json();
           setResults(data.buildings);
@@ -46,12 +46,9 @@ export function StepBuildingSearch({ onUpdate, onNext }: StepBuildingSearchProps
       } finally {
         setIsSearching(false);
       }
-    }, 300);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+    fetchBuildings();
+  }, [debouncedQuery]);
 
   const handleSelect = (building: BuildingResult) => {
     onUpdate({

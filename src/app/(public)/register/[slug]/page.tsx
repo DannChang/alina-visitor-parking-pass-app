@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, use } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -115,7 +116,7 @@ export default function RegisterPage({
 
   const selectedDuration = watch('duration');
 
-  useEffect(() => {
+  useMountEffect(() => {
     const fetchUnits = async () => {
       try {
         const response = await fetch(`/api/units?buildingSlug=${slug}`);
@@ -138,7 +139,7 @@ export default function RegisterPage({
     };
 
     fetchUnits();
-  }, [slug]);
+  });
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);

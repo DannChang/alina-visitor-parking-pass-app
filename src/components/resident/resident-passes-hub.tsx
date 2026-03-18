@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
   AlertCircle,
@@ -191,9 +192,9 @@ export function ResidentPassesHub() {
     }
   }, []);
 
-  useEffect(() => {
+  useMountEffect(() => {
     fetchPasses();
-  }, [fetchPasses]);
+  });
 
   const sortedPasses = [...passes].sort((left, right) => {
     const leftActive = isActivePass(left) ? 1 : 0;

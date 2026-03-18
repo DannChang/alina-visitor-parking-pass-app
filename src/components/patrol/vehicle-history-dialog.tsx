@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { format } from 'date-fns';
 import { Loader2, Car, AlertTriangle, ClipboardList } from 'lucide-react';
 import {
@@ -126,7 +127,7 @@ export function VehicleHistoryDialog({
     }
   }, []);
 
-  useEffect(() => {
+  useFetchOnChange(() => {
     if (open && vehicleId) {
       fetchHistory(vehicleId);
     }

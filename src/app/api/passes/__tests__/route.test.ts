@@ -1,6 +1,6 @@
 /**
  * Passes API Route Integration Tests
- * CRITICAL: These routes handle visitor parking registration for hospital patients
+ * CRITICAL: These routes handle visitor parking registration
  * Target coverage: 80%+
  */
 
@@ -123,10 +123,7 @@ describe('Passes API Routes', () => {
         parkingZone: null,
       });
 
-      const request = createMockPostRequest(
-        'http://localhost:3000/api/passes',
-        validPassData
-      );
+      const request = createMockPostRequest('http://localhost:3000/api/passes', validPassData);
 
       const response = await POST(request);
       const data = await response.json();
@@ -216,19 +213,14 @@ describe('Passes API Routes', () => {
         warnings: [],
       });
 
-      const request = createMockPostRequest(
-        'http://localhost:3000/api/passes',
-        validPassData
-      );
+      const request = createMockPostRequest('http://localhost:3000/api/passes', validPassData);
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(400);
       expect(data.error).toBe('Validation failed');
-      expect(data.errors).toContainEqual(
-        expect.objectContaining({ code: 'ERR_4000' })
-      );
+      expect(data.errors).toContainEqual(expect.objectContaining({ code: 'ERR_4000' }));
     });
 
     it('should return 400 for consecutive hours exceeded', async () => {
@@ -240,18 +232,13 @@ describe('Passes API Routes', () => {
         warnings: [],
       });
 
-      const request = createMockPostRequest(
-        'http://localhost:3000/api/passes',
-        validPassData
-      );
+      const request = createMockPostRequest('http://localhost:3000/api/passes', validPassData);
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.errors).toContainEqual(
-        expect.objectContaining({ code: 'ERR_4002' })
-      );
+      expect(data.errors).toContainEqual(expect.objectContaining({ code: 'ERR_4002' }));
     });
 
     it('should return 400 for vehicle during cooldown', async () => {
@@ -263,18 +250,13 @@ describe('Passes API Routes', () => {
         warnings: [],
       });
 
-      const request = createMockPostRequest(
-        'http://localhost:3000/api/passes',
-        validPassData
-      );
+      const request = createMockPostRequest('http://localhost:3000/api/passes', validPassData);
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.errors).toContainEqual(
-        expect.objectContaining({ code: 'ERR_4003' })
-      );
+      expect(data.errors).toContainEqual(expect.objectContaining({ code: 'ERR_4003' }));
     });
 
     it('should return warnings with successful creation', async () => {
@@ -302,9 +284,7 @@ describe('Passes API Routes', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.warnings).toContainEqual(
-        expect.objectContaining({ code: 'LONG_DURATION' })
-      );
+      expect(data.warnings).toContainEqual(expect.objectContaining({ code: 'LONG_DURATION' }));
     });
 
     it('should update existing vehicle details if provided', async () => {
@@ -387,10 +367,7 @@ describe('Passes API Routes', () => {
     it('should return 500 on database error', async () => {
       mockPrisma.building.findUnique.mockRejectedValue(new Error('Database connection failed'));
 
-      const request = createMockPostRequest(
-        'http://localhost:3000/api/passes',
-        validPassData
-      );
+      const request = createMockPostRequest('http://localhost:3000/api/passes', validPassData);
 
       const response = await POST(request);
       const data = await response.json();
@@ -539,9 +516,7 @@ describe('Passes API Routes', () => {
 
     it('should return 500 on database error', async () => {
       mockAuth.mockResolvedValue(createMockManagerSession());
-      mockPrisma.parkingPass.findMany.mockRejectedValue(
-        new Error('Database connection failed')
-      );
+      mockPrisma.parkingPass.findMany.mockRejectedValue(new Error('Database connection failed'));
 
       const request = createMockGetRequest('http://localhost:3000/api/passes');
       const response = await GET(request);

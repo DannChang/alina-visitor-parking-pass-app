@@ -49,6 +49,15 @@ function canAccessRoute(role: UserRole, pathname: string): boolean {
   return allowedRoles.includes(role);
 }
 
+function isSecureAuthRequest(request: NextRequest): boolean {
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  if (forwardedProto) {
+    return forwardedProto.split(',')[0]?.trim() === 'https';
+  }
+
+  return request.nextUrl.protocol === 'https:';
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -120,6 +129,7 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({
     req: request,
     secret,
+    secureCookie: isSecureAuthRequest(request),
   });
 
   const isLoggedIn = !!token;
@@ -130,6 +140,10 @@ export async function middleware(request: NextRequest) {
     // Redirect logged-in users away from login page
     if (pathname === '/login' && isLoggedIn) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    if (pathname === '/resident/login' && isLoggedIn) {
+      const destination = userRole === 'RESIDENT' ? '/resident/passes' : '/dashboard';
+      return NextResponse.redirect(new URL(destination, request.url));
     }
     return NextResponse.next();
   }

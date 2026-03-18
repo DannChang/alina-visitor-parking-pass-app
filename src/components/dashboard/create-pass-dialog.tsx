@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Loader2, Building, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,23 +48,30 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
   const [buildingSlug, setBuildingSlug] = useState('');
   const [unitNumber, setUnitNumber] = useState('');
 
-  // Resident: load building/unit from session
-  useEffect(() => {
-    if (!isResident || !session) return;
-    const s = session as unknown as Record<string, string>;
-    if (s.buildingSlug) setBuildingSlug(s.buildingSlug);
-    if (s.unitNumber) setUnitNumber(s.unitNumber);
-  }, [isResident, session]);
+  // Resident: derive building/unit from session
+  const sessionRecord = session as unknown as Record<string, string> | null;
+  const sessionBuildingSlug = isResident ? sessionRecord?.buildingSlug ?? '' : '';
+  const sessionUnitNumber = isResident ? sessionRecord?.unitNumber ?? '' : '';
 
-  // Building search for staff
-  useEffect(() => {
-    if (isResident || buildingSearch.length < 2) {
+  // Sync session values into state when they become available
+  if (isResident && sessionBuildingSlug && !buildingSlug) {
+    setBuildingSlug(sessionBuildingSlug);
+  }
+  if (isResident && sessionUnitNumber && !unitNumber) {
+    setUnitNumber(sessionUnitNumber);
+  }
+
+  // Building search for staff (debounced)
+  const debouncedBuildingSearch = useDebouncedValue(buildingSearch, 300);
+
+  useFetchOnChange(() => {
+    if (isResident || debouncedBuildingSearch.length < 2) {
       setBuildings([]);
       return;
     }
-    const timeout = setTimeout(async () => {
+    const fetchBuildings = async () => {
       try {
-        const res = await fetch(`/api/buildings/search?q=${encodeURIComponent(buildingSearch)}`);
+        const res = await fetch(`/api/buildings/search?q=${encodeURIComponent(debouncedBuildingSearch)}`);
         if (res.ok) {
           const data = await res.json();
           setBuildings(data.buildings);
@@ -70,9 +79,9 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
       } catch {
         // Silently fail
       }
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [buildingSearch, isResident]);
+    };
+    fetchBuildings();
+  }, [debouncedBuildingSearch, isResident]);
 
   const resetForm = () => {
     setLicensePlate('');

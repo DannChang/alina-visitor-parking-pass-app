@@ -1,6 +1,6 @@
 /**
  * Visitor Registration E2E Tests
- * CRITICAL: This is the primary flow for hospital visitors
+ * CRITICAL: This is the primary flow for parking visitors
  *
  * Tests the public registration page where visitors register their vehicles
  * to get temporary parking passes.
@@ -150,9 +150,9 @@ test.describe('Invalid Building Handling', () => {
     await page.goto('/register/non-existent-building');
 
     // Should show error or 404
-    await expect(
-      page.getByText(/not found|building.*not found|error/i)
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/not found|building.*not found|error/i)).toBeVisible({
+      timeout: 10000,
+    });
   });
 });
 

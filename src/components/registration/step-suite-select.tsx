@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Home, Loader2, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,7 +29,9 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
   const [error, setError] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<string | null>(data.unitId ?? null);
 
-  useEffect(() => {
+  useFetchOnChange(() => {
+    if (!data.buildingSlug) return;
+
     const fetchUnits = async () => {
       try {
         const res = await fetch(`/api/units?buildingSlug=${data.buildingSlug}`);
@@ -41,8 +44,7 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
         setIsLoading(false);
       }
     };
-
-    if (data.buildingSlug) fetchUnits();
+    fetchUnits();
   }, [data.buildingSlug]);
 
   const handleSelect = (unit: UnitResult) => {

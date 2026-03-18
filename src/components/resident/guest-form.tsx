@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,19 +34,26 @@ export function GuestForm({ open, onOpenChange, guest, onSuccess }: GuestFormPro
   const [licensePlate, setLicensePlate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (guest) {
-      setName(guest.name);
-      setPhone(guest.phone ?? '');
-      setEmail(guest.email ?? '');
-      setLicensePlate(guest.licensePlate ?? '');
+  const resetForm = (g: Guest | null) => {
+    if (g) {
+      setName(g.name);
+      setPhone(g.phone ?? '');
+      setEmail(g.email ?? '');
+      setLicensePlate(g.licensePlate ?? '');
     } else {
       setName('');
       setPhone('');
       setEmail('');
       setLicensePlate('');
     }
-  }, [guest, open]);
+  };
+
+  const handleOpenChange = (value: boolean) => {
+    if (value) {
+      resetForm(guest);
+    }
+    onOpenChange(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +89,7 @@ export function GuestForm({ open, onOpenChange, guest, onSuccess }: GuestFormPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{guest ? 'Edit Guest' : 'Add Guest'}</DialogTitle>

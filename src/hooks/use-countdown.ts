@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
+import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 
 interface CountdownResult {
   hours: number;
@@ -42,21 +44,24 @@ export function useCountdown(endTime: Date | string): CountdownResult {
 
   const [countdown, setCountdown] = useState<CountdownResult>(calculate);
 
-  useEffect(() => {
+  // Update endTimeRef and recalculate when endTime prop changes
+  useFetchOnChange(() => {
     endTimeRef.current =
       typeof endTime === 'string' ? new Date(endTime) : endTime;
     setCountdown(calculate());
   }, [endTime, calculate]);
 
-  useEffect(() => {
-    if (countdown.isExpired) return;
-
+  // Tick every second while not expired
+  useMountEffect(() => {
     const interval = setInterval(() => {
-      setCountdown(calculate());
+      setCountdown((prev) => {
+        if (prev.isExpired) return prev;
+        return calculate();
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [countdown.isExpired, calculate]);
+  });
 
   return countdown;
 }

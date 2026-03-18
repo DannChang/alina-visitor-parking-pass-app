@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 import { Camera, CameraOff, SwitchCamera, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,9 +37,9 @@ export function CameraCapture({ onCapture, isProcessing = false, className }: Ca
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-start camera on mount
-  useEffect(() => {
+  useMountEffect(() => {
     startCamera();
-  }, [startCamera]);
+  });
 
   const handleCapture = () => {
     if (isProcessing) return;

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMountEffect } from '@/hooks/use-mount-effect';
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ export function ResidentSettingsForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
+  useMountEffect(() => {
     const fetchSettings = async () => {
       try {
         const res = await fetch('/api/resident/settings');
@@ -36,7 +37,7 @@ export function ResidentSettingsForm() {
       }
     };
     fetchSettings();
-  }, []);
+  });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

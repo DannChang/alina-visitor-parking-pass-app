@@ -14,9 +14,13 @@ import { APP_CONFIG } from '@/lib/constants';
 
 interface ResidentLoginFormProps {
   showResetSuccess?: boolean;
+  callbackUrl?: string;
 }
 
-export function ResidentLoginForm({ showResetSuccess = false }: ResidentLoginFormProps) {
+export function ResidentLoginForm({
+  showResetSuccess = false,
+  callbackUrl = '/resident/passes',
+}: ResidentLoginFormProps) {
   const router = useRouter();
   const [unitNumber, setUnitNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -33,18 +37,27 @@ export function ResidentLoginForm({ showResetSuccess = false }: ResidentLoginFor
     setIsSubmitting(true);
     setError(null);
 
-    const result = await signIn('resident-credentials', {
-      buildingSlug: APP_CONFIG.resident.defaultBuildingSlug,
-      unitNumber,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn('resident-credentials', {
+        buildingSlug: APP_CONFIG.resident.defaultBuildingSlug,
+        unitNumber,
+        password,
+        redirect: false,
+        callbackUrl,
+      });
 
-    if (result?.error) {
-      setError('Invalid credentials. Please check your unit number and password.');
+      if (result?.error) {
+        setError('Invalid credentials. Please check your unit number and password.');
+        return;
+      }
+
+      const destination = result?.url ?? callbackUrl;
+      router.replace(destination);
+      router.refresh();
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    } else {
-      router.push('/resident/passes');
     }
   };
 

@@ -1,6 +1,6 @@
 /**
  * QR Code Generation Utilities
- * Hospital-grade QR code generation for parking zones
+ * QR code generation for parking zones
  */
 
 import QRCode from 'qrcode';
@@ -37,10 +37,7 @@ export async function generateParkingQRCode(
 /**
  * Generate QR code as Data URL from any URL
  */
-export async function generateQRCodeDataURL(
-  url: string,
-  options?: QRCodeOptions
-): Promise<string> {
+export async function generateQRCodeDataURL(url: string, options?: QRCodeOptions): Promise<string> {
   const qrOptions = {
     width: options?.width ?? QR_CODE_CONFIG.size,
     margin: options?.margin ?? QR_CODE_CONFIG.margin,
@@ -63,10 +60,7 @@ export async function generateQRCodeDataURL(
 /**
  * Generate QR code as Buffer (for server-side saving)
  */
-export async function generateQRCodeBuffer(
-  url: string,
-  options?: QRCodeOptions
-): Promise<Buffer> {
+export async function generateQRCodeBuffer(url: string, options?: QRCodeOptions): Promise<Buffer> {
   const qrOptions = {
     width: options?.width ?? QR_CODE_CONFIG.size,
     margin: options?.margin ?? QR_CODE_CONFIG.margin,
@@ -90,10 +84,7 @@ export async function generateQRCodeBuffer(
 /**
  * Generate QR code as SVG string
  */
-export async function generateQRCodeSVG(
-  url: string,
-  options?: QRCodeOptions
-): Promise<string> {
+export async function generateQRCodeSVG(url: string, options?: QRCodeOptions): Promise<string> {
   const qrOptions = {
     width: options?.width ?? QR_CODE_CONFIG.size,
     margin: options?.margin ?? QR_CODE_CONFIG.margin,
