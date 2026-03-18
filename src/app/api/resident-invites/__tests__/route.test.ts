@@ -184,6 +184,9 @@ describe('Resident invite API routes', () => {
       {
         token: 'token-1',
         password: 'Resident@123!',
+        strataLotNumber: 'SL-101',
+        assignedStallNumbers: ['12'],
+        personalLicensePlates: ['ABC123'],
       },
       {
         'user-agent': 'vitest',
@@ -198,6 +201,9 @@ describe('Resident invite API routes', () => {
     expect(mockConsumeResidentInvite).toHaveBeenCalledWith({
       token: 'token-1',
       password: 'Resident@123!',
+      strataLotNumber: 'SL-101',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: ['ABC123'],
       ipAddress: null,
       userAgent: 'vitest',
     });

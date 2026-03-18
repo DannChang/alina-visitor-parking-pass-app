@@ -111,6 +111,8 @@ model Resident {
   email     String?
   phone     String?
   name      String
+  strataLotNumber String?
+  assignedStallNumbers String[] @default([])
   unitId    String
   unit      Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
