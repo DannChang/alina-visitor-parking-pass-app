@@ -40,6 +40,7 @@ interface PassDetails {
     licensePlate: string;
     make: string | null;
     model: string | null;
+    year: number | null;
     color: string | null;
     state: string | null;
     isBlacklisted: boolean;
@@ -152,7 +153,7 @@ export function PassDetailsSheet({
                   <div>
                     <p className="font-mono text-xl font-bold">{pass.vehicle.licensePlate}</p>
                     <p className="text-sm text-muted-foreground">
-                      {[pass.vehicle.color, pass.vehicle.make, pass.vehicle.model]
+                      {[pass.vehicle.year, pass.vehicle.color, pass.vehicle.make, pass.vehicle.model]
                         .filter(Boolean)
                         .join(' ') || 'Vehicle details not provided'}
                     </p>

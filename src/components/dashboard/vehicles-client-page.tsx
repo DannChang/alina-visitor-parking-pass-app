@@ -24,6 +24,7 @@ interface Vehicle {
   licensePlate: string;
   make: string | null;
   model: string | null;
+  year: number | null;
   color: string | null;
   state: string | null;
   isBlacklisted: boolean;
@@ -148,7 +149,7 @@ export function VehiclesClientPage() {
                           <div>
                             <p className="font-medium">{vehicle.licensePlate}</p>
                             <p className="text-xs text-muted-foreground">
-                              {[vehicle.color, vehicle.make, vehicle.model]
+                              {[vehicle.year, vehicle.color, vehicle.make, vehicle.model]
                                 .filter(Boolean)
                                 .join(' ') || 'Vehicle details not provided'}
                             </p>

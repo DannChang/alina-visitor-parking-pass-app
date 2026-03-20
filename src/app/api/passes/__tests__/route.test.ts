@@ -95,6 +95,9 @@ describe('Passes API Routes', () => {
       duration: 4,
       visitorName: 'John Doe',
       visitorPhone: '555-1234',
+      vehicleMake: 'Toyota',
+      vehicleModel: 'Camry',
+      vehicleYear: 2024,
     };
 
     const mockBuilding = {
@@ -267,10 +270,16 @@ describe('Passes API Routes', () => {
         errors: [],
         warnings: [{ code: 'LONG_DURATION', message: 'Pass duration exceeds 12 hours' }],
       });
-      mockPrisma.vehicle.findUnique.mockResolvedValue(mockVehicle);
+      const createdVehicle = createMockVehicle({
+        make: validPassData.vehicleMake,
+        model: validPassData.vehicleModel,
+        year: validPassData.vehicleYear,
+      });
+      mockPrisma.vehicle.findUnique.mockResolvedValue(null);
+      mockPrisma.vehicle.create.mockResolvedValue(createdVehicle);
       mockPrisma.parkingPass.create.mockResolvedValue({
         ...createMockPass({ duration: 24 }),
-        vehicle: mockVehicle,
+        vehicle: createdVehicle,
         unit: { ...mockUnit, building: mockBuilding },
         parkingZone: null,
       });
@@ -293,6 +302,7 @@ describe('Passes API Routes', () => {
         ...existingVehicle,
         make: 'Honda',
         model: 'Civic',
+        year: 2020,
         color: 'Blue',
       };
 
@@ -316,6 +326,7 @@ describe('Passes API Routes', () => {
         ...validPassData,
         vehicleMake: 'Honda',
         vehicleModel: 'Civic',
+        vehicleYear: 2020,
         vehicleColor: 'Blue',
       });
 
@@ -461,7 +472,7 @@ describe('Passes API Routes', () => {
       expect(response.status).toBe(200);
       expect(mockPrisma.parkingPass.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ unit: { buildingId: 'building-1' } }),
+          where: expect.objectContaining({ unit: { is: { buildingId: 'building-1' } } }),
         })
       );
     });
@@ -482,7 +493,7 @@ describe('Passes API Routes', () => {
           where: expect.objectContaining({
             OR: expect.arrayContaining([
               expect.objectContaining({
-                vehicle: { normalizedPlate: { contains: 'ABC' } },
+                vehicle: { is: { normalizedPlate: { contains: 'ABC' } } },
               }),
             ]),
           }),
