@@ -35,6 +35,10 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  handleClickableRowKeyDown,
+  stopClickableRowPropagation,
+} from '@/components/dashboard/clickable-row';
 
 interface User {
   id: string;
@@ -268,7 +272,15 @@ export default function UsersPage() {
                   </TableRow>
                 ) : (
                   users.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow
+                      key={user.id}
+                      tabIndex={0}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      onClick={() => handleOpenDialog(user)}
+                      onKeyDown={(event) =>
+                        handleClickableRowKeyDown(event, () => handleOpenDialog(user))
+                      }
+                    >
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -315,16 +327,24 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleOpenDialog(user)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleOpenDialog(user);
+                            }}
                             title="Edit user"
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleToggleSuspend(user)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleToggleSuspend(user);
+                            }}
                             title={user.isSuspended ? 'Unsuspend user' : 'Suspend user'}
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             {user.isSuspended ? (
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -335,8 +355,12 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(user)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleDelete(user);
+                            }}
                             title="Delete user"
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>

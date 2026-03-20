@@ -146,6 +146,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard': [], // Base dashboard accessible to all authenticated
   '/dashboard/passes': ['passes:view_all', 'passes:view_own'],
   '/dashboard/violations': ['violations:view'],
+  '/dashboard/vehicles': ['vehicles:view'],
   '/dashboard/units': ['units:view'],
   '/dashboard/analytics': ['analytics:view'],
   '/dashboard/health': ['health:view'],

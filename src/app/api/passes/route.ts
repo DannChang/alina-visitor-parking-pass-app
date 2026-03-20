@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status') as PassStatus | null;
+  const status = searchParams.get('status');
   const buildingId = searchParams.get('buildingId');
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
@@ -50,17 +50,29 @@ export async function GET(request: NextRequest) {
     where.unitId = unitId;
   }
 
-  if (status) {
-    where.status = status;
+  if (status === 'EXPIRING_SOON') {
+    where.status = PassStatus.ACTIVE;
+    where.endTime = {
+      gt: new Date(),
+      lte: new Date(Date.now() + 60 * 60 * 1000),
+    };
+  } else if (status) {
+    where.status = status as PassStatus;
   }
 
   if (buildingId) {
-    where.unit = { buildingId };
+    where.unit = { is: { buildingId } };
   }
 
   if (search) {
     where.OR = [
-      { vehicle: { normalizedPlate: { contains: normalizeLicensePlate(search) } } },
+      {
+        vehicle: {
+          is: {
+            normalizedPlate: { contains: normalizeLicensePlate(search) },
+          },
+        },
+      },
       { visitorName: { contains: search, mode: 'insensitive' } },
       { confirmationCode: { contains: search } },
     ];
