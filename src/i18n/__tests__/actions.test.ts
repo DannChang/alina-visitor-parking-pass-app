@@ -38,8 +38,13 @@ describe('i18n actions', () => {
       await setLocale('en');
       await setLocale('es');
       await setLocale('fr');
+      await setLocale('zh-Hans');
+      await setLocale('zh-Hant');
+      await setLocale('fa');
+      await setLocale('ko');
+      await setLocale('vi');
 
-      expect(mockCookieStore.set).toHaveBeenCalledTimes(3);
+      expect(mockCookieStore.set).toHaveBeenCalledTimes(8);
     });
   });
 
