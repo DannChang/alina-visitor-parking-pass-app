@@ -32,6 +32,7 @@ export const PASS_CONFIG = {
   maxVehiclesPerUnit: 2,
   maxConsecutiveHours: 24,
   cooldownHours: 2,
+  weeklyHourBank: 24,
 } as const;
 
 export const LICENSE_PLATE_CONFIG = {
@@ -75,6 +76,7 @@ export const ERROR_CODES = {
   INVALID_DURATION: 'ERR_4004',
   OUTSIDE_OPERATING_HOURS: 'ERR_4005',
   MAX_CONSECUTIVE_DAYS: 'ERR_4006',
+  WEEKLY_HOUR_BANK_EXCEEDED: 'ERR_4007',
 
   // Authentication errors (4100-4199)
   UNAUTHORIZED: 'ERR_4100',

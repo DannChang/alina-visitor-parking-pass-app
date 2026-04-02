@@ -276,9 +276,61 @@ describe('Validation Service', () => {
     });
 
     // ============================================
-    // Rule 6: OPERATING HOURS
+    // Rule 6: WEEKLY HOUR BANK
     // ============================================
-    describe('Rule 6: Operating Hours', () => {
+    describe('Rule 6: Weekly Hour Bank', () => {
+      it('should reject when the rolling weekly 24-hour bank would be exceeded (ERR_4007)', async () => {
+        setupDefaultMocks();
+        const now = new Date();
+        const weeklyPasses = [
+          {
+            startTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+            endTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000),
+            duration: 12,
+          },
+          {
+            startTime: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+            endTime: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+            duration: 10,
+          },
+        ];
+        mockPrisma.parkingPass.findMany.mockResolvedValue(weeklyPasses);
+
+        const result = await validatePassRequest(defaultRequest);
+
+        expect(result.isValid).toBe(false);
+        const error = result.errors.find((e) => e.code === 'ERR_4007');
+        expect(error).toBeDefined();
+        expect(error?.field).toBe('duration');
+      });
+
+      it('should warn with the remaining weekly hour bank after approval', async () => {
+        setupDefaultMocks();
+        const weeklyPasses = [
+          {
+            startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            endTime: new Date(),
+            duration: 8,
+          },
+        ];
+        mockPrisma.parkingPass.findMany.mockResolvedValue(weeklyPasses);
+
+        const result = await validatePassRequest(defaultRequest);
+
+        const warning = result.warnings.find((w) => w.code === 'WEEKLY_HOUR_BANK_REMAINING');
+        expect(warning).toBeDefined();
+        expect(warning?.metadata).toEqual({
+          weeklyHourBank: 24,
+          weeklyHoursUsed: 8,
+          weeklyHoursRemainingAfterApproval: 12,
+        });
+      });
+    });
+
+    // ============================================
+    // Rule 7: OPERATING HOURS
+    // ============================================
+    describe('Rule 7: Operating Hours', () => {
       it('should reject outside operating hours (ERR_4005)', async () => {
         setupDefaultMocks();
         // Set operating hours 8:00 - 18:00
