@@ -6,6 +6,7 @@ import { getNavItemsForRole } from '@/lib/navigation';
 import { PatrolDashboard } from '@/components/patrol/patrol-dashboard';
 import { Send } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 export default async function HomePage() {
   const session = await auth();
@@ -52,7 +53,10 @@ export default async function HomePage() {
   const t = await getTranslations('landing');
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+      <div className="absolute top-4 right-4">
+        <LocaleSwitcher />
+      </div>
       <div className="w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">

@@ -32,6 +32,7 @@ import { VehicleHistoryDialog } from './vehicle-history-dialog';
 import { usePatrolScanner } from '@/hooks/use-patrol-scanner';
 import { cn } from '@/lib/utils';
 import { NAV_ICONS, type NavItem } from '@/lib/navigation';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 interface PatrolDashboardProps {
   user: {
@@ -189,6 +190,7 @@ export function PatrolDashboard({
 
             {/* Right side actions */}
             <div className="flex items-center gap-1">
+              <LocaleSwitcher />
               {isOffline && (
                 <Badge variant="secondary" className="gap-1 text-xs">
                   <WifiOff className="h-3 w-3" />

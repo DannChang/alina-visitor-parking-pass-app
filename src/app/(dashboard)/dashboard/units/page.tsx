@@ -34,6 +34,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import {
+  handleClickableRowKeyDown,
+  stopClickableRowPropagation,
+} from '@/components/dashboard/clickable-row';
 
 interface Building {
   id: string;
@@ -274,7 +278,15 @@ export default function UnitsPage() {
                   </TableRow>
                 ) : (
                   filteredUnits.map((unit) => (
-                    <TableRow key={unit.id}>
+                    <TableRow
+                      key={unit.id}
+                      tabIndex={0}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      onClick={() => handleOpenDialog(unit)}
+                      onKeyDown={(event) =>
+                        handleClickableRowKeyDown(event, () => handleOpenDialog(unit))
+                      }
+                    >
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -334,14 +346,22 @@ export default function UnitsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleOpenDialog(unit)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleOpenDialog(unit);
+                            }}
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(unit)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleDelete(unit);
+                            }}
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>

@@ -241,6 +241,7 @@ model Vehicle {
   // Vehicle details
   make          String?
   model         String?
+  year          Int?
   color         String?
   state         String?  // License plate state/province
 

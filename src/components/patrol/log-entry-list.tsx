@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 export interface PatrolLogEntry {
   id: string;
+  vehicleId: string | null;
   licensePlate: string;
   normalizedPlate: string;
   entryType: 'ENTRY' | 'EXIT' | 'SPOT_CHECK' | 'NOTE';
@@ -25,6 +26,7 @@ export interface PatrolLogEntry {
 
 interface LogEntryListProps {
   entries: PatrolLogEntry[];
+  onEntrySelect?: (entry: PatrolLogEntry) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoading?: boolean;
@@ -74,6 +76,7 @@ function LogEntrySkeleton() {
 
 export function LogEntryList({
   entries,
+  onEntrySelect,
   onLoadMore,
   hasMore = false,
   isLoading = false,
@@ -106,7 +109,20 @@ export function LogEntryList({
         const typeConfig = ENTRY_TYPE_CONFIG[entry.entryType];
 
         return (
-          <Card key={entry.id}>
+          <Card
+            key={entry.id}
+            tabIndex={0}
+            className="cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={() => onEntrySelect?.(entry)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+              }
+
+              event.preventDefault();
+              onEntrySelect?.(entry);
+            }}
+          >
             <CardContent className="py-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">

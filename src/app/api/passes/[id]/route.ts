@@ -29,6 +29,7 @@ export async function GET(
             licensePlate: true,
             make: true,
             model: true,
+            year: true,
             color: true,
             state: true,
             isBlacklisted: true,

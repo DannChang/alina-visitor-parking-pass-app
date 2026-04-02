@@ -52,6 +52,11 @@ export async function GET(request: NextRequest) {
       prisma.patrolLogEntry.findMany({
         where,
         include: {
+          vehicle: {
+            select: {
+              id: true,
+            },
+          },
           patroller: {
             select: {
               id: true,
@@ -67,7 +72,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      entries,
+      entries: entries.map(({ vehicle, ...entry }) => ({
+        ...entry,
+        vehicleId: vehicle?.id ?? entry.vehicleId ?? null,
+      })),
       pagination: {
         page,
         limit,

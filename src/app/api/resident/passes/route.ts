@@ -12,6 +12,9 @@ const createPassSchema = z.object({
   duration: z.number().int().min(1).max(24),
   visitorName: z.string().min(1).max(100),
   visitorPhone: z.string().max(20).optional(),
+  vehicleMake: z.string().trim().min(1).max(50),
+  vehicleModel: z.string().trim().min(1).max(50),
+  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
 });
 
 // GET /api/resident/passes - List passes for the resident's unit
@@ -53,6 +56,7 @@ export async function GET(request: NextRequest) {
               licensePlate: true,
               make: true,
               model: true,
+              year: true,
               color: true,
             },
           },
@@ -158,6 +162,18 @@ export async function POST(request: NextRequest) {
         data: {
           licensePlate: data.licensePlate.toUpperCase(),
           normalizedPlate,
+          make: data.vehicleMake,
+          model: data.vehicleModel,
+          year: data.vehicleYear,
+        },
+      });
+    } else {
+      vehicle = await prisma.vehicle.update({
+        where: { id: vehicle.id },
+        data: {
+          make: data.vehicleMake,
+          model: data.vehicleModel,
+          year: data.vehicleYear,
         },
       });
     }

@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -87,12 +88,14 @@ function StatCard({
   value,
   description,
   icon: Icon,
+  href,
   variant = 'default',
 }: {
   title: string;
   value: number;
   description: string;
   icon: React.ElementType;
+  href: string;
   variant?: 'default' | 'warning' | 'success' | 'destructive';
 }) {
   const iconColors = {
@@ -103,16 +106,18 @@ function StatCard({
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
-        <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
-        <Icon className={`h-4 w-4 ${iconColors[variant]}`} />
-      </CardHeader>
-      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-        <div className="text-xl md:text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground truncate">{description}</p>
-      </CardContent>
-    </Card>
+    <Link href={href} className="block focus-visible:outline-none">
+      <Card className="h-full transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+          <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
+          <Icon className={`h-4 w-4 ${iconColors[variant]}`} />
+        </CardHeader>
+        <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+          <div className="text-xl md:text-2xl font-bold">{value}</div>
+          <p className="text-xs text-muted-foreground truncate">{description}</p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -145,6 +150,7 @@ async function StatsSection() {
         value={stats.activePasses}
         description="Currently valid passes"
         icon={Car}
+        href="/dashboard/passes?status=ACTIVE"
         variant="success"
       />
       <StatCard
@@ -152,6 +158,7 @@ async function StatsSection() {
         value={stats.expiringSoon}
         description="Within the next hour"
         icon={Clock}
+        href="/dashboard/passes?status=EXPIRING_SOON"
         variant="warning"
       />
       <StatCard
@@ -159,6 +166,7 @@ async function StatsSection() {
         value={stats.todayViolations}
         description="Logged today"
         icon={AlertTriangle}
+        href="/dashboard/violations?date=today"
         variant="destructive"
       />
       <StatCard
@@ -166,6 +174,7 @@ async function StatsSection() {
         value={stats.totalVehicles}
         description="In the system"
         icon={Users}
+        href="/dashboard/vehicles"
       />
     </div>
   );

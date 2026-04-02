@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getNavItemsForRole, NAV_ICONS } from '@/lib/navigation';
 import { MobileNav } from '@/components/mobile-nav';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 export default async function DashboardLayout({
   children,
@@ -61,8 +62,7 @@ export default async function DashboardLayout({
           <Car className="mr-2 h-6 w-6 text-primary" />
           <span className="font-semibold">Alina Parking</span>
         </div>
-        {/* Spacer for centering */}
-        <div className="w-11" />
+        <LocaleSwitcher />
       </header>
 
       {/* Desktop Sidebar - hidden on mobile */}
@@ -91,8 +91,11 @@ export default async function DashboardLayout({
             })}
           </nav>
 
-          {/* User menu */}
-          <div className="border-t p-4">
+          {/* Language & User menu */}
+          <div className="border-t p-4 space-y-2">
+            <div className="flex justify-end">
+              <LocaleSwitcher />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start px-2">

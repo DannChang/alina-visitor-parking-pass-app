@@ -82,6 +82,12 @@ export const NAV_ITEMS: NavItem[] = [
     permissions: ['passes:view_all'],
   },
   {
+    href: '/dashboard/vehicles',
+    label: 'Vehicles',
+    iconName: 'Car',
+    permissions: ['vehicles:view'],
+  },
+  {
     href: '/dashboard/units',
     label: 'Units',
     iconName: 'Home',

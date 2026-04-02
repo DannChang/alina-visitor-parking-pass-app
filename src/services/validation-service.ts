@@ -13,7 +13,7 @@ import {
   getHoursUntilCooldownEnds,
   isWithinOperatingHours,
 } from '@/lib/utils/date-time';
-import { ERROR_CODES, VALIDATION_MESSAGES } from '@/lib/constants';
+import { ERROR_CODES, PASS_CONFIG, VALIDATION_MESSAGES } from '@/lib/constants';
 import type { ParkingRule } from '@prisma/client';
 
 export interface ValidationResult {
@@ -55,11 +55,12 @@ export async function validatePassRequest(
 
   try {
     // Fetch all necessary data in parallel for performance
-    const [rules, vehicle, activePassesForUnit, recentPassesForPlate] = await Promise.all([
+    const [rules, vehicle, activePassesForUnit, recentPassesForPlate, weeklyPassesForPlate] = await Promise.all([
       fetchBuildingRules(data.buildingId),
       fetchVehicle(data.licensePlate),
       countActivePassesForUnit(data.unitId),
       fetchRecentPassesForPlate(data.licensePlate),
+      fetchWeeklyPassesForPlate(data.licensePlate, data.buildingId),
     ]);
 
     // Emergency override - skip most validations
@@ -178,7 +179,28 @@ export async function validatePassRequest(
       });
     }
 
-    // 7. OPERATING HOURS CHECK
+    // 7. WEEKLY HOUR BANK
+    const weeklyHoursUsed = weeklyPassesForPlate.reduce(
+      (totalHours, pass) => totalHours + pass.duration,
+      0
+    );
+    const weeklyHoursRemaining = PASS_CONFIG.weeklyHourBank - weeklyHoursUsed;
+
+    if (data.durationHours > weeklyHoursRemaining) {
+      errors.push({
+        code: ERROR_CODES.WEEKLY_HOUR_BANK_EXCEEDED,
+        message: `This vehicle has ${Math.max(weeklyHoursRemaining, 0)} of ${PASS_CONFIG.weeklyHourBank} weekly hours remaining. Requesting ${data.durationHours} hour${data.durationHours === 1 ? '' : 's'} exceeds the weekly bank.`,
+        field: 'duration',
+        metadata: {
+          weeklyHourBank: PASS_CONFIG.weeklyHourBank,
+          weeklyHoursUsed,
+          weeklyHoursRemaining: Math.max(weeklyHoursRemaining, 0),
+          requestedHours: data.durationHours,
+        },
+      });
+    }
+
+    // 8. OPERATING HOURS CHECK
     if (!isWithinOperatingHours(rules.operatingStartHour, rules.operatingEndHour)) {
       const startHour = rules.operatingStartHour ?? 0;
       const endHour = rules.operatingEndHour ?? 24;
@@ -196,6 +218,18 @@ export async function validatePassRequest(
     }
 
     // WARNINGS (non-blocking)
+
+    if (weeklyHoursRemaining - data.durationHours >= 0) {
+      warnings.push({
+        code: 'WEEKLY_HOUR_BANK_REMAINING',
+        message: `${weeklyHoursRemaining - data.durationHours} of ${PASS_CONFIG.weeklyHourBank} weekly hours will remain after this pass.`,
+        metadata: {
+          weeklyHourBank: PASS_CONFIG.weeklyHourBank,
+          weeklyHoursUsed,
+          weeklyHoursRemainingAfterApproval: weeklyHoursRemaining - data.durationHours,
+        },
+      });
+    }
 
     // Long duration warning
     if (data.durationHours >= 24) {
@@ -456,7 +490,7 @@ async function fetchRecentPassesForPlate(licensePlate: string) {
 
   return prisma.parkingPass.findMany({
     where: {
-      vehicle: { normalizedPlate },
+      vehicle: { is: { normalizedPlate } },
       createdAt: { gte: lookbackTime },
       deletedAt: null,
     },
@@ -480,12 +514,36 @@ async function fetchPassesForDayCount(licensePlate: string, days: number) {
 
   return prisma.parkingPass.findMany({
     where: {
-      vehicle: { normalizedPlate },
+      vehicle: { is: { normalizedPlate } },
       createdAt: { gte: lookbackTime },
       deletedAt: null,
     },
     select: {
       startTime: true,
+    },
+  });
+}
+
+async function fetchWeeklyPassesForPlate(licensePlate: string, buildingId: string) {
+  const normalizedPlate = normalizeLicensePlate(licensePlate);
+  const lookbackTime = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  return prisma.parkingPass.findMany({
+    where: {
+      vehicle: {
+        is: { normalizedPlate },
+      },
+      unit: {
+        is: { buildingId },
+      },
+      startTime: { gte: lookbackTime },
+      deletedAt: null,
+      status: {
+        in: ['ACTIVE', 'EXPIRED', 'EXTENDED'],
+      },
+    },
+    select: {
+      duration: true,
     },
   });
 }

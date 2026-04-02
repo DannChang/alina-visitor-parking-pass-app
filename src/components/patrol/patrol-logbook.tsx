@@ -18,6 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { LogEntryForm } from './log-entry-form';
 import { LogEntryList, type PatrolLogEntry } from './log-entry-list';
+import { VehicleHistoryDialog } from './vehicle-history-dialog';
+import { LogEntryDetailsSheet } from './log-entry-details-sheet';
 
 const PAGE_SIZE = 20;
 
@@ -36,6 +38,7 @@ export function PatrolLogbook() {
   const [hasMore, setHasMore] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<PatrolLogEntry | null>(null);
 
   // Filter state
   const [filterType, setFilterType] = useState('ALL');
@@ -257,6 +260,7 @@ export function PatrolLogbook() {
       {/* Entry List */}
       <LogEntryList
         entries={entries}
+        onEntrySelect={setSelectedEntry}
         onLoadMore={loadMore}
         hasMore={hasMore}
         isLoading={isLoading || isLoadingMore}
@@ -267,6 +271,25 @@ export function PatrolLogbook() {
         open={showForm}
         onOpenChange={setShowForm}
         onSuccess={handleFormSuccess}
+      />
+      <VehicleHistoryDialog
+        open={!!selectedEntry?.vehicleId}
+        onOpenChange={(open) => {
+          if (!open && selectedEntry?.vehicleId) {
+            setSelectedEntry(null);
+          }
+        }}
+        vehicleId={selectedEntry?.vehicleId || null}
+        licensePlate={selectedEntry?.licensePlate || ''}
+      />
+      <LogEntryDetailsSheet
+        entry={selectedEntry && !selectedEntry.vehicleId ? selectedEntry : null}
+        open={!!selectedEntry && !selectedEntry.vehicleId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedEntry(null);
+          }
+        }}
       />
     </div>
   );

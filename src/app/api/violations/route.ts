@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
   const resolved = searchParams.get('resolved');
   const type = searchParams.get('type') as ViolationType | null;
   const severity = searchParams.get('severity') as ViolationSeverity | null;
+  const date = searchParams.get('date');
+  const search = searchParams.get('search');
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
 
@@ -56,6 +58,21 @@ export async function GET(request: NextRequest) {
 
   if (severity) {
     where.severity = severity;
+  }
+
+  if (date === 'today') {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    where.createdAt = { gte: startOfToday };
+  }
+
+  if (search) {
+    where.OR = [
+      { vehicle: { is: { licensePlate: { contains: search, mode: 'insensitive' } } } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { location: { contains: search, mode: 'insensitive' } },
+      { loggedBy: { is: { name: { contains: search, mode: 'insensitive' } } } },
+    ];
   }
 
   try {
