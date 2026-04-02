@@ -48,7 +48,10 @@ async function getRecentPasses() {
     where: {
       deletedAt: null,
     },
-    include: {
+    select: {
+      id: true,
+      status: true,
+      endTime: true,
       vehicle: {
         select: {
           licensePlate: true,
@@ -183,6 +186,7 @@ async function StatsSection() {
 
 async function RecentPassesSection() {
   const [passes, t] = await Promise.all([getRecentPasses(), getTranslations('dashboard.home')]);
+  const now = new Date();
 
   return (
     <Card className="col-span-1">
@@ -195,32 +199,40 @@ async function RecentPassesSection() {
           {passes.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('noRecentPasses')}</p>
           ) : (
-            passes.map((pass) => (
-              <div key={pass.id} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                    <Car className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{pass.vehicle.licensePlate}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t('unitLabel', { number: pass.unit.unitNumber })}
-                    </p>
-                  </div>
-                </div>
-                <Badge
-                  variant={
-                    pass.status === 'ACTIVE'
-                      ? 'default'
-                      : pass.status === 'EXPIRED'
-                        ? 'secondary'
-                        : 'outline'
-                  }
+            passes.map((pass) => {
+              const effectiveStatus =
+                pass.status === 'ACTIVE' && pass.endTime < now ? 'EXPIRED' : pass.status;
+              return (
+                <Link
+                  key={pass.id}
+                  href={`/dashboard/passes?passId=${pass.id}`}
+                  className="flex items-center justify-between rounded-md p-1 -mx-1 hover:bg-accent transition-colors"
                 >
-                  {pass.status}
-                </Badge>
-              </div>
-            ))
+                  <div className="flex items-center space-x-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                      <Car className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{pass.vehicle.licensePlate}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('unitLabel', { number: pass.unit.unitNumber })}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={
+                      effectiveStatus === 'ACTIVE'
+                        ? 'default'
+                        : effectiveStatus === 'EXPIRED'
+                          ? 'secondary'
+                          : 'outline'
+                    }
+                  >
+                    {effectiveStatus}
+                  </Badge>
+                </Link>
+              );
+            })
           )}
         </div>
       </CardContent>
