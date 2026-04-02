@@ -238,7 +238,8 @@
       "security": "安保",
       "never": "从未",
       "active": "有效",
-      "suspended": "已暂停"
+      "suspended": "已暂停",
+      "usersFound": "找到 {count} 个用户"
     },
     "vehicles": {
       "title": "车辆",

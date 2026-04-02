@@ -238,7 +238,8 @@
       "security": "امنیت",
       "never": "هرگز",
       "active": "فعال",
-      "suspended": "تعلیق شده"
+      "suspended": "تعلیق شده",
+      "usersFound": "{count} کاربر یافت شد"
     },
     "vehicles": {
       "title": "خودروها",

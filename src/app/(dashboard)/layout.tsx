@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth, signOut } from '@/lib/auth';
 import { Car, LogOut } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -21,7 +22,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const [session, t] = await Promise.all([auth(), getTranslations('common')]);
 
   if (!session?.user) {
     redirect('/login');
@@ -124,7 +125,7 @@ export default async function DashboardLayout({
                   <form action={handleSignOut}>
                     <button type="submit" className="flex w-full items-center">
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
+                      {t('signOut')}
                     </button>
                   </form>
                 </DropdownMenuItem>

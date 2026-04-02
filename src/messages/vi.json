@@ -238,7 +238,8 @@
       "security": "Bảo Vệ",
       "never": "Chưa bao giờ",
       "active": "Đang Hoạt Động",
-      "suspended": "Tạm Ngưng"
+      "suspended": "Tạm Ngưng",
+      "usersFound": "{count, plural, other {Tìm thấy # người dùng}}"
     },
     "vehicles": {
       "title": "Xe",

@@ -7,6 +7,7 @@ import { Car, AlertTriangle, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getTranslations } from 'next-intl/server';
 
 async function getStats() {
   const now = new Date();
@@ -141,38 +142,38 @@ function StatsLoading() {
 }
 
 async function StatsSection() {
-  const stats = await getStats();
+  const [stats, t] = await Promise.all([getStats(), getTranslations('dashboard.home')]);
 
   return (
     <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
       <StatCard
-        title="Active Passes"
+        title={t('activePassesTitle')}
         value={stats.activePasses}
-        description="Currently valid passes"
+        description={t('activePassesDesc')}
         icon={Car}
         href="/dashboard/passes?status=ACTIVE"
         variant="success"
       />
       <StatCard
-        title="Expiring Soon"
+        title={t('expiringSoonTitle')}
         value={stats.expiringSoon}
-        description="Within the next hour"
+        description={t('expiringSoonDesc')}
         icon={Clock}
         href="/dashboard/passes?status=EXPIRING_SOON"
         variant="warning"
       />
       <StatCard
-        title="Today's Violations"
+        title={t('todayViolationsTitle')}
         value={stats.todayViolations}
-        description="Logged today"
+        description={t('todayViolationsDesc')}
         icon={AlertTriangle}
         href="/dashboard/violations?date=today"
         variant="destructive"
       />
       <StatCard
-        title="Total Vehicles"
+        title={t('totalVehiclesTitle')}
         value={stats.totalVehicles}
-        description="In the system"
+        description={t('totalVehiclesDesc')}
         icon={Users}
         href="/dashboard/vehicles"
       />
@@ -181,18 +182,18 @@ async function StatsSection() {
 }
 
 async function RecentPassesSection() {
-  const passes = await getRecentPasses();
+  const [passes, t] = await Promise.all([getRecentPasses(), getTranslations('dashboard.home')]);
 
   return (
     <Card className="col-span-1">
       <CardHeader>
-        <CardTitle>Recent Passes</CardTitle>
-        <CardDescription>Latest parking registrations</CardDescription>
+        <CardTitle>{t('recentPasses')}</CardTitle>
+        <CardDescription>{t('recentPassesDesc')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {passes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent passes</p>
+            <p className="text-sm text-muted-foreground">{t('noRecentPasses')}</p>
           ) : (
             passes.map((pass) => (
               <div key={pass.id} className="flex items-center justify-between">
@@ -203,7 +204,7 @@ async function RecentPassesSection() {
                   <div>
                     <p className="text-sm font-medium">{pass.vehicle.licensePlate}</p>
                     <p className="text-xs text-muted-foreground">
-                      Unit {pass.unit.unitNumber}
+                      {t('unitLabel', { number: pass.unit.unitNumber })}
                     </p>
                   </div>
                 </div>
@@ -228,18 +229,21 @@ async function RecentPassesSection() {
 }
 
 async function RecentViolationsSection() {
-  const violations = await getRecentViolations();
+  const [violations, t] = await Promise.all([
+    getRecentViolations(),
+    getTranslations('dashboard.home'),
+  ]);
 
   return (
     <Card className="col-span-1">
       <CardHeader>
-        <CardTitle>Recent Violations</CardTitle>
-        <CardDescription>Latest logged violations</CardDescription>
+        <CardTitle>{t('recentViolations')}</CardTitle>
+        <CardDescription>{t('recentViolationsDesc')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {violations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent violations</p>
+            <p className="text-sm text-muted-foreground">{t('noRecentViolations')}</p>
           ) : (
             violations.map((violation) => (
               <div key={violation.id} className="flex items-center justify-between">
@@ -276,12 +280,14 @@ export default async function DashboardPage() {
     redirect('/dashboard/passes');
   }
 
+  const t = await getTranslations('dashboard.home');
+
   return (
     <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Welcome back, {session.user.name || 'Manager'}. Here&apos;s what&apos;s happening today.
+          {t('welcomeBack', { name: session.user.name || 'Manager' })} {t('todaySummary')}
         </p>
       </div>
 

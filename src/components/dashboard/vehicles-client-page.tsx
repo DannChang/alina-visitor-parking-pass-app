@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { handleClickableRowKeyDown } from '@/components/dashboard/clickable-row';
 import { VehicleHistoryDialog } from '@/components/patrol/vehicle-history-dialog';
+import { useTranslations } from 'next-intl';
 
 interface Vehicle {
   id: string;
@@ -47,6 +48,7 @@ function VehiclesLoading() {
 }
 
 export function VehiclesClientPage() {
+  const t = useTranslations('dashboard.vehicles');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -85,17 +87,15 @@ export function VehiclesClientPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Vehicles</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Search and inspect registered vehicles across the property
-          </p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value.toUpperCase())}
-            placeholder="Search by plate..."
+            placeholder={t('searchPlaceholder')}
             className="h-11 pl-9 md:h-10"
           />
         </div>
@@ -103,10 +103,8 @@ export function VehiclesClientPage() {
 
       <Card>
         <CardHeader className="px-4 md:px-6">
-          <CardTitle className="text-lg md:text-xl">Registered Vehicles</CardTitle>
-          <CardDescription>
-            Click a row to open the full vehicle history
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">{t('registeredVehicles')}</CardTitle>
+          <CardDescription>{t('registeredVehiclesDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {loading ? (
@@ -115,19 +113,19 @@ export function VehiclesClientPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>State</TableHead>
-                  <TableHead>Passes</TableHead>
-                  <TableHead>Violations</TableHead>
-                  <TableHead>Risk</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t('vehicle')}</TableHead>
+                  <TableHead>{t('state')}</TableHead>
+                  <TableHead>{t('passes')}</TableHead>
+                  <TableHead>{t('violationsCol')}</TableHead>
+                  <TableHead>{t('risk')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {vehicles.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No vehicles found
+                      {t('noVehiclesFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -151,7 +149,7 @@ export function VehiclesClientPage() {
                             <p className="text-xs text-muted-foreground">
                               {[vehicle.year, vehicle.color, vehicle.make, vehicle.model]
                                 .filter(Boolean)
-                                .join(' ') || 'Vehicle details not provided'}
+                                .join(' ') || t('detailsNotProvided')}
                             </p>
                           </div>
                         </div>
@@ -165,10 +163,10 @@ export function VehiclesClientPage() {
                           {vehicle.isBlacklisted ? (
                             <Badge variant="destructive">
                               <AlertTriangle className="mr-1 h-3 w-3" />
-                              Blacklisted
+                              {t('blacklisted')}
                             </Badge>
                           ) : (
-                            <Badge variant="outline">Normal</Badge>
+                            <Badge variant="outline">{t('clean')}</Badge>
                           )}
                         </div>
                       </TableCell>

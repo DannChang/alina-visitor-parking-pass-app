@@ -238,7 +238,8 @@
       "security": "保全",
       "never": "從未",
       "active": "有效",
-      "suspended": "已暫停"
+      "suspended": "已暫停",
+      "usersFound": "找到 {count} 個用戶"
     },
     "vehicles": {
       "title": "車輛",

@@ -22,6 +22,7 @@ import {
   ViolationDetailsSheet,
   type ViolationDetails,
 } from '@/components/dashboard/violation-details-sheet';
+import { useTranslations } from 'next-intl';
 
 function getSeverityVariant(severity: string) {
   switch (severity) {
@@ -53,6 +54,8 @@ export function ViolationsClientPage({
 }: {
   initialDateFilter: string | null;
 }) {
+  const t = useTranslations('dashboard.violationsPage');
+  const tc = useTranslations('common');
   const [violations, setViolations] = useState<ViolationDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
@@ -94,15 +97,13 @@ export function ViolationsClientPage({
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Violations</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            View and manage parking violations
-          </p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by plate, note, location..."
+            placeholder={t('searchPlaceholder')}
             className="pl-9 h-11 md:h-10 text-base md:text-sm"
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
@@ -112,12 +113,8 @@ export function ViolationsClientPage({
 
       <Card>
         <CardHeader className="px-4 md:px-6">
-          <CardTitle className="text-lg md:text-xl">All Violations</CardTitle>
-          <CardDescription>
-            {initialDateFilter === 'today'
-              ? 'Showing violations logged today'
-              : 'A list of all logged violations across all buildings'}
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">{t('allViolations')}</CardTitle>
+          <CardDescription>{t('allViolationsDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {isLoading ? (
@@ -126,21 +123,21 @@ export function ViolationsClientPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Severity</TableHead>
+                  <TableHead>{t('vehicle')}</TableHead>
+                  <TableHead>{t('type')}</TableHead>
+                  <TableHead>{t('severity')}</TableHead>
                   <TableHead>Escalation</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Logged By</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Logged</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead>{t('reported')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {violations.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground">
-                      No violations found
+                      {t('noViolationsFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -164,7 +161,7 @@ export function ViolationsClientPage({
                           </div>
                           {violation.vehicle.isBlacklisted ? (
                             <Badge variant="destructive" className="text-xs">
-                              Blacklisted
+                              {tc('blacklisted')}
                             </Badge>
                           ) : null}
                         </div>
@@ -203,10 +200,10 @@ export function ViolationsClientPage({
                         {violation.isResolved ? (
                           <div className="flex items-center space-x-1 text-success">
                             <CheckCircle2 className="h-4 w-4" />
-                            <span>Resolved</span>
+                            <span>{t('resolved')}</span>
                           </div>
                         ) : (
-                          <Badge variant="outline">Open</Badge>
+                          <Badge variant="outline">{t('unresolved')}</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">

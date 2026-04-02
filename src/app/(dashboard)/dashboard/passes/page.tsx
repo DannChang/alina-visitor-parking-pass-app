@@ -30,6 +30,7 @@ import {
 import { CreatePassDialog } from '@/components/dashboard/create-pass-dialog';
 import { handleClickableRowKeyDown } from '@/components/dashboard/clickable-row';
 import { PassDetailsSheet } from '@/components/dashboard/pass-details-sheet';
+import { useTranslations } from 'next-intl';
 
 interface PassVehicle {
   id: string;
@@ -84,16 +85,8 @@ function PassesLoading() {
   );
 }
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'EXPIRING_SOON', label: 'Expiring soon' },
-  { value: 'EXPIRED', label: 'Expired' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'SUSPENDED', label: 'Suspended' },
-] as const;
-
 export default function PassesPage() {
+  const t = useTranslations('dashboard.passes');
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -161,14 +154,14 @@ export default function PassesPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Parking Passes</h1>
-          <p className="text-sm md:text-base text-muted-foreground">View and manage all parking passes</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by plate or name..."
+              placeholder={t('searchPlaceholder')}
               className="pl-9 h-11 md:h-10 text-base md:text-sm"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
@@ -176,20 +169,21 @@ export default function PassesPage() {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-11 w-[180px] md:h-10">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('status')} />
             </SelectTrigger>
             <SelectContent>
-              {STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">{t('allStatuses')}</SelectItem>
+              <SelectItem value="ACTIVE">{t('active')}</SelectItem>
+              <SelectItem value="EXPIRING_SOON">{t('expiringSoon')}</SelectItem>
+              <SelectItem value="EXPIRED">{t('expired')}</SelectItem>
+              <SelectItem value="CANCELLED">{t('cancelled')}</SelectItem>
+              <SelectItem value="SUSPENDED">{t('suspended')}</SelectItem>
             </SelectContent>
           </Select>
           {canCreate && (
             <Button onClick={() => setDialogOpen(true)} size="sm" className="shrink-0">
               <Plus className="h-4 w-4 mr-1" />
-              New Pass
+              {t('newPass')}
             </Button>
           )}
         </div>
@@ -197,10 +191,8 @@ export default function PassesPage() {
 
       <Card>
         <CardHeader className="px-4 md:px-6">
-          <CardTitle className="text-lg md:text-xl">All Passes</CardTitle>
-          <CardDescription>
-            A list of all registered parking passes across all buildings
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">{t('allPasses')}</CardTitle>
+          <CardDescription>{t('allPassesDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {isLoading ? (
@@ -209,19 +201,19 @@ export default function PassesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Visitor</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expires</TableHead>
+                  <TableHead>{t('vehicle')}</TableHead>
+                  <TableHead>{t('unit')}</TableHead>
+                  <TableHead>{t('visitor')}</TableHead>
+                  <TableHead>{t('duration')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead>{t('expires')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {passes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No parking passes found
+                      {t('noPassesFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -253,7 +245,7 @@ export default function PassesPage() {
                             </div>
                             {pass.vehicle.isBlacklisted && (
                               <Badge variant="destructive" className="text-xs">
-                                Blacklisted
+                                {t('blacklisted')}
                               </Badge>
                             )}
                           </div>
@@ -261,7 +253,7 @@ export default function PassesPage() {
                         <TableCell>{pass.unit.unitNumber}</TableCell>
                         <TableCell>
                           {pass.visitorName || (
-                            <span className="text-muted-foreground">Not provided</span>
+                            <span className="text-muted-foreground">{t('notProvided')}</span>
                           )}
                         </TableCell>
                         <TableCell>

@@ -238,7 +238,8 @@
       "security": "Sécurité",
       "never": "Jamais",
       "active": "Actif",
-      "suspended": "Suspendu"
+      "suspended": "Suspendu",
+      "usersFound": "{count, plural, =1 {# utilisateur trouvé} other {# utilisateurs trouvés}}"
     },
     "vehicles": {
       "title": "Véhicules",

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 interface Building {
   id: string;
@@ -60,6 +61,7 @@ function SettingsLoading() {
 }
 
 export default function SettingsPage() {
+  const t = useTranslations('dashboard.settingsPage');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -87,7 +89,7 @@ export default function SettingsPage() {
         setSelectedBuildingId(data.buildings[0].id);
       }
     } catch (error) {
-      toast.error('Failed to load buildings');
+      toast.error(t('failedToLoadBuildings'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -103,7 +105,7 @@ export default function SettingsPage() {
       setBuildingData(data.building);
       setParkingRules(data.parkingRules);
     } catch (error) {
-      toast.error('Failed to load building settings');
+      toast.error(t('failedToLoadSettings'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -120,9 +122,9 @@ export default function SettingsPage() {
         body: JSON.stringify(buildingData),
       });
       if (!response.ok) throw new Error('Failed to save settings');
-      toast.success('Building settings saved successfully');
+      toast.success(t('buildingSettingsSaved'));
     } catch (error) {
-      toast.error('Failed to save building settings');
+      toast.error(t('failedToSaveBuilding'));
       console.error(error);
     } finally {
       setSaving(false);
@@ -139,9 +141,9 @@ export default function SettingsPage() {
         body: JSON.stringify(parkingRules),
       });
       if (!response.ok) throw new Error('Failed to save parking rules');
-      toast.success('Parking rules saved successfully');
+      toast.success(t('parkingRulesSaved'));
     } catch (error) {
-      toast.error('Failed to save parking rules');
+      toast.error(t('failedToSaveParkingRules'));
       console.error(error);
     } finally {
       setSaving(false);
@@ -152,8 +154,8 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage system configuration</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
         </div>
         <SettingsLoading />
       </div>
@@ -164,12 +166,12 @@ export default function SettingsPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage building and system configuration</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <Select value={selectedBuildingId} onValueChange={setSelectedBuildingId}>
           <SelectTrigger className="w-full md:w-[250px] h-11 md:h-10">
-            <SelectValue placeholder="Select building" />
+            <SelectValue placeholder={t('selectBuilding')} />
           </SelectTrigger>
           <SelectContent>
             {buildings.map((building) => (
@@ -186,23 +188,19 @@ export default function SettingsPage() {
           <TabsList className="inline-flex w-auto min-w-full md:w-auto">
             <TabsTrigger value="building" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
               <Building2 className="mr-2 h-4 w-4" />
-              <span className="hidden xs:inline">Building</span>
-              <span className="xs:hidden">Bldg</span>
+              {t('buildingTab')}
             </TabsTrigger>
             <TabsTrigger value="parking" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
               <Clock className="mr-2 h-4 w-4" />
-              <span className="hidden xs:inline">Parking</span>
-              <span className="xs:hidden">Park</span>
+              {t('parkingTab')}
             </TabsTrigger>
             <TabsTrigger value="notifications" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
               <Bell className="mr-2 h-4 w-4" />
-              <span className="hidden xs:inline">Notifications</span>
-              <span className="xs:hidden">Notif</span>
+              {t('notificationsTab')}
             </TabsTrigger>
             <TabsTrigger value="security" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
               <Shield className="mr-2 h-4 w-4" />
-              <span className="hidden xs:inline">Security</span>
-              <span className="xs:hidden">Sec</span>
+              {t('securityTab')}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -214,13 +212,13 @@ export default function SettingsPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Building Information</CardTitle>
-                  <CardDescription>Basic building details and contact information</CardDescription>
+                  <CardTitle>{t('buildingInfo')}</CardTitle>
+                  <CardDescription>{t('buildingInfoDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Building Name</Label>
+                      <Label htmlFor="name">{t('buildingName')}</Label>
                       <Input
                         id="name"
                         value={buildingData.name}
@@ -229,7 +227,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="slug">URL Slug</Label>
+                      <Label htmlFor="slug">{t('urlSlug')}</Label>
                       <Input
                         id="slug"
                         value={buildingData.slug}
@@ -239,7 +237,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="address">{t('address')}</Label>
                     <Input
                       id="address"
                       value={buildingData.address}
@@ -249,7 +247,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="timezone">Timezone</Label>
+                      <Label htmlFor="timezone">{t('timezone')}</Label>
                       <Select
                         value={buildingData.timezone}
                         onValueChange={(value) => setBuildingData({ ...buildingData, timezone: value })}
@@ -266,7 +264,7 @@ export default function SettingsPage() {
                       </Select>
                     </div>
                     <div className="flex items-center justify-between py-2 md:block md:space-y-2">
-                      <Label htmlFor="isActive">Status</Label>
+                      <Label htmlFor="isActive">{t('statusLabel')}</Label>
                       <div className="flex items-center space-x-2 md:pt-2">
                         <Switch
                           id="isActive"
@@ -274,7 +272,7 @@ export default function SettingsPage() {
                           onCheckedChange={(checked) => setBuildingData({ ...buildingData, isActive: checked })}
                         />
                         <Label htmlFor="isActive" className="font-normal">
-                          {buildingData.isActive ? 'Active' : 'Inactive'}
+                          {buildingData.isActive ? t('active') : t('inactive')}
                         </Label>
                       </div>
                     </div>
@@ -284,13 +282,13 @@ export default function SettingsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                  <CardDescription>Emergency and general contact details</CardDescription>
+                  <CardTitle>{t('contactInfoTitle')}</CardTitle>
+                  <CardDescription>{t('contactInfoDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="contactEmail">Contact Email</Label>
+                      <Label htmlFor="contactEmail">{t('contactEmail')}</Label>
                       <Input
                         id="contactEmail"
                         type="email"
@@ -300,7 +298,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contactPhone">Contact Phone</Label>
+                      <Label htmlFor="contactPhone">{t('contactPhone')}</Label>
                       <Input
                         id="contactPhone"
                         type="tel"
@@ -311,7 +309,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="emergencyPhone">Emergency Phone</Label>
+                    <Label htmlFor="emergencyPhone">{t('emergencyPhone')}</Label>
                     <Input
                       id="emergencyPhone"
                       type="tel"
@@ -326,14 +324,14 @@ export default function SettingsPage() {
               <div className="flex justify-end">
                 <Button onClick={handleSaveBuilding} disabled={saving} className="w-full md:w-auto min-h-[44px] md:min-h-0">
                   {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Building Settings
+                  {t('saveBuildingSettings')}
                 </Button>
               </div>
             </>
           ) : (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                Select a building to view settings
+                {t('selectBuildingPrompt')}
               </CardContent>
             </Card>
           )}
@@ -346,13 +344,13 @@ export default function SettingsPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Pass Limits</CardTitle>
-                  <CardDescription>Configure limits for parking passes</CardDescription>
+                  <CardTitle>{t('passLimits')}</CardTitle>
+                  <CardDescription>{t('passLimitsDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="maxVehiclesPerUnit">Max Vehicles per Unit</Label>
+                      <Label htmlFor="maxVehiclesPerUnit">{t('maxVehiclesPerUnit')}</Label>
                       <Input
                         id="maxVehiclesPerUnit"
                         type="number"
@@ -364,7 +362,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="maxConsecutiveHours">Max Consecutive Hours</Label>
+                      <Label htmlFor="maxConsecutiveHours">{t('maxConsecutiveHours')}</Label>
                       <Input
                         id="maxConsecutiveHours"
                         type="number"
@@ -378,7 +376,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="cooldownHours">Cooldown Hours</Label>
+                      <Label htmlFor="cooldownHours">{t('cooldownHours')}</Label>
                       <Input
                         id="cooldownHours"
                         type="number"
@@ -388,10 +386,10 @@ export default function SettingsPage() {
                         onChange={(e) => setParkingRules({ ...parkingRules, cooldownHours: parseInt(e.target.value) || 0 })}
                         className="h-11 md:h-10 text-base md:text-sm"
                       />
-                      <p className="text-xs text-muted-foreground">Hours before same vehicle can register again</p>
+                      <p className="text-xs text-muted-foreground">{t('cooldownHoursDesc')}</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gracePeriodMinutes">Grace Period (minutes)</Label>
+                      <Label htmlFor="gracePeriodMinutes">{t('gracePeriodMinutes')}</Label>
                       <Input
                         id="gracePeriodMinutes"
                         type="number"
@@ -408,13 +406,13 @@ export default function SettingsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Extension Rules</CardTitle>
-                  <CardDescription>Configure pass extension settings</CardDescription>
+                  <CardTitle>{t('extensionRules')}</CardTitle>
+                  <CardDescription>{t('extensionRulesDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="maxExtensions">Max Extensions</Label>
+                      <Label htmlFor="maxExtensions">{t('maxExtensions')}</Label>
                       <Input
                         id="maxExtensions"
                         type="number"
@@ -426,7 +424,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="extensionMaxHours">Max Extension Hours</Label>
+                      <Label htmlFor="extensionMaxHours">{t('maxExtensionHours')}</Label>
                       <Input
                         id="extensionMaxHours"
                         type="number"
@@ -443,16 +441,14 @@ export default function SettingsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Additional Options</CardTitle>
-                  <CardDescription>Configure additional parking options</CardDescription>
+                  <CardTitle>{t('additionalOptions')}</CardTitle>
+                  <CardDescription>{t('additionalOptionsDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="requireUnitConfirmation">Require Unit Confirmation</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Require residents to confirm visitor registrations
-                      </p>
+                      <Label htmlFor="requireUnitConfirmation">{t('requireUnitConfirmation')}</Label>
+                      <p className="text-sm text-muted-foreground">{t('requireUnitConfirmationDesc')}</p>
                     </div>
                     <Switch
                       id="requireUnitConfirmation"
@@ -463,10 +459,8 @@ export default function SettingsPage() {
                   <Separator />
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="allowEmergencyOverride">Allow Emergency Override</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow managers to override limits for emergencies
-                      </p>
+                      <Label htmlFor="allowEmergencyOverride">{t('allowEmergencyOverride')}</Label>
+                      <p className="text-sm text-muted-foreground">{t('allowEmergencyOverrideDesc')}</p>
                     </div>
                     <Switch
                       id="allowEmergencyOverride"
@@ -480,14 +474,14 @@ export default function SettingsPage() {
               <div className="flex justify-end">
                 <Button onClick={handleSaveParkingRules} disabled={saving} className="w-full md:w-auto min-h-[44px] md:min-h-0">
                   {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Parking Rules
+                  {t('saveParkingRules')}
                 </Button>
               </div>
             </>
           ) : (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                No parking rules configured for this building
+                {t('noParkingRules')}
               </CardContent>
             </Card>
           )}
@@ -496,36 +490,30 @@ export default function SettingsPage() {
         <TabsContent value="notifications" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Email Notifications</CardTitle>
-              <CardDescription>Configure email notification settings</CardDescription>
+              <CardTitle>{t('emailNotifications')}</CardTitle>
+              <CardDescription>{t('emailNotificationsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Pass Confirmation</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Send confirmation email when pass is created
-                  </p>
+                  <Label>{t('passConfirmation')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('passConfirmationDesc')}</p>
                 </div>
                 <Switch defaultChecked />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Expiration Warning</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Send warning email before pass expires
-                  </p>
+                  <Label>{t('expirationWarning')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('expirationWarningDesc')}</p>
                 </div>
                 <Switch defaultChecked />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Violation Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Send email when violations are logged
-                  </p>
+                  <Label>{t('violationAlerts')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('violationAlertsDesc')}</p>
                 </div>
                 <Switch defaultChecked />
               </div>
@@ -536,36 +524,30 @@ export default function SettingsPage() {
         <TabsContent value="security" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Security Settings</CardTitle>
-              <CardDescription>Configure security and access controls</CardDescription>
+              <CardTitle>{t('securitySettings')}</CardTitle>
+              <CardDescription>{t('securitySettingsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Two-Factor Authentication</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Require 2FA for all admin accounts
-                  </p>
+                  <Label>{t('twoFactor')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('twoFactorDesc')}</p>
                 </div>
                 <Switch />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>IP Allowlist</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Restrict dashboard access to specific IPs
-                  </p>
+                  <Label>{t('ipAllowlist')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('ipAllowlistDesc')}</p>
                 </div>
                 <Switch />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Audit Logging</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Log all user actions for compliance
-                  </p>
+                  <Label>{t('auditLogging')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('auditLoggingDesc')}</p>
                 </div>
                 <Switch defaultChecked disabled />
               </div>

@@ -238,7 +238,8 @@
       "security": "보안",
       "never": "없음",
       "active": "활성",
-      "suspended": "정지됨"
+      "suspended": "정지됨",
+      "usersFound": "{count}명의 사용자를 찾았습니다"
     },
     "vehicles": {
       "title": "차량",

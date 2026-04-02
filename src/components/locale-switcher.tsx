@@ -1,7 +1,6 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { Globe, ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,6 @@ import { cn } from '@/lib/utils';
 
 export function LocaleSwitcher() {
   const locale = useLocale() as Locale;
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function handleSelect(newLocale: Locale) {

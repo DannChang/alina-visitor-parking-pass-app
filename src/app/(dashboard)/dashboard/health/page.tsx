@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'critical';
@@ -68,12 +69,13 @@ function StatusBadge({ status }: { status: 'operational' | 'degraded' | 'down' |
     critical: 'destructive',
   };
 
+  const th = useTranslations('dashboard.health');
   const labels: Record<string, string> = {
-    operational: 'Operational',
-    healthy: 'Healthy',
-    degraded: 'Degraded',
-    down: 'Down',
-    critical: 'Critical',
+    operational: th('operational'),
+    healthy: th('healthy'),
+    degraded: th('degraded'),
+    down: th('down'),
+    critical: th('critical'),
   };
 
   return (
@@ -145,6 +147,7 @@ function HealthLoading() {
 }
 
 export default function HealthPage() {
+  const t = useTranslations('dashboard.health');
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -178,8 +181,8 @@ export default function HealthPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
-          <p className="text-muted-foreground">Monitor system status and performance</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
         </div>
         <HealthLoading />
       </div>
@@ -190,8 +193,8 @@ export default function HealthPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
-          <p className="text-muted-foreground">Monitor system status and performance</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -202,7 +205,7 @@ export default function HealthPage() {
             </p>
             <Button onClick={() => fetchHealth(true)} className="mt-4">
               <RefreshCw className="mr-2 h-4 w-4" />
-              Retry
+              {t('refresh')}
             </Button>
           </CardContent>
         </Card>
@@ -223,8 +226,8 @@ export default function HealthPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">System Health</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Monitor system status and performance</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center justify-between md:justify-end gap-4">
           <span className="text-sm text-muted-foreground">
@@ -232,7 +235,7 @@ export default function HealthPage() {
           </span>
           <Button variant="outline" onClick={() => fetchHealth(true)} disabled={refreshing} className="min-h-[44px] md:min-h-0">
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('refresh')}
           </Button>
         </div>
       </div>
@@ -244,7 +247,7 @@ export default function HealthPage() {
             <div className="flex items-center space-x-4">
               <StatusIcon status={health.status} />
               <div>
-                <h2 className="text-xl font-semibold">System Status</h2>
+                <h2 className="text-xl font-semibold">{t('overallStatus')}</h2>
                 <p className="text-sm text-muted-foreground">
                   All systems {health.status === 'healthy' ? 'operational' : health.status}
                 </p>
@@ -255,19 +258,19 @@ export default function HealthPage() {
           <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
             <div className="text-center">
               <p className="text-2xl font-bold">{formatUptime(health.uptime)}</p>
-              <p className="text-sm text-muted-foreground">Uptime</p>
+              <p className="text-sm text-muted-foreground">{t('uptime')}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold">{health.version}</p>
-              <p className="text-sm text-muted-foreground">Version</p>
+              <p className="text-sm text-muted-foreground">{t('version')}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold">{health.metrics.avgResponseTime}ms</p>
-              <p className="text-sm text-muted-foreground">Avg Response</p>
+              <p className="text-sm text-muted-foreground">{t('avgResponseTime')}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold capitalize">{health.environment}</p>
-              <p className="text-sm text-muted-foreground">Environment</p>
+              <p className="text-sm text-muted-foreground">{t('environment')}</p>
             </div>
           </div>
         </CardContent>
@@ -275,20 +278,20 @@ export default function HealthPage() {
 
       {/* Services */}
       <div>
-        <h3 className="text-lg font-medium mb-4">Services</h3>
+        <h3 className="text-lg font-medium mb-4">{t('services')}</h3>
         <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
           <ServiceCard
-            name="Database"
+            name={t('database')}
             icon={Database}
             service={health.services.database}
           />
           <ServiceCard
-            name="API"
+            name={t('api')}
             icon={Server}
             service={health.services.api}
           />
           <ServiceCard
-            name="Email Service"
+            name={t('emailService')}
             icon={Wifi}
             service={health.services.email}
           />
@@ -298,39 +301,39 @@ export default function HealthPage() {
       {/* Metrics */}
       <Card>
         <CardHeader>
-          <CardTitle>System Metrics</CardTitle>
-          <CardDescription>Current system activity and resource usage</CardDescription>
+          <CardTitle>{t('metrics')}</CardTitle>
+          <CardDescription>{t('description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             <div className="space-y-4">
-              <h4 className="text-sm font-medium">Activity</h4>
+              <h4 className="text-sm font-medium">{t('metrics')}</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Active Passes</span>
+                  <span className="text-sm">{t('activePasses')}</span>
                   <Badge variant="outline">{health.metrics.activePasses}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Expiring Soon</span>
+                  <span className="text-sm">{t('expiringSoon')}</span>
                   <Badge variant="secondary">{health.metrics.expiringSoon}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Today&apos;s Violations</span>
+                  <span className="text-sm">{t('todayViolations')}</span>
                   <Badge variant="destructive">{health.metrics.todayViolations}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Pending Notifications</span>
+                  <span className="text-sm">{t('pendingNotifications')}</span>
                   <Badge variant="outline">{health.metrics.pendingNotifications}</Badge>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-sm font-medium">Resources</h4>
+              <h4 className="text-sm font-medium">{t('uptime')}</h4>
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm">Memory Usage</span>
+                    <span className="text-sm">{t('memoryUsage')}</span>
                     <span className="text-sm text-muted-foreground">
                       {health.resources.memory.used}MB / {health.resources.memory.total}MB
                     </span>

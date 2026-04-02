@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { format, subDays, startOfDay, endOfDay, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { TrendingUp, TrendingDown, Clock, Car, AlertTriangle, Users, Calendar, Download } from 'lucide-react';
 import { hasPermission } from '@/lib/authorization';
+import { getTranslations } from 'next-intl/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -280,7 +281,7 @@ function AnalyticsLoading() {
 }
 
 async function AnalyticsContent() {
-  const analytics = await getAnalytics();
+  const [analytics, t] = await Promise.all([getAnalytics(), getTranslations('dashboard.analyticsPage')]);
 
   const violationLabels: Record<string, string> = {
     OVERSTAY: 'Overstay',
@@ -300,29 +301,29 @@ async function AnalyticsContent() {
       {/* Key Metrics */}
       <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
         <StatCard
-          title="This Month's Passes"
+          title={t('thisMonth')}
           value={analytics.passes.thisMonth}
           change={analytics.passes.monthlyChange}
-          description={`${analytics.passes.today} registered today`}
+          description={`${analytics.passes.today} ${t('todayPasses').toLowerCase()}`}
           icon={Car}
         />
         <StatCard
-          title="This Month's Violations"
+          title={t('monthViolations')}
           value={analytics.violations.thisMonth}
           change={-analytics.violations.monthlyChange}
-          description={`${analytics.violations.today} logged today`}
+          description={`${analytics.violations.today} ${t('todayViolations').toLowerCase()}`}
           icon={AlertTriangle}
         />
         <StatCard
-          title="Registered Vehicles"
+          title={t('totalVehicles')}
           value={analytics.vehicles.total}
-          description={`${analytics.vehicles.blacklisted} blacklisted`}
+          description={`${analytics.vehicles.blacklisted} ${t('blacklisted').toLowerCase()}`}
           icon={Users}
         />
         <StatCard
-          title="Active Units"
+          title={t('activeUnits')}
           value={`${analytics.units.active}/${analytics.units.total}`}
-          description="Units accepting visitors"
+          description={t('occupancyRate')}
           icon={Calendar}
         />
       </div>
@@ -331,8 +332,8 @@ async function AnalyticsContent() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Passes (Last 7 Days)</CardTitle>
-            <CardDescription>Daily parking pass registrations</CardDescription>
+            <CardTitle>{t('passesLabel')} ({t('last7DaysTrend')})</CardTitle>
+            <CardDescription>{t('todayPasses')}</CardDescription>
           </CardHeader>
           <CardContent>
             <SimpleBarChart data={analytics.passesLast7Days} label="" />
@@ -340,8 +341,8 @@ async function AnalyticsContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Violations (Last 7 Days)</CardTitle>
-            <CardDescription>Daily violations logged</CardDescription>
+            <CardTitle>{t('violationsLabel')} ({t('last7DaysTrend')})</CardTitle>
+            <CardDescription>{t('todayViolations')}</CardDescription>
           </CardHeader>
           <CardContent>
             <SimpleBarChart data={analytics.violationsLast7Days} label="" />
@@ -353,8 +354,8 @@ async function AnalyticsContent() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Pass Durations</CardTitle>
-            <CardDescription>Most popular durations (30 days)</CardDescription>
+            <CardTitle>{t('passesByDuration')}</CardTitle>
+            <CardDescription>{t('thisMonth')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -365,7 +366,7 @@ async function AnalyticsContent() {
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{item.duration} hours</span>
+                      <span className="text-sm">{item.duration} {t('hours')}</span>
                     </div>
                     <Badge variant="secondary">{item._count}</Badge>
                   </div>
@@ -377,8 +378,8 @@ async function AnalyticsContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Violation Types</CardTitle>
-            <CardDescription>Most common violations (30 days)</CardDescription>
+            <CardTitle>{t('violationsByType')}</CardTitle>
+            <CardDescription>{t('thisMonth')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -398,8 +399,8 @@ async function AnalyticsContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Units</CardTitle>
-            <CardDescription>Most visitor passes (30 days)</CardDescription>
+            <CardTitle>{t('topUnits')}</CardTitle>
+            <CardDescription>{t('thisMonth')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -409,7 +410,7 @@ async function AnalyticsContent() {
                 analytics.topUnits.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <span className="text-sm">Unit {item.unitNumber}</span>
-                    <Badge variant="outline">{item.count} passes</Badge>
+                    <Badge variant="outline">{item.count} {t('passesLabel').toLowerCase()}</Badge>
                   </div>
                 ))
               )}
@@ -421,8 +422,8 @@ async function AnalyticsContent() {
       {/* Peak Hours */}
       <Card>
         <CardHeader>
-          <CardTitle>Peak Registration Hours</CardTitle>
-          <CardDescription>Busiest times for visitor registration (30 days)</CardDescription>
+          <CardTitle>{t('peakHours')}</CardTitle>
+          <CardDescription>{t('thisMonth')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
@@ -444,7 +445,7 @@ async function AnalyticsContent() {
 }
 
 export default async function AnalyticsPage() {
-  const session = await auth();
+  const [session, t] = await Promise.all([auth(), getTranslations('dashboard.analyticsPage')]);
 
   if (!session?.user) {
     redirect('/login');
@@ -459,13 +460,13 @@ export default async function AnalyticsPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Parking system insights and trends</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <Button variant="outline" asChild className="w-full md:w-auto min-h-[44px] md:min-h-0">
           <a href="/api/export?type=analytics" download>
             <Download className="mr-2 h-4 w-4" />
-            Export Report
+            {t('exportReport')}
           </a>
         </Button>
       </div>
