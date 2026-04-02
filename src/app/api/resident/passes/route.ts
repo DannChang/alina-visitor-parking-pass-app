@@ -123,6 +123,26 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data;
     const normalizedPlate = normalizeLicensePlate(data.licensePlate);
+    const existingVehicle = await prisma.vehicle.findUnique({
+      where: { normalizedPlate },
+    });
+
+    if (existingVehicle?.residentId === residentId) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          errors: [
+            {
+              code: 'RESIDENT_SELF_PLATE',
+              message: "You can't create a visitor pass for your own vehicle.",
+              field: 'licensePlate',
+            },
+          ],
+          warnings: [],
+        },
+        { status: 400 }
+      );
+    }
 
     // Get the unit with building info for validation
     const unit = await prisma.unit.findUnique({
@@ -154,9 +174,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find or create the vehicle
-    let vehicle = await prisma.vehicle.findUnique({
-      where: { normalizedPlate },
-    });
+    let vehicle = existingVehicle;
 
     if (!vehicle) {
       vehicle = await prisma.vehicle.create({

@@ -184,6 +184,7 @@ describe('Resident invite API routes', () => {
       {
         token: 'token-1',
         password: 'Resident@123!',
+        hasVehicle: true,
         strataLotNumber: 'SL-101',
         assignedStallNumbers: ['12'],
         personalLicensePlates: ['ABC123'],
@@ -201,12 +202,66 @@ describe('Resident invite API routes', () => {
     expect(mockConsumeResidentInvite).toHaveBeenCalledWith({
       token: 'token-1',
       password: 'Resident@123!',
+      hasVehicle: true,
       strataLotNumber: 'SL-101',
       assignedStallNumbers: ['12'],
       personalLicensePlates: ['ABC123'],
       ipAddress: null,
       userAgent: 'vitest',
     });
+  });
+
+  it('consumes a resident invite without a vehicle', async () => {
+    mockConsumeResidentInvite.mockResolvedValue({
+      buildingSlug: 'alina-visitor-parking',
+      unitNumber: '101',
+    });
+
+    const request = createMockPostRequest(
+      'http://localhost:3000/api/resident-invites/consume',
+      {
+        token: 'token-2',
+        password: 'Resident@123!',
+        hasVehicle: false,
+        strataLotNumber: 'SL-101',
+        assignedStallNumbers: ['12'],
+        personalLicensePlates: [],
+      }
+    );
+
+    const response = await consumePOST(request);
+
+    expect(response.status).toBe(200);
+    expect(mockConsumeResidentInvite).toHaveBeenCalledWith({
+      token: 'token-2',
+      password: 'Resident@123!',
+      hasVehicle: false,
+      strataLotNumber: 'SL-101',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: [],
+      ipAddress: null,
+      userAgent: null,
+    });
+  });
+
+  it('rejects a no-vehicle payload that still includes license plates', async () => {
+    const request = createMockPostRequest(
+      'http://localhost:3000/api/resident-invites/consume',
+      {
+        token: 'token-3',
+        password: 'Resident@123!',
+        hasVehicle: false,
+        strataLotNumber: 'SL-101',
+        assignedStallNumbers: ['12'],
+        personalLicensePlates: ['ABC123'],
+      }
+    );
+
+    const response = await consumePOST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe('Personal license plates must be empty when no vehicle is selected');
   });
 
   it('returns auth failures from the permission helper', async () => {

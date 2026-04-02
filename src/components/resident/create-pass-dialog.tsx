@@ -66,7 +66,11 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || 'Failed to create pass');
+        const validationMessage =
+          Array.isArray(data.errors) && data.errors[0]?.message
+            ? data.errors[0].message
+            : null;
+        setError(validationMessage || data.error || 'Failed to create pass');
         return;
       }
 

@@ -8,13 +8,30 @@ import {
 const consumeSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  hasVehicle: z.boolean(),
   strataLotNumber: z.string().trim().min(1, 'Strata lot number is required'),
   assignedStallNumbers: z
     .array(z.string().trim().min(1, 'Assigned stall number is required'))
     .min(1, 'At least one assigned stall number is required'),
-  personalLicensePlates: z
-    .array(z.string().trim().min(2, 'License plate must be at least 2 characters'))
-    .min(1, 'At least one personal license plate is required'),
+  personalLicensePlates: z.array(
+    z.string().trim().min(2, 'License plate must be at least 2 characters')
+  ),
+}).superRefine((data, ctx) => {
+  if (data.hasVehicle && data.personalLicensePlates.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['personalLicensePlates'],
+      message: 'At least one personal license plate is required',
+    });
+  }
+
+  if (!data.hasVehicle && data.personalLicensePlates.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['personalLicensePlates'],
+      message: 'Personal license plates must be empty when no vehicle is selected',
+    });
+  }
 });
 
 export async function POST(request: NextRequest) {
@@ -31,6 +48,7 @@ export async function POST(request: NextRequest) {
     const result = await consumeResidentInvite({
       token: data.token,
       password: data.password,
+      hasVehicle: data.hasVehicle,
       strataLotNumber: data.strataLotNumber,
       assignedStallNumbers: data.assignedStallNumbers,
       personalLicensePlates: data.personalLicensePlates,

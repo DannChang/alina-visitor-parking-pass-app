@@ -128,6 +128,7 @@ interface ReissueResidentInviteInput {
 interface ConsumeResidentInviteInput {
   token: string;
   password: string;
+  hasVehicle: boolean;
   strataLotNumber: string;
   assignedStallNumbers: string[];
   personalLicensePlates: string[];
@@ -1008,9 +1009,9 @@ export async function consumeResidentInvite(
   const assignedStallNumbers = input.assignedStallNumbers
     .map((stallNumber) => stallNumber.trim())
     .filter(Boolean);
-  const personalLicensePlates = input.personalLicensePlates
-    .map((licensePlate) => licensePlate.trim())
-    .filter(Boolean);
+  const personalLicensePlates = input.hasVehicle
+    ? input.personalLicensePlates.map((licensePlate) => licensePlate.trim()).filter(Boolean)
+    : [];
 
   if (!strataLotNumber) {
     throw new ResidentInviteError(
@@ -1028,11 +1029,19 @@ export async function consumeResidentInvite(
     );
   }
 
-  if (personalLicensePlates.length === 0) {
+  if (input.hasVehicle && personalLicensePlates.length === 0) {
     throw new ResidentInviteError(
       'At least one personal license plate is required',
       400,
       'LICENSE_PLATE_REQUIRED'
+    );
+  }
+
+  if (!input.hasVehicle && input.personalLicensePlates.some((licensePlate) => licensePlate.trim())) {
+    throw new ResidentInviteError(
+      'Personal license plates must be empty when no vehicle is selected',
+      400,
+      'LICENSE_PLATE_NOT_ALLOWED'
     );
   }
 
@@ -1269,6 +1278,7 @@ export async function consumeResidentInvite(
             residentId: resident.id,
             unitId: currentInvite.unitId,
             buildingId: currentInvite.buildingId,
+            hasVehicle: input.hasVehicle,
             strataLotNumber,
             assignedStallNumbers: uniqueAssignedStallNumbers,
             personalLicensePlates: uniqueNormalizedLicensePlates.map(
