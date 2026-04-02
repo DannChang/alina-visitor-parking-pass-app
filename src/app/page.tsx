@@ -1,9 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { auth, signOut } from '@/lib/auth';
-import { hasPermission } from '@/lib/authorization';
-import { getNavItemsForRole } from '@/lib/navigation';
-import { PatrolDashboard } from '@/components/patrol/patrol-dashboard';
+import { auth } from '@/lib/auth';
 import { Send } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { LocaleSwitcher } from '@/components/locale-switcher';
@@ -11,41 +8,10 @@ import { LocaleSwitcher } from '@/components/locale-switcher';
 export default async function HomePage() {
   const session = await auth();
 
-  // If user is logged in and has patrol permissions, show patrol dashboard
   if (session?.user) {
-    const canPatrol = hasPermission(session.user.role, 'passes:view_all');
-
-    if (canPatrol) {
-      const navItems = getNavItemsForRole(session.user.role);
-      const initials = session.user.name
-        ? session.user.name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-        : session.user.email?.charAt(0).toUpperCase() || 'U';
-
-      // Server action for sign out
-      async function handleSignOut() {
-        'use server';
-        await signOut({ redirectTo: '/login' });
-      }
-
-      return (
-        <PatrolDashboard
-          user={{
-            name: session.user.name,
-            email: session.user.email,
-            role: session.user.role,
-          }}
-          initials={initials}
-          navItems={navItems}
-          signOutAction={handleSignOut}
-        />
-      );
+    if (session.user.role === 'RESIDENT') {
+      redirect('/resident/passes');
     }
-
-    // Logged in but no patrol permission - redirect to dashboard
     redirect('/dashboard');
   }
 

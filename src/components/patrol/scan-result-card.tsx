@@ -15,12 +15,14 @@ import {
   History,
   Timer,
   Home,
+  ShieldAlert,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { formatPassContact } from '@/lib/utils/contact';
 import type { PatrolLookupResult, VehicleStatus } from '@/app/api/patrol/lookup/route';
 
 interface ScanResultCardProps {
@@ -116,6 +118,7 @@ export function ScanResultCard({
   const config = STATUS_CONFIG[result.status];
   const StatusIcon = config.icon;
 
+  const hasAutoViolation = result.autoCreatedViolation?.isNew === true;
   const canIssueViolation =
     result.status !== 'VALID' && result.status !== 'EXPIRING_SOON';
 
@@ -177,6 +180,22 @@ export function ScanResultCard({
           </div>
         )}
 
+        {/* Auto-Created Violation Banner */}
+        {hasAutoViolation && result.autoCreatedViolation && (
+          <div className="rounded-lg bg-red-50 border border-red-200 p-3 flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-red-600 shrink-0" />
+            <div>
+              <p className="font-medium text-red-800 text-sm">
+                Violation Auto-Logged
+              </p>
+              <p className="text-red-700 text-xs">
+                {String(result.autoCreatedViolation.type).replace(/_/g, ' ')} &mdash;{' '}
+                {String(result.autoCreatedViolation.severity)} severity
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Active Pass Info */}
         {result.activePass && (
           <div className="rounded-lg bg-white/60 p-3">
@@ -191,7 +210,10 @@ export function ScanResultCard({
               <div className="flex items-center gap-1">
                 <User className="h-3 w-3 text-slate-500" />
                 <span className="text-slate-700">
-                  {result.activePass.visitorName || 'Unknown'}
+                  {formatPassContact(
+                    result.activePass.visitorEmail,
+                    result.activePass.visitorPhone
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -251,12 +273,12 @@ export function ScanResultCard({
           {canIssueViolation && (
             <Button
               onClick={onIssueViolation}
-              variant="destructive"
+              variant={hasAutoViolation ? 'outline' : 'destructive'}
               className="flex-1"
               size="touch"
             >
               <AlertTriangle className="mr-2 h-5 w-5" />
-              Issue Violation
+              {hasAutoViolation ? 'Log Additional Violation' : 'Issue Violation'}
             </Button>
           )}
           <Button

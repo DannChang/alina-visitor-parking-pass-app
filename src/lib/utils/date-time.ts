@@ -3,7 +3,16 @@
  * Mission-critical time calculations for parking passes
  */
 
-import { addHours, addMinutes, differenceInHours, differenceInMinutes, format, isAfter, isBefore, parseISO } from 'date-fns';
+import {
+  addHours,
+  addMinutes,
+  differenceInHours,
+  differenceInMinutes,
+  format,
+  isAfter,
+  isBefore,
+  parseISO,
+} from 'date-fns';
 import { DATE_FORMATS, TIMEZONE_DEFAULT } from '../constants';
 
 /**
@@ -83,7 +92,9 @@ export function formatTime(date: Date | string): string {
  * Calculate total consecutive hours for multiple passes
  * Used to enforce maximum consecutive parking time
  */
-export function calculateConsecutiveHours(passes: Array<{ startTime: Date; endTime: Date }>): number {
+export function calculateConsecutiveHours(
+  passes: Array<{ startTime: Date; endTime: Date }>
+): number {
   if (passes.length === 0) return 0;
 
   // Sort by start time
@@ -241,6 +252,107 @@ export function getCurrentTimeInTimezone(_timezone: string = TIMEZONE_DEFAULT): 
   return new Date();
 }
 
+function getTimezoneDateParts(date: Date, timezone: string) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value ?? '0');
+
+  return {
+    year: getPart('year'),
+    month: getPart('month'),
+    day: getPart('day'),
+    hour: getPart('hour'),
+    minute: getPart('minute'),
+    second: getPart('second'),
+  };
+}
+
+function zonedDateTimeToUtc(
+  timezone: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number = 0,
+  minute: number = 0,
+  second: number = 0
+) {
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const zonedGuess = getTimezoneDateParts(utcGuess, timezone);
+  const desiredUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  const zonedGuessUtc = Date.UTC(
+    zonedGuess.year,
+    zonedGuess.month - 1,
+    zonedGuess.day,
+    zonedGuess.hour,
+    zonedGuess.minute,
+    zonedGuess.second
+  );
+
+  return new Date(utcGuess.getTime() + (desiredUtc - zonedGuessUtc));
+}
+
+export function getStartOfCurrentMonthInTimezone(
+  timezone: string = TIMEZONE_DEFAULT,
+  now: Date = new Date()
+): Date {
+  const current = getTimezoneDateParts(now, timezone);
+  return zonedDateTimeToUtc(timezone, current.year, current.month, 1);
+}
+
+export function getStartOfCurrentDayInTimezone(
+  timezone: string = TIMEZONE_DEFAULT,
+  now: Date = new Date()
+): Date {
+  const current = getTimezoneDateParts(now, timezone);
+  return zonedDateTimeToUtc(timezone, current.year, current.month, current.day);
+}
+
+export function getStartOfCurrentWeekInTimezone(
+  timezone: string = TIMEZONE_DEFAULT,
+  now: Date = new Date()
+): Date {
+  const current = getTimezoneDateParts(now, timezone);
+  const currentDate = new Date(Date.UTC(current.year, current.month - 1, current.day));
+  const dayOfWeek = currentDate.getUTCDay();
+  const diffToMonday = (dayOfWeek + 6) % 7;
+
+  currentDate.setUTCDate(currentDate.getUTCDate() - diffToMonday);
+
+  return zonedDateTimeToUtc(
+    timezone,
+    currentDate.getUTCFullYear(),
+    currentDate.getUTCMonth() + 1,
+    currentDate.getUTCDate()
+  );
+}
+
+export function getTimeBankWindowStart(
+  period: 'DAILY' | 'WEEKLY' | 'MONTHLY',
+  timezone: string = TIMEZONE_DEFAULT,
+  now: Date = new Date()
+): Date {
+  switch (period) {
+    case 'DAILY':
+      return getStartOfCurrentDayInTimezone(timezone, now);
+    case 'WEEKLY':
+      return getStartOfCurrentWeekInTimezone(timezone, now);
+    case 'MONTHLY':
+    default:
+      return getStartOfCurrentMonthInTimezone(timezone, now);
+  }
+}
+
 /**
  * Format duration in hours to human-readable string
  */
@@ -309,11 +421,6 @@ export function calculateConsecutiveDays(
 /**
  * Check if two date ranges overlap
  */
-export function doDateRangesOverlap(
-  start1: Date,
-  end1: Date,
-  start2: Date,
-  end2: Date
-): boolean {
+export function doDateRangesOverlap(start1: Date, end1: Date, start2: Date, end2: Date): boolean {
   return isBefore(start1, end2) && isAfter(end1, start2);
 }

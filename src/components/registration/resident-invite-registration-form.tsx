@@ -8,6 +8,7 @@ import { signIn } from 'next-auth/react';
 import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle, CheckCircle2, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -89,6 +90,7 @@ export function ResidentInviteRegistrationForm({
   const [strataLotNumber, setStrataLotNumber] = useState('');
   const [assignedStallNumbers, setAssignedStallNumbers] = useState(['']);
   const [personalLicensePlates, setPersonalLicensePlates] = useState(['']);
+  const [hasVehicle, setHasVehicle] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -149,9 +151,11 @@ export function ResidentInviteRegistrationForm({
     const cleanedAssignedStallNumbers = assignedStallNumbers
       .map((stallNumber) => stallNumber.trim())
       .filter(Boolean);
-    const cleanedPersonalLicensePlates = personalLicensePlates
-      .map((licensePlate) => licensePlate.trim().toUpperCase())
-      .filter(Boolean);
+    const cleanedPersonalLicensePlates = hasVehicle
+      ? personalLicensePlates
+          .map((licensePlate) => licensePlate.trim().toUpperCase())
+          .filter(Boolean)
+      : [];
 
     if (!cleanedStrataLotNumber) {
       setError('Strata lot number is required.');
@@ -163,7 +167,7 @@ export function ResidentInviteRegistrationForm({
       return;
     }
 
-    if (cleanedPersonalLicensePlates.length === 0) {
+    if (hasVehicle && cleanedPersonalLicensePlates.length === 0) {
       setError('At least one personal license plate is required.');
       return;
     }
@@ -187,6 +191,7 @@ export function ResidentInviteRegistrationForm({
         body: JSON.stringify({
           token,
           password,
+          hasVehicle,
           strataLotNumber: cleanedStrataLotNumber,
           assignedStallNumbers: cleanedAssignedStallNumbers,
           personalLicensePlates: cleanedPersonalLicensePlates,
@@ -214,7 +219,7 @@ export function ResidentInviteRegistrationForm({
       }
 
       setSignedIn(true);
-      router.replace('/dashboard/passes');
+      router.replace('/resident/passes');
       router.refresh();
     } catch (submitError) {
       setError(
@@ -271,7 +276,7 @@ export function ResidentInviteRegistrationForm({
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="resident-registration-strata-lot">Strata Lot #</Label>
             <Input
@@ -347,13 +352,43 @@ export function ResidentInviteRegistrationForm({
                 variant="outline"
                 size="sm"
                 onClick={() => addListValue(setPersonalLicensePlates)}
+                disabled={!hasVehicle}
               >
                 <Plus className="h-4 w-4" />
                 Add Plate
               </Button>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <Checkbox
+                id="resident-registration-no-vehicle"
+                checked={!hasVehicle}
+                onCheckedChange={(checked) => {
+                  const noVehicle = checked === true;
+                  setHasVehicle(!noVehicle);
+                  if (noVehicle) {
+                    setPersonalLicensePlates(['']);
+                  }
+                }}
+              />
+              <div className="space-y-1">
+                <Label
+                  htmlFor="resident-registration-no-vehicle"
+                  className="cursor-pointer"
+                >
+                  I don&apos;t have a vehicle
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  You can finish registration now and add your vehicle later from the resident
+                  portal.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="space-y-2"
+              aria-hidden={!hasVehicle}
+            >
               {personalLicensePlates.map((licensePlate, index) => (
                 <div key={`plate-${index}`} className="flex items-center gap-2">
                   <Input
@@ -367,14 +402,15 @@ export function ResidentInviteRegistrationForm({
                     }
                     className="h-11 uppercase md:h-10"
                     placeholder={`License plate #${index + 1}`}
-                    required
+                    required={hasVehicle}
+                    disabled={!hasVehicle}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => removeListValue(setPersonalLicensePlates, index)}
-                    disabled={personalLicensePlates.length === 1}
+                    disabled={!hasVehicle || personalLicensePlates.length === 1}
                     aria-label={`Remove license plate ${index + 1}`}
                   >
                     <Trash2 className="h-4 w-4" />

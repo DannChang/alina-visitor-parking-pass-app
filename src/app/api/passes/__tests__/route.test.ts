@@ -53,6 +53,10 @@ vi.mock('@/services/validation-service', () => ({
   validatePassRequest: vi.fn(),
 }));
 
+vi.mock('@/services/notification-service', () => ({
+  sendPassConfirmationNotifications: vi.fn().mockResolvedValue(0),
+}));
+
 // Import after mocks
 import { GET, POST } from '../route';
 import { prisma } from '@/lib/prisma';
@@ -93,8 +97,8 @@ describe('Passes API Routes', () => {
       unitNumber: '101',
       buildingSlug: 'alina-hospital',
       duration: 4,
-      visitorName: 'John Doe',
       visitorPhone: '555-1234',
+      visitorEmail: 'guest@example.com',
       vehicleMake: 'Toyota',
       vehicleModel: 'Camry',
       vehicleYear: 2024,

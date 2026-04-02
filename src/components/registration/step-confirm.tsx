@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, ChevronLeft, Loader2, Car, Building, Home, Clock, User } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Loader2, Car, Building, Clock, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -30,12 +30,12 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
           unitNumber: data.unitNumber,
           buildingSlug: data.buildingSlug,
           duration: data.duration,
-          visitorName: data.visitorName,
           visitorPhone: data.visitorPhone,
           visitorEmail: data.visitorEmail,
           vehicleMake: data.vehicleMake,
           vehicleModel: data.vehicleModel,
           vehicleColor: data.vehicleColor,
+          vehicleYear: data.vehicleYear,
         }),
       });
 
@@ -91,7 +91,7 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Home className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
               <p className="text-xs text-muted-foreground">Unit</p>
               <p className="font-medium">{data.unitNumber}</p>
@@ -105,10 +105,17 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
-              <p className="text-xs text-muted-foreground">Visitor</p>
-              <p className="font-medium">{data.visitorName}</p>
+              <p className="text-xs text-muted-foreground">Phone</p>
+              <p className="font-medium">{data.visitorPhone}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Email</p>
+              <p className="font-medium">{data.visitorEmail}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

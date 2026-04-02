@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import { calculateEndTime } from '@/lib/utils/date-time';
 import { validatePassRequest } from '@/services/validation-service';
+import { sendPassConfirmationNotifications } from '@/services/notification-service';
 import { PassStatus, PassType } from '@prisma/client';
 
 // Schema for creating a new pass
@@ -13,12 +14,15 @@ const createPassSchema = z.object({
   unitNumber: z.string().min(1),
   buildingSlug: z.string().min(1),
   duration: z.number().int().min(1).max(24),
-  visitorName: z.string().min(1).max(100).optional(),
-  visitorPhone: z.string().max(20).optional(),
-  visitorEmail: z.string().email().optional(),
+  visitorPhone: z.string().trim().min(1).max(20),
+  visitorEmail: z.string().trim().email(),
   vehicleMake: z.string().trim().min(1).max(50),
   vehicleModel: z.string().trim().min(1).max(50),
-  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
+  vehicleYear: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear() + 1),
   vehicleColor: z.string().max(30).optional(),
   vehicleState: z.string().max(10).optional(),
   passType: z.nativeEnum(PassType).optional(),
@@ -74,7 +78,8 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      { visitorName: { contains: search, mode: 'insensitive' } },
+      { visitorEmail: { contains: search, mode: 'insensitive' } },
+      { visitorPhone: { contains: search, mode: 'insensitive' } },
       { confirmationCode: { contains: search } },
     ];
   }
@@ -197,6 +202,7 @@ export async function POST(request: NextRequest) {
       licensePlate: normalizedPlate,
       unitId: unit.id,
       buildingId: building.id,
+      timezone: building.timezone,
       durationHours: data.duration,
     });
 
@@ -248,9 +254,7 @@ export async function POST(request: NextRequest) {
 
     // Get IP address and user agent
     const ipAddress =
-      request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      null;
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null;
     const userAgent = request.headers.get('user-agent') || null;
 
     // Create the parking pass
@@ -265,9 +269,8 @@ export async function POST(request: NextRequest) {
         duration: data.duration,
         status: PassStatus.ACTIVE,
         passType: data.passType ?? PassType.VISITOR,
-        visitorName: data.visitorName ?? null,
-        visitorPhone: data.visitorPhone ?? null,
-        visitorEmail: data.visitorEmail ?? null,
+        visitorPhone: data.visitorPhone,
+        visitorEmail: data.visitorEmail,
         registeredVia: 'WEB_FORM',
         ipAddress,
         userAgent,
@@ -282,6 +285,12 @@ export async function POST(request: NextRequest) {
         parkingZone: true,
       },
     });
+
+    try {
+      await sendPassConfirmationNotifications(pass.id);
+    } catch (error) {
+      console.error('Error sending pass confirmation emails:', error);
+    }
 
     // Log the QR scan if applicable
     if (parkingZone) {

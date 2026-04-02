@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import type { TimeBankPeriod } from '@prisma/client';
 import { useMountEffect } from '@/hooks/use-mount-effect';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
@@ -10,9 +11,9 @@ import {
   ChevronRight,
   Clock3,
   Loader2,
+  Phone,
   Plus,
   Ticket,
-  UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CountdownTimer } from '@/components/pass/countdown-timer';
@@ -27,7 +28,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatTimeBankPeriod, formatTimeBankWindowLabel } from '@/lib/parking-rules';
 import { cn } from '@/lib/utils';
+import { formatPassContact, toTelephoneHref } from '@/lib/utils/contact';
 import { CreatePassDialog } from './create-pass-dialog';
 import { useCountdown } from '@/hooks/use-countdown';
 
@@ -39,8 +42,8 @@ interface ResidentPass {
   endTime: string;
   createdAt: string;
   confirmationCode: string;
-  visitorName: string | null;
   visitorPhone: string | null;
+  visitorEmail: string | null;
   deletionReason: string | null;
   vehicle: {
     id: string;
@@ -58,6 +61,20 @@ interface ResidentPass {
       slug: string;
     };
   };
+}
+
+interface ResidentPassLimits {
+  allowedDurations: number[];
+  maxActivePasses: number;
+  monthlyHourBank: number;
+  timeBankPeriod: TimeBankPeriod;
+}
+
+interface ResidentPassUsage {
+  activePassCount: number;
+  activePassLimit: number;
+  monthlyHoursUsed: number;
+  monthlyHoursRemaining: number;
 }
 
 const ACTIVE_STATUSES = new Set(['ACTIVE', 'EXTENDED']);
@@ -167,6 +184,18 @@ export function ResidentPassesHub() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedPassId, setSelectedPassId] = useState<string | null>(null);
+  const [limits, setLimits] = useState<ResidentPassLimits>({
+    allowedDurations: [2, 4, 8, 12, 24],
+    maxActivePasses: 3,
+    monthlyHourBank: 72,
+    timeBankPeriod: 'MONTHLY',
+  });
+  const [usage, setUsage] = useState<ResidentPassUsage>({
+    activePassCount: 0,
+    activePassLimit: 3,
+    monthlyHoursUsed: 0,
+    monthlyHoursRemaining: 72,
+  });
 
   const fetchPasses = useCallback(async () => {
     setIsLoading(true);
@@ -180,6 +209,12 @@ export function ResidentPassesHub() {
 
       const data = await res.json();
       setPasses(data.passes);
+      if (data.limits) {
+        setLimits(data.limits);
+      }
+      if (data.usage) {
+        setUsage(data.usage);
+      }
       setLoadError(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load parking passes';
@@ -207,10 +242,11 @@ export function ResidentPassesHub() {
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
   });
 
-  const activePasses = sortedPasses.filter(isActivePass);
   const selectedPass = selectedPassId
     ? (sortedPasses.find((pass) => pass.id === selectedPassId) ?? null)
     : null;
+  const timeBankPeriodLabel = formatTimeBankPeriod(limits.timeBankPeriod);
+  const timeBankWindowLabel = formatTimeBankWindowLabel(limits.timeBankPeriod);
 
   return (
     <>
@@ -236,18 +272,23 @@ export function ResidentPassesHub() {
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
                     Active Now
                   </p>
-                  <p className="mt-2 text-3xl font-semibold">{activePasses.length}</p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {usage.activePassCount}/{usage.activePassLimit}
+                  </p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
-                    Total Passes
+                    {timeBankPeriodLabel} bank
                   </p>
-                  <p className="mt-2 text-3xl font-semibold">{sortedPasses.length}</p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {usage.monthlyHoursRemaining}/{limits.monthlyHourBank}h
+                  </p>
                 </div>
                 <Button
                   type="button"
                   size="lg"
                   onClick={() => setShowCreateDialog(true)}
+                  disabled={usage.activePassCount >= usage.activePassLimit}
                   className="rounded-3xl bg-white px-6 text-slate-950 hover:bg-slate-100"
                 >
                   <Plus className="h-4 w-4" />
@@ -263,7 +304,8 @@ export function ResidentPassesHub() {
             <div>
               <h2 className="text-xl font-semibold text-slate-950">Your passes</h2>
               <p className="text-sm text-slate-600">
-                Tap any pass to view visitor details, timing, and the confirmation code.
+                Tap any pass to view visitor details, timing, and the confirmation code. Your unit
+                has {usage.monthlyHoursRemaining} hours left this {timeBankWindowLabel}.
               </p>
             </div>
             {isLoading && hasLoadedOnce && (
@@ -344,7 +386,7 @@ export function ResidentPassesHub() {
                                 {pass.vehicle.licensePlate}
                               </p>
                               <p className="truncate text-sm text-slate-600">
-                                {pass.visitorName || 'Visitor name not provided'}
+                                {formatPassContact(pass.visitorEmail, pass.visitorPhone)}
                               </p>
                             </div>
                           </div>
@@ -423,6 +465,12 @@ export function ResidentPassesHub() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onSuccess={fetchPasses}
+        allowedDurations={limits.allowedDurations}
+        monthlyHourBank={limits.monthlyHourBank}
+        timeBankPeriod={limits.timeBankPeriod}
+        monthlyHoursRemaining={usage.monthlyHoursRemaining}
+        activePassCount={usage.activePassCount}
+        activePassLimit={usage.activePassLimit}
       />
 
       <Dialog
@@ -434,7 +482,10 @@ export function ResidentPassesHub() {
         }}
       >
         {selectedPass && (
-          <DialogContent className="max-w-2xl overflow-auto border-0 p-0 md:rounded-[32px] [&>button]:bg-transparent [&>button]:text-white [&>button]:opacity-100">
+          <DialogContent
+            showHandle={false}
+            className="overflow-auto border-0 p-0 md:inset-x-0 md:bottom-0 md:left-0 md:top-auto md:max-h-[90vh] md:w-full md:max-w-none md:translate-x-0 md:translate-y-0 md:rounded-b-none md:rounded-t-[32px] md:border-x-0 md:border-b-0 md:border-t lg:inset-auto lg:left-[50%] lg:top-[50%] lg:max-h-[85vh] lg:w-full lg:max-w-2xl lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[32px] lg:border [&>button]:bg-transparent [&>button]:text-white [&>button]:opacity-100"
+          >
             <div className="bg-[linear-gradient(135deg,_#020617,_#0f172a_55%,_#1e293b)] px-6 py-7 text-white sm:px-8">
               <Badge
                 variant="outline"
@@ -451,7 +502,7 @@ export function ResidentPassesHub() {
                   {selectedPass.vehicle.licensePlate}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-slate-300">
-                  {selectedPass.visitorName || 'Visitor name not provided'}
+                  {formatPassContact(selectedPass.visitorEmail, selectedPass.visitorPhone)}
                 </DialogDescription>
               </DialogHeader>
             </div>
@@ -465,27 +516,41 @@ export function ResidentPassesHub() {
                 <Card className="rounded-3xl border-slate-200 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <UserRound className="h-4 w-4 text-slate-500" />
-                      Visitor
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      Contact
                     </CardTitle>
                     <CardDescription>Primary contact details for this pass</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Name
+                        Phone
                       </p>
-                      <p className="mt-1 font-medium text-slate-950">
-                        {selectedPass.visitorName || 'Not provided'}
-                      </p>
+                      {selectedPass.visitorPhone ? (
+                        <a
+                          className="mt-1 inline-flex font-medium text-primary hover:underline"
+                          href={toTelephoneHref(selectedPass.visitorPhone)}
+                        >
+                          {selectedPass.visitorPhone}
+                        </a>
+                      ) : (
+                        <p className="mt-1 font-medium text-slate-950">Not provided</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Phone
+                        Email
                       </p>
-                      <p className="mt-1 font-medium text-slate-950">
-                        {selectedPass.visitorPhone || 'Not provided'}
-                      </p>
+                      {selectedPass.visitorEmail ? (
+                        <a
+                          className="mt-1 inline-flex font-medium text-primary hover:underline"
+                          href={`mailto:${selectedPass.visitorEmail}`}
+                        >
+                          {selectedPass.visitorEmail}
+                        </a>
+                      ) : (
+                        <p className="mt-1 font-medium text-slate-950">Not provided</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

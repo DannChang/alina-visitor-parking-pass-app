@@ -57,7 +57,8 @@ interface Pass {
   duration: number;
   startTime: string;
   endTime: string;
-  visitorName: string | null;
+  visitorPhone: string | null;
+  visitorEmail: string | null;
   vehicle: PassVehicle;
   unit: PassUnit;
 }
@@ -96,7 +97,9 @@ export default function PassesPage() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const debouncedSearch = useDebouncedValue(searchValue, 400);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedPassId, setSelectedPassId] = useState<string | null>(null);
+  const [selectedPassId, setSelectedPassId] = useState<string | null>(
+    searchParams.get('passId') || null,
+  );
 
   const role = session?.user?.role;
   const canCreate = role ? PASSES_CREATE_ROLES.includes(role) : false;
@@ -252,9 +255,12 @@ export default function PassesPage() {
                         </TableCell>
                         <TableCell>{pass.unit.unitNumber}</TableCell>
                         <TableCell>
-                          {pass.visitorName || (
-                            <span className="text-muted-foreground">{t('notProvided')}</span>
-                          )}
+                          <div className="text-sm">
+                            <p>{pass.visitorEmail || t('notProvided')}</p>
+                            <p className="text-muted-foreground">
+                              {pass.visitorPhone || t('notProvided')}
+                            </p>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1">

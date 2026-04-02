@@ -1,7 +1,7 @@
 import { ResidentLoginForm } from '@/components/resident/resident-login-form';
 
 function getResidentCallbackUrl(rawCallbackUrl?: string) {
-  if (!rawCallbackUrl || !rawCallbackUrl.startsWith('/')) {
+  if (!rawCallbackUrl || !rawCallbackUrl.startsWith('/resident')) {
     return '/resident/passes';
   }
 

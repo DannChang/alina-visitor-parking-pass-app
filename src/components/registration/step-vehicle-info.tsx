@@ -20,6 +20,7 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
   const [make, setMake] = useState(data.vehicleMake ?? '');
   const [model, setModel] = useState(data.vehicleModel ?? '');
   const [color, setColor] = useState(data.vehicleColor ?? '');
+  const [year, setYear] = useState(data.vehicleYear ? String(data.vehicleYear) : '');
   const [error, setError] = useState<string | null>(null);
 
   const handleContinue = () => {
@@ -28,12 +29,17 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
       setError('Please enter a valid license plate (2-10 characters)');
       return;
     }
+    if (!year.trim()) {
+      setError('Please enter the vehicle year');
+      return;
+    }
     setError(null);
     onUpdate({
       licensePlate: cleaned,
       vehicleMake: make || '',
       vehicleModel: model || '',
       vehicleColor: color || '',
+      vehicleYear: Number(year),
     });
     onNext();
   };
@@ -64,7 +70,7 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <div className="space-y-1">
             <Label htmlFor="make" className="text-xs">Make</Label>
             <Input
@@ -93,6 +99,17 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
               value={color}
               onChange={(e) => setColor(e.target.value)}
               className="h-10 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="year" className="text-xs">Year</Label>
+            <Input
+              id="year"
+              placeholder="2024"
+              value={year}
+              onChange={(e) => setYear(e.target.value.replace(/[^0-9]/g, ''))}
+              className="h-10 text-sm"
+              inputMode="numeric"
             />
           </div>
         </div>

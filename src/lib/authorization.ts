@@ -152,6 +152,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/health': ['health:view'],
   '/dashboard/users': ['users:view'],
   '/dashboard/settings': ['settings:view'],
+  '/dashboard/patrol': ['passes:view_all'],
   '/dashboard/patrol-log': ['passes:view_all'],
   '/dashboard/registration-passes': ['resident_invites:manage'],
   '/resident': ['resident:manage_guests'],

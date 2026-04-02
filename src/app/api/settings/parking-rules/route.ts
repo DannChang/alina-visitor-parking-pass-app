@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { TimeBankPeriod } from '@prisma/client';
 import { z } from 'zod';
 
 const parkingRulesSchema = z.object({
-  maxVehiclesPerUnit: z.number().min(1).max(10).default(2),
+  maxVehiclesPerUnit: z.number().min(1).max(10).default(3),
+  monthlyHourBank: z.number().int().min(1).max(744).default(72),
+  timeBankPeriod: z.nativeEnum(TimeBankPeriod).default(TimeBankPeriod.MONTHLY),
   maxConsecutiveHours: z.number().min(1).max(168).default(24),
   cooldownHours: z.number().min(0).max(48).default(2),
   maxExtensions: z.number().min(0).max(5).default(1),
@@ -38,10 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ parkingRules });
   } catch (error) {
     console.error('Error fetching parking rules:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch parking rules' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch parking rules' }, { status: 500 });
   }
 }
 
@@ -112,9 +112,6 @@ export async function PATCH(request: NextRequest) {
       );
     }
     console.error('Error updating parking rules:', error);
-    return NextResponse.json(
-      { error: 'Failed to update parking rules' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to update parking rules' }, { status: 500 });
   }
 }

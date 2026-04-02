@@ -199,7 +199,27 @@ async function main() {
   console.log(`   Password: Admin@123! (CHANGE THIS IN PRODUCTION!)\n`);
 
   // ============================================
-  // 6. CREATE MANAGER USER
+  // 6. CREATE SYSTEM USER (for automated violations)
+  // ============================================
+
+  console.log('🤖 Creating system user...');
+
+  const systemUser = await prisma.user.upsert({
+    where: { email: 'system@automated.internal' },
+    update: {},
+    create: {
+      email: 'system@automated.internal',
+      name: 'Automated System',
+      role: 'MANAGER',
+      emailVerified: new Date(),
+      isActive: true,
+    },
+  });
+
+  console.log(`✅ Created system user: ${systemUser.email}\n`);
+
+  // ============================================
+  // 7. CREATE MANAGER USER
   // ============================================
 
   console.log('👤 Creating manager user...');
@@ -238,7 +258,7 @@ async function main() {
   console.log(`   Password: Manager@123! (CHANGE THIS IN PRODUCTION!)\n`);
 
   // ============================================
-  // 7. CREATE SAMPLE RESIDENT
+  // 8. CREATE SAMPLE RESIDENT
   // ============================================
 
   console.log('👤 Creating sample resident...');
@@ -297,7 +317,7 @@ async function main() {
   }
 
   // ============================================
-  // 8. CREATE SAMPLE VEHICLES & PASSES
+  // 9. CREATE SAMPLE VEHICLES & PASSES
   // ============================================
 
   console.log('🚗 Creating sample vehicles and passes...');
@@ -375,6 +395,7 @@ async function main() {
   console.log(`   • Building: ${building.name}`);
   console.log(`   • Parking Zones: ${zones.length}`);
   console.log(`   • Units: ${seededUnits.length}/${ALINA_SEEDED_UNIT_COUNT} seeded`);
+  console.log(`   • System User: system@automated.internal`);
   console.log(`   • Admin User: admin@alinahospital.com`);
   console.log(`   • Manager User: manager@alinahospital.com`);
   console.log(`   • Resident User: resident@example.com`);

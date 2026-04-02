@@ -28,7 +28,8 @@ interface PassRecord {
   status: string;
   startTime: string;
   endTime: string;
-  visitorName: string | null;
+  visitorPhone: string | null;
+  visitorEmail: string | null;
   unitNumber: string;
   buildingName: string;
   passType: string;
@@ -263,9 +264,10 @@ export function VehicleHistoryDialog({
                           <div className="text-sm text-slate-700">
                             {pass.buildingName} - {tc('unit')} {pass.unitNumber}
                           </div>
-                          {pass.visitorName && (
+                          {(pass.visitorEmail || pass.visitorPhone) && (
                             <div className="text-sm text-slate-600">
-                              {tc('visitor')}: {pass.visitorName}
+                              {tc('visitor')}:{' '}
+                              {[pass.visitorEmail, pass.visitorPhone].filter(Boolean).join(' • ')}
                             </div>
                           )}
                           <div className="text-xs text-muted-foreground">

@@ -6,7 +6,6 @@ import { PassStatus } from '@prisma/client';
 
 const updatePassSchema = z.object({
   status: z.nativeEnum(PassStatus).optional(),
-  visitorName: z.string().optional(),
   visitorPhone: z.string().optional(),
   visitorEmail: z.string().email().optional(),
   deletionReason: z.string().optional(),
@@ -120,9 +119,6 @@ export async function PATCH(
 
     if (parsed.data.status) {
       updateData.status = parsed.data.status;
-    }
-    if (parsed.data.visitorName !== undefined) {
-      updateData.visitorName = parsed.data.visitorName;
     }
     if (parsed.data.visitorPhone !== undefined) {
       updateData.visitorPhone = parsed.data.visitorPhone;
