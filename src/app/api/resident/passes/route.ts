@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { createDefaultParkingRule } from '@/lib/parking-rules';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
-import { calculateEndTime } from '@/lib/utils/date-time';
+import { calculateEndTime, getTimeBankWindowStart } from '@/lib/utils/date-time';
 import { validatePassRequest } from '@/services/validation-service';
 import { sendPassConfirmationNotifications } from '@/services/notification-service';
 import { PassStatus, PassType } from '@prisma/client';
@@ -15,7 +16,11 @@ const createPassSchema = z.object({
   visitorEmail: z.string().trim().email(),
   vehicleMake: z.string().trim().min(1).max(50),
   vehicleModel: z.string().trim().min(1).max(50),
-  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
+  vehicleYear: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear() + 1),
 });
 
 // GET /api/resident/passes - List passes for the resident's unit
@@ -38,6 +43,27 @@ export async function GET(request: NextRequest) {
   const skip = (page - 1) * limit;
 
   try {
+    const unit = await prisma.unit.findUnique({
+      where: { id: unitId },
+      include: {
+        building: {
+          include: {
+            parkingRules: true,
+          },
+        },
+      },
+    });
+
+    if (!unit) {
+      return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+    }
+
+    const parkingRules = unit.building.parkingRules ?? createDefaultParkingRule(unit.buildingId);
+    const timeBankWindowStart = getTimeBankWindowStart(
+      parkingRules.timeBankPeriod,
+      unit.building.timezone
+    );
+
     const where: Record<string, unknown> = {
       unitId,
       deletedAt: null,
@@ -47,7 +73,7 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    const [passes, total] = await Promise.all([
+    const [passes, total, activePassCount, timeBankPasses] = await Promise.all([
       prisma.parkingPass.findMany({
         where,
         include: {
@@ -80,7 +106,31 @@ export async function GET(request: NextRequest) {
         take: limit,
       }),
       prisma.parkingPass.count({ where }),
+      prisma.parkingPass.count({
+        where: {
+          unitId,
+          deletedAt: null,
+          endTime: { gt: new Date() },
+          status: { in: [PassStatus.ACTIVE, PassStatus.EXTENDED] },
+        },
+      }),
+      prisma.parkingPass.findMany({
+        where: {
+          unitId,
+          startTime: { gte: timeBankWindowStart },
+          deletedAt: null,
+          status: { in: [PassStatus.ACTIVE, PassStatus.EXPIRED, PassStatus.EXTENDED] },
+        },
+        select: {
+          duration: true,
+        },
+      }),
     ]);
+
+    const timeBankHoursUsed = timeBankPasses.reduce(
+      (totalHours, pass) => totalHours + pass.duration,
+      0
+    );
 
     return NextResponse.json({
       passes,
@@ -89,6 +139,18 @@ export async function GET(request: NextRequest) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      limits: {
+        allowedDurations: parkingRules.allowedDurations,
+        maxActivePasses: parkingRules.maxVehiclesPerUnit,
+        monthlyHourBank: parkingRules.monthlyHourBank,
+        timeBankPeriod: parkingRules.timeBankPeriod,
+      },
+      usage: {
+        activePassCount,
+        activePassLimit: parkingRules.maxVehiclesPerUnit,
+        monthlyHoursUsed: timeBankHoursUsed,
+        monthlyHoursRemaining: Math.max(parkingRules.monthlyHourBank - timeBankHoursUsed, 0),
       },
     });
   } catch (error) {
@@ -159,6 +221,7 @@ export async function POST(request: NextRequest) {
       licensePlate: normalizedPlate,
       unitId,
       buildingId: unit.buildingId,
+      timezone: unit.building.timezone,
       durationHours: data.duration,
     });
 

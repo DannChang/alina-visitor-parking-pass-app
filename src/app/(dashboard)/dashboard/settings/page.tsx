@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { TimeBankPeriod } from '@prisma/client';
 import { useMountEffect } from '@/hooks/use-mount-effect';
 import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Building2, Clock, Shield, Bell, Save, RefreshCw } from 'lucide-react';
@@ -38,6 +39,8 @@ interface ParkingRules {
   id: string;
   buildingId: string;
   maxVehiclesPerUnit: number;
+  monthlyHourBank: number;
+  timeBankPeriod: TimeBankPeriod;
   maxConsecutiveHours: number;
   cooldownHours: number;
   maxExtensions: number;
@@ -166,11 +169,11 @@ export default function SettingsPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground md:text-base">{t('description')}</p>
         </div>
         <Select value={selectedBuildingId} onValueChange={setSelectedBuildingId}>
-          <SelectTrigger className="w-full md:w-[250px] h-11 md:h-10">
+          <SelectTrigger className="h-11 w-full md:h-10 md:w-[250px]">
             <SelectValue placeholder={t('selectBuilding')} />
           </SelectTrigger>
           <SelectContent>
@@ -184,21 +187,24 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="building" className="space-y-4">
-        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
           <TabsList className="inline-flex w-auto min-w-full md:w-auto">
-            <TabsTrigger value="building" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+            <TabsTrigger value="building" className="min-h-[44px] flex-1 md:min-h-0 md:flex-none">
               <Building2 className="mr-2 h-4 w-4" />
               {t('buildingTab')}
             </TabsTrigger>
-            <TabsTrigger value="parking" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+            <TabsTrigger value="parking" className="min-h-[44px] flex-1 md:min-h-0 md:flex-none">
               <Clock className="mr-2 h-4 w-4" />
               {t('parkingTab')}
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+            <TabsTrigger
+              value="notifications"
+              className="min-h-[44px] flex-1 md:min-h-0 md:flex-none"
+            >
               <Bell className="mr-2 h-4 w-4" />
               {t('notificationsTab')}
             </TabsTrigger>
-            <TabsTrigger value="security" className="min-h-[44px] md:min-h-0 flex-1 md:flex-none">
+            <TabsTrigger value="security" className="min-h-[44px] flex-1 md:min-h-0 md:flex-none">
               <Shield className="mr-2 h-4 w-4" />
               {t('securityTab')}
             </TabsTrigger>
@@ -223,7 +229,7 @@ export default function SettingsPage() {
                         id="name"
                         value={buildingData.name}
                         onChange={(e) => setBuildingData({ ...buildingData, name: e.target.value })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -232,7 +238,7 @@ export default function SettingsPage() {
                         id="slug"
                         value={buildingData.slug}
                         onChange={(e) => setBuildingData({ ...buildingData, slug: e.target.value })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                   </div>
@@ -241,8 +247,10 @@ export default function SettingsPage() {
                     <Input
                       id="address"
                       value={buildingData.address}
-                      onChange={(e) => setBuildingData({ ...buildingData, address: e.target.value })}
-                      className="h-11 md:h-10 text-base md:text-sm"
+                      onChange={(e) =>
+                        setBuildingData({ ...buildingData, address: e.target.value })
+                      }
+                      className="h-11 text-base md:h-10 md:text-sm"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -250,7 +258,9 @@ export default function SettingsPage() {
                       <Label htmlFor="timezone">{t('timezone')}</Label>
                       <Select
                         value={buildingData.timezone}
-                        onValueChange={(value) => setBuildingData({ ...buildingData, timezone: value })}
+                        onValueChange={(value) =>
+                          setBuildingData({ ...buildingData, timezone: value })
+                        }
                       >
                         <SelectTrigger className="h-11 md:h-10">
                           <SelectValue />
@@ -269,7 +279,9 @@ export default function SettingsPage() {
                         <Switch
                           id="isActive"
                           checked={buildingData.isActive}
-                          onCheckedChange={(checked) => setBuildingData({ ...buildingData, isActive: checked })}
+                          onCheckedChange={(checked) =>
+                            setBuildingData({ ...buildingData, isActive: checked })
+                          }
                         />
                         <Label htmlFor="isActive" className="font-normal">
                           {buildingData.isActive ? t('active') : t('inactive')}
@@ -293,8 +305,10 @@ export default function SettingsPage() {
                         id="contactEmail"
                         type="email"
                         value={buildingData.contactEmail || ''}
-                        onChange={(e) => setBuildingData({ ...buildingData, contactEmail: e.target.value || null })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setBuildingData({ ...buildingData, contactEmail: e.target.value || null })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -303,8 +317,10 @@ export default function SettingsPage() {
                         id="contactPhone"
                         type="tel"
                         value={buildingData.contactPhone || ''}
-                        onChange={(e) => setBuildingData({ ...buildingData, contactPhone: e.target.value || null })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setBuildingData({ ...buildingData, contactPhone: e.target.value || null })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                   </div>
@@ -314,16 +330,26 @@ export default function SettingsPage() {
                       id="emergencyPhone"
                       type="tel"
                       value={buildingData.emergencyPhone || ''}
-                      onChange={(e) => setBuildingData({ ...buildingData, emergencyPhone: e.target.value || null })}
-                      className="h-11 md:h-10 text-base md:text-sm"
+                      onChange={(e) =>
+                        setBuildingData({ ...buildingData, emergencyPhone: e.target.value || null })
+                      }
+                      className="h-11 text-base md:h-10 md:text-sm"
                     />
                   </div>
                 </CardContent>
               </Card>
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveBuilding} disabled={saving} className="w-full md:w-auto min-h-[44px] md:min-h-0">
-                  {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                <Button
+                  onClick={handleSaveBuilding}
+                  disabled={saving}
+                  className="min-h-[44px] w-full md:min-h-0 md:w-auto"
+                >
+                  {saving ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   {t('saveBuildingSettings')}
                 </Button>
               </div>
@@ -350,16 +376,66 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="maxVehiclesPerUnit">{t('maxVehiclesPerUnit')}</Label>
+                      <Label htmlFor="maxVehiclesPerUnit">{t('maxActivePassesPerUnit')}</Label>
                       <Input
                         id="maxVehiclesPerUnit"
                         type="number"
                         min="1"
                         max="10"
                         value={parkingRules.maxVehiclesPerUnit}
-                        onChange={(e) => setParkingRules({ ...parkingRules, maxVehiclesPerUnit: parseInt(e.target.value) || 1 })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            maxVehiclesPerUnit: parseInt(e.target.value) || 1,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        {t('maxActivePassesPerUnitDesc')}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="monthlyHourBank">{t('timeBankHours')}</Label>
+                      <Input
+                        id="monthlyHourBank"
+                        type="number"
+                        min="1"
+                        max="744"
+                        value={parkingRules.monthlyHourBank}
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            monthlyHourBank: parseInt(e.target.value) || 1,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">{t('timeBankHoursDesc')}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="timeBankPeriod">{t('timeBankResetPeriod')}</Label>
+                      <Select
+                        value={parkingRules.timeBankPeriod}
+                        onValueChange={(value) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            timeBankPeriod: value as TimeBankPeriod,
+                          })
+                        }
+                      >
+                        <SelectTrigger id="timeBankPeriod" className="h-11 md:h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DAILY">{t('timeBankPeriodDaily')}</SelectItem>
+                          <SelectItem value="WEEKLY">{t('timeBankPeriodWeekly')}</SelectItem>
+                          <SelectItem value="MONTHLY">{t('timeBankPeriodMonthly')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {t('timeBankResetPeriodDesc')}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="maxConsecutiveHours">{t('maxConsecutiveHours')}</Label>
@@ -369,8 +445,13 @@ export default function SettingsPage() {
                         min="1"
                         max="168"
                         value={parkingRules.maxConsecutiveHours}
-                        onChange={(e) => setParkingRules({ ...parkingRules, maxConsecutiveHours: parseInt(e.target.value) || 24 })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            maxConsecutiveHours: parseInt(e.target.value) || 24,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                   </div>
@@ -383,8 +464,13 @@ export default function SettingsPage() {
                         min="0"
                         max="48"
                         value={parkingRules.cooldownHours}
-                        onChange={(e) => setParkingRules({ ...parkingRules, cooldownHours: parseInt(e.target.value) || 0 })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            cooldownHours: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                       <p className="text-xs text-muted-foreground">{t('cooldownHoursDesc')}</p>
                     </div>
@@ -396,8 +482,13 @@ export default function SettingsPage() {
                         min="0"
                         max="60"
                         value={parkingRules.gracePeriodMinutes}
-                        onChange={(e) => setParkingRules({ ...parkingRules, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            gracePeriodMinutes: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                   </div>
@@ -419,8 +510,13 @@ export default function SettingsPage() {
                         min="0"
                         max="5"
                         value={parkingRules.maxExtensions}
-                        onChange={(e) => setParkingRules({ ...parkingRules, maxExtensions: parseInt(e.target.value) || 0 })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            maxExtensions: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -431,8 +527,13 @@ export default function SettingsPage() {
                         min="1"
                         max="24"
                         value={parkingRules.extensionMaxHours}
-                        onChange={(e) => setParkingRules({ ...parkingRules, extensionMaxHours: parseInt(e.target.value) || 4 })}
-                        className="h-11 md:h-10 text-base md:text-sm"
+                        onChange={(e) =>
+                          setParkingRules({
+                            ...parkingRules,
+                            extensionMaxHours: parseInt(e.target.value) || 4,
+                          })
+                        }
+                        className="h-11 text-base md:h-10 md:text-sm"
                       />
                     </div>
                   </div>
@@ -447,33 +548,51 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="requireUnitConfirmation">{t('requireUnitConfirmation')}</Label>
-                      <p className="text-sm text-muted-foreground">{t('requireUnitConfirmationDesc')}</p>
+                      <Label htmlFor="requireUnitConfirmation">
+                        {t('requireUnitConfirmation')}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {t('requireUnitConfirmationDesc')}
+                      </p>
                     </div>
                     <Switch
                       id="requireUnitConfirmation"
                       checked={parkingRules.requireUnitConfirmation}
-                      onCheckedChange={(checked) => setParkingRules({ ...parkingRules, requireUnitConfirmation: checked })}
+                      onCheckedChange={(checked) =>
+                        setParkingRules({ ...parkingRules, requireUnitConfirmation: checked })
+                      }
                     />
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label htmlFor="allowEmergencyOverride">{t('allowEmergencyOverride')}</Label>
-                      <p className="text-sm text-muted-foreground">{t('allowEmergencyOverrideDesc')}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t('allowEmergencyOverrideDesc')}
+                      </p>
                     </div>
                     <Switch
                       id="allowEmergencyOverride"
                       checked={parkingRules.allowEmergencyOverride}
-                      onCheckedChange={(checked) => setParkingRules({ ...parkingRules, allowEmergencyOverride: checked })}
+                      onCheckedChange={(checked) =>
+                        setParkingRules({ ...parkingRules, allowEmergencyOverride: checked })
+                      }
                     />
                   </div>
                 </CardContent>
               </Card>
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveParkingRules} disabled={saving} className="w-full md:w-auto min-h-[44px] md:min-h-0">
-                  {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                <Button
+                  onClick={handleSaveParkingRules}
+                  disabled={saving}
+                  className="min-h-[44px] w-full md:min-h-0 md:w-auto"
+                >
+                  {saving ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   {t('saveParkingRules')}
                 </Button>
               </div>

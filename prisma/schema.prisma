@@ -13,6 +13,12 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
+enum TimeBankPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 // ============================================
 // SYSTEM CONFIGURATION
 // ============================================
@@ -189,7 +195,9 @@ model ParkingRule {
   building    Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
 
   // Rule configurations
-  maxVehiclesPerUnit        Int      @default(2)
+  maxVehiclesPerUnit        Int      @default(3)
+  monthlyHourBank           Int      @default(72)
+  timeBankPeriod            TimeBankPeriod @default(MONTHLY)
   maxConsecutiveHours       Int      @default(24)
   cooldownHours             Int      @default(2)
   maxExtensions             Int      @default(1)

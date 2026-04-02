@@ -12,7 +12,9 @@ export function createMockParkingRule(overrides?: Partial<ParkingRule>): Parking
   return {
     id: 'rule-1',
     buildingId: 'building-1',
-    maxVehiclesPerUnit: 2,
+    maxVehiclesPerUnit: 3,
+    monthlyHourBank: 72,
+    timeBankPeriod: 'MONTHLY',
     maxConsecutiveHours: 24,
     cooldownHours: 2,
     maxExtensions: 1,

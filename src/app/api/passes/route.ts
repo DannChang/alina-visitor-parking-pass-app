@@ -18,7 +18,11 @@ const createPassSchema = z.object({
   visitorEmail: z.string().trim().email(),
   vehicleMake: z.string().trim().min(1).max(50),
   vehicleModel: z.string().trim().min(1).max(50),
-  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
+  vehicleYear: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear() + 1),
   vehicleColor: z.string().max(30).optional(),
   vehicleState: z.string().max(10).optional(),
   passType: z.nativeEnum(PassType).optional(),
@@ -198,6 +202,7 @@ export async function POST(request: NextRequest) {
       licensePlate: normalizedPlate,
       unitId: unit.id,
       buildingId: building.id,
+      timezone: building.timezone,
       durationHours: data.duration,
     });
 
@@ -249,9 +254,7 @@ export async function POST(request: NextRequest) {
 
     // Get IP address and user agent
     const ipAddress =
-      request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      null;
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null;
     const userAgent = request.headers.get('user-agent') || null;
 
     // Create the parking pass

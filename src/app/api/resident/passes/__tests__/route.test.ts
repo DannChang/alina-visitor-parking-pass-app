@@ -3,6 +3,7 @@ import { createMockPostRequest } from '@/test/mocks/next-request';
 import {
   createMockBuilding,
   createMockPass,
+  createMockParkingRule,
   createMockUnit,
   createMockVehicle,
 } from '@/test/mocks/prisma';
@@ -103,7 +104,10 @@ describe('Resident passes API route', () => {
   it('creates a visitor pass for a non-resident plate', async () => {
     const unit = {
       ...createMockUnit(),
-      building: createMockBuilding(),
+      building: {
+        ...createMockBuilding(),
+        parkingRules: createMockParkingRule(),
+      },
     };
     const vehicle = createMockVehicle({
       residentId: null,

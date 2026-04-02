@@ -8,10 +8,8 @@ export const APP_CONFIG = {
   url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   description: 'Visitor parking pass management system',
   resident: {
-    defaultBuildingName:
-      process.env.NEXT_PUBLIC_DEFAULT_BUILDING_NAME ?? 'Alina Visitor Parking',
-    defaultBuildingSlug:
-      process.env.NEXT_PUBLIC_DEFAULT_BUILDING_SLUG ?? 'alina-visitor-parking',
+    defaultBuildingName: process.env.NEXT_PUBLIC_DEFAULT_BUILDING_NAME ?? 'Alina Visitor Parking',
+    defaultBuildingSlug: process.env.NEXT_PUBLIC_DEFAULT_BUILDING_SLUG ?? 'alina-visitor-parking',
   },
 } as const;
 
@@ -29,10 +27,10 @@ export const PASS_CONFIG = {
   gracePeriodMinutes: 15,
 
   // Limits
-  maxVehiclesPerUnit: 2,
+  maxVehiclesPerUnit: 3,
   maxConsecutiveHours: 24,
   cooldownHours: 2,
-  weeklyHourBank: 24,
+  monthlyHourBank: 72,
 } as const;
 
 export const LICENSE_PLATE_CONFIG = {
@@ -76,7 +74,7 @@ export const ERROR_CODES = {
   INVALID_DURATION: 'ERR_4004',
   OUTSIDE_OPERATING_HOURS: 'ERR_4005',
   MAX_CONSECUTIVE_DAYS: 'ERR_4006',
-  WEEKLY_HOUR_BANK_EXCEEDED: 'ERR_4007',
+  MONTHLY_HOUR_BANK_EXCEEDED: 'ERR_4007',
 
   // Authentication errors (4100-4199)
   UNAUTHORIZED: 'ERR_4100',

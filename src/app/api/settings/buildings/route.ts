@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { createDefaultParkingRule } from '@/lib/parking-rules';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -38,7 +39,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Building not found' }, { status: 404 });
       }
 
-      return NextResponse.json({ building, parkingRules });
+      return NextResponse.json({
+        building,
+        parkingRules: parkingRules ?? createDefaultParkingRule(id),
+      });
     }
 
     const buildings = await prisma.building.findMany({
@@ -49,10 +53,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ buildings });
   } catch (error) {
     console.error('Error fetching buildings:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch buildings' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch buildings' }, { status: 500 });
   }
 }
 
@@ -109,9 +110,6 @@ export async function PATCH(request: NextRequest) {
       );
     }
     console.error('Error updating building:', error);
-    return NextResponse.json(
-      { error: 'Failed to update building' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to update building' }, { status: 500 });
   }
 }

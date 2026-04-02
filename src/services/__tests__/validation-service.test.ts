@@ -6,11 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { validatePassRequest, validatePassExtension } from '../validation-service';
-import {
-  createMockParkingRule,
-  createMockVehicle,
-  createMockPass,
-} from '@/test/mocks/prisma';
+import { createMockParkingRule, createMockVehicle, createMockPass } from '@/test/mocks/prisma';
 
 // Mock Prisma
 vi.mock('@/lib/prisma', () => ({
@@ -107,7 +103,7 @@ describe('Validation Service', () => {
     describe('Rule 2: Maximum Vehicles Per Unit', () => {
       it('should reject when unit has max vehicles (ERR_4001)', async () => {
         setupDefaultMocks();
-        mockPrisma.parkingPass.count.mockResolvedValue(2); // At limit
+        mockPrisma.parkingPass.count.mockResolvedValue(3); // At limit
 
         const result = await validatePassRequest(defaultRequest);
 
@@ -116,14 +112,14 @@ describe('Validation Service', () => {
         expect(error).toBeDefined();
         expect(error?.field).toBe('unitNumber');
         expect(error?.metadata).toEqual({
-          maxAllowed: 2,
-          currentCount: 2,
+          maxAllowed: 3,
+          currentCount: 3,
         });
       });
 
       it('should allow when under vehicle limit', async () => {
         setupDefaultMocks();
-        mockPrisma.parkingPass.count.mockResolvedValue(1);
+        mockPrisma.parkingPass.count.mockResolvedValue(2);
 
         const result = await validatePassRequest(defaultRequest);
 
@@ -132,7 +128,7 @@ describe('Validation Service', () => {
 
       it('should warn when approaching vehicle limit', async () => {
         setupDefaultMocks();
-        mockPrisma.parkingPass.count.mockResolvedValue(1); // 1 of 2, will be 2nd
+        mockPrisma.parkingPass.count.mockResolvedValue(2); // 2 of 3, will be 3rd
 
         const result = await validatePassRequest(defaultRequest);
 
@@ -276,25 +272,25 @@ describe('Validation Service', () => {
     });
 
     // ============================================
-    // Rule 6: WEEKLY HOUR BANK
+    // Rule 6: MONTHLY HOUR BANK
     // ============================================
-    describe('Rule 6: Weekly Hour Bank', () => {
-      it('should reject when the rolling weekly 24-hour bank would be exceeded (ERR_4007)', async () => {
+    describe('Rule 6: Monthly Hour Bank', () => {
+      it('should reject when the unit monthly 72-hour bank would be exceeded (ERR_4007)', async () => {
         setupDefaultMocks();
         const now = new Date();
-        const weeklyPasses = [
+        const monthlyPasses = [
           {
             startTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
             endTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000),
-            duration: 12,
+            duration: 36,
           },
           {
             startTime: new Date(now.getTime() - 24 * 60 * 60 * 1000),
             endTime: new Date(now.getTime() - 12 * 60 * 60 * 1000),
-            duration: 10,
+            duration: 34,
           },
         ];
-        mockPrisma.parkingPass.findMany.mockResolvedValue(weeklyPasses);
+        mockPrisma.parkingPass.findMany.mockResolvedValue(monthlyPasses);
 
         const result = await validatePassRequest(defaultRequest);
 
@@ -304,25 +300,53 @@ describe('Validation Service', () => {
         expect(error?.field).toBe('duration');
       });
 
-      it('should warn with the remaining weekly hour bank after approval', async () => {
+      it('should warn with the remaining monthly hour bank after approval', async () => {
         setupDefaultMocks();
-        const weeklyPasses = [
+        const monthlyPasses = [
           {
             startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
             endTime: new Date(),
             duration: 8,
           },
         ];
-        mockPrisma.parkingPass.findMany.mockResolvedValue(weeklyPasses);
+        mockPrisma.parkingPass.findMany.mockResolvedValue(monthlyPasses);
 
         const result = await validatePassRequest(defaultRequest);
 
-        const warning = result.warnings.find((w) => w.code === 'WEEKLY_HOUR_BANK_REMAINING');
+        const warning = result.warnings.find((w) => w.code === 'MONTHLY_HOUR_BANK_REMAINING');
         expect(warning).toBeDefined();
         expect(warning?.metadata).toEqual({
-          weeklyHourBank: 24,
-          weeklyHoursUsed: 8,
-          weeklyHoursRemainingAfterApproval: 12,
+          monthlyHourBank: 72,
+          timeBankPeriod: 'MONTHLY',
+          timeBankHoursUsed: 8,
+          timeBankHoursRemainingAfterApproval: 60,
+        });
+      });
+
+      it('should use the configured weekly bank period in warning metadata', async () => {
+        setupDefaultMocks();
+        mockPrisma.parkingRule.findUnique.mockResolvedValue(
+          createMockParkingRule({
+            timeBankPeriod: 'WEEKLY',
+          })
+        );
+        mockPrisma.parkingPass.findMany.mockResolvedValue([
+          {
+            startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            endTime: new Date(),
+            duration: 8,
+          },
+        ]);
+
+        const result = await validatePassRequest(defaultRequest);
+        const warning = result.warnings.find((w) => w.code === 'MONTHLY_HOUR_BANK_REMAINING');
+
+        expect(warning?.message).toContain('weekly hours');
+        expect(warning?.metadata).toEqual({
+          monthlyHourBank: 72,
+          timeBankPeriod: 'WEEKLY',
+          timeBankHoursUsed: 8,
+          timeBankHoursRemainingAfterApproval: 60,
         });
       });
     });
@@ -604,10 +628,7 @@ describe('Validation Service', () => {
       });
 
       it('should allow when under extension limit', async () => {
-        setupExtensionMocks(
-          { extensionCount: 0 },
-          { maxExtensions: 2 }
-        );
+        setupExtensionMocks({ extensionCount: 0 }, { maxExtensions: 2 });
 
         const result = await validatePassExtension('pass-1', 2);
 
@@ -648,10 +669,7 @@ describe('Validation Service', () => {
     describe('Grace Period', () => {
       it('should reject when pass expired beyond grace period', async () => {
         const expiredTime = new Date(Date.now() - 30 * 60 * 1000); // 30 min ago
-        setupExtensionMocks(
-          { endTime: expiredTime },
-          { gracePeriodMinutes: 15 }
-        );
+        setupExtensionMocks({ endTime: expiredTime }, { gracePeriodMinutes: 15 });
 
         const result = await validatePassExtension('pass-1', 2);
 
@@ -662,10 +680,7 @@ describe('Validation Service', () => {
 
       it('should allow when within grace period', async () => {
         const recentExpiry = new Date(Date.now() - 10 * 60 * 1000); // 10 min ago
-        setupExtensionMocks(
-          { endTime: recentExpiry },
-          { gracePeriodMinutes: 15 }
-        );
+        setupExtensionMocks({ endTime: recentExpiry }, { gracePeriodMinutes: 15 });
 
         const result = await validatePassExtension('pass-1', 2);
 
@@ -763,15 +778,18 @@ describe('Validation Service', () => {
     describe('Valid Extension', () => {
       it('should validate successful extension request', async () => {
         const futureExpiry = new Date(Date.now() + 60 * 60 * 1000);
-        setupExtensionMocks({
-          status: 'ACTIVE',
-          extensionCount: 0,
-          endTime: futureExpiry,
-        }, {
-          maxExtensions: 2,
-          extensionMaxHours: 4,
-          gracePeriodMinutes: 15,
-        });
+        setupExtensionMocks(
+          {
+            status: 'ACTIVE',
+            extensionCount: 0,
+            endTime: futureExpiry,
+          },
+          {
+            maxExtensions: 2,
+            extensionMaxHours: 4,
+            gracePeriodMinutes: 15,
+          }
+        );
 
         const result = await validatePassExtension('pass-1', 2);
 
@@ -785,9 +803,7 @@ describe('Validation Service', () => {
     // ============================================
     describe('Error Handling', () => {
       it('should return internal error on database failure', async () => {
-        mockPrisma.parkingPass.findUnique.mockRejectedValue(
-          new Error('Database error')
-        );
+        mockPrisma.parkingPass.findUnique.mockRejectedValue(new Error('Database error'));
 
         const result = await validatePassExtension('pass-1', 2);
 

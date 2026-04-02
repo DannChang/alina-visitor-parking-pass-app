@@ -9,11 +9,13 @@ import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import {
   calculateConsecutiveHours,
   calculateConsecutiveDays,
+  getTimeBankWindowStart,
   isCooldownPeriodOver,
   getHoursUntilCooldownEnds,
   isWithinOperatingHours,
 } from '@/lib/utils/date-time';
-import { ERROR_CODES, PASS_CONFIG, VALIDATION_MESSAGES } from '@/lib/constants';
+import { ERROR_CODES, VALIDATION_MESSAGES } from '@/lib/constants';
+import { createDefaultParkingRule, formatTimeBankPeriod } from '@/lib/parking-rules';
 import type { ParkingRule } from '@prisma/client';
 
 export interface ValidationResult {
@@ -40,6 +42,7 @@ interface PassRequestData {
   licensePlate: string;
   unitId: string;
   durationHours: number;
+  timezone?: string;
   isEmergency?: boolean;
 }
 
@@ -47,21 +50,23 @@ interface PassRequestData {
  * Validate a parking pass request against all business rules
  * This is the PRIMARY validation function for all pass creation
  */
-export async function validatePassRequest(
-  data: PassRequestData
-): Promise<ValidationResult> {
+export async function validatePassRequest(data: PassRequestData): Promise<ValidationResult> {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
 
   try {
     // Fetch all necessary data in parallel for performance
-    const [rules, vehicle, activePassesForUnit, recentPassesForPlate, weeklyPassesForPlate] = await Promise.all([
+    const [rules, vehicle, activePassesForUnit, recentPassesForPlate] = await Promise.all([
       fetchBuildingRules(data.buildingId),
       fetchVehicle(data.licensePlate),
       countActivePassesForUnit(data.unitId),
       fetchRecentPassesForPlate(data.licensePlate),
-      fetchWeeklyPassesForPlate(data.licensePlate, data.buildingId),
     ]);
+    const timeBankPassesForUnit = await fetchTimeBankPassesForUnit(
+      data.unitId,
+      rules.timeBankPeriod,
+      data.timezone
+    );
 
     // Emergency override - skip most validations
     if (data.isEmergency && rules.allowEmergencyOverride) {
@@ -149,7 +154,10 @@ export async function validatePassRequest(
     // 5. CONSECUTIVE DAY LIMIT
     if (recentPassesForPlate.length > 0) {
       // Fetch passes from a wider window for day-level counting
-      const passesForDayCount = await fetchPassesForDayCount(data.licensePlate, rules.maxConsecutiveDays + 1);
+      const passesForDayCount = await fetchPassesForDayCount(
+        data.licensePlate,
+        rules.maxConsecutiveDays + 1
+      );
       const consecutiveDays = calculateConsecutiveDays(passesForDayCount);
 
       if (consecutiveDays >= rules.maxConsecutiveDays) {
@@ -179,22 +187,24 @@ export async function validatePassRequest(
       });
     }
 
-    // 7. WEEKLY HOUR BANK
-    const weeklyHoursUsed = weeklyPassesForPlate.reduce(
+    // 7. TIME BANK
+    const periodLabel = formatTimeBankPeriod(rules.timeBankPeriod);
+    const timeBankHoursUsed = timeBankPassesForUnit.reduce(
       (totalHours, pass) => totalHours + pass.duration,
       0
     );
-    const weeklyHoursRemaining = PASS_CONFIG.weeklyHourBank - weeklyHoursUsed;
+    const timeBankHoursRemaining = rules.monthlyHourBank - timeBankHoursUsed;
 
-    if (data.durationHours > weeklyHoursRemaining) {
+    if (data.durationHours > timeBankHoursRemaining) {
       errors.push({
-        code: ERROR_CODES.WEEKLY_HOUR_BANK_EXCEEDED,
-        message: `This vehicle has ${Math.max(weeklyHoursRemaining, 0)} of ${PASS_CONFIG.weeklyHourBank} weekly hours remaining. Requesting ${data.durationHours} hour${data.durationHours === 1 ? '' : 's'} exceeds the weekly bank.`,
+        code: ERROR_CODES.MONTHLY_HOUR_BANK_EXCEEDED,
+        message: `This unit has ${Math.max(timeBankHoursRemaining, 0)} of ${rules.monthlyHourBank} ${periodLabel} hours remaining. Requesting ${data.durationHours} hour${data.durationHours === 1 ? '' : 's'} exceeds the ${periodLabel} bank.`,
         field: 'duration',
         metadata: {
-          weeklyHourBank: PASS_CONFIG.weeklyHourBank,
-          weeklyHoursUsed,
-          weeklyHoursRemaining: Math.max(weeklyHoursRemaining, 0),
+          monthlyHourBank: rules.monthlyHourBank,
+          timeBankPeriod: rules.timeBankPeriod,
+          timeBankHoursUsed,
+          timeBankHoursRemaining: Math.max(timeBankHoursRemaining, 0),
           requestedHours: data.durationHours,
         },
       });
@@ -219,14 +229,15 @@ export async function validatePassRequest(
 
     // WARNINGS (non-blocking)
 
-    if (weeklyHoursRemaining - data.durationHours >= 0) {
+    if (timeBankHoursRemaining - data.durationHours >= 0) {
       warnings.push({
-        code: 'WEEKLY_HOUR_BANK_REMAINING',
-        message: `${weeklyHoursRemaining - data.durationHours} of ${PASS_CONFIG.weeklyHourBank} weekly hours will remain after this pass.`,
+        code: 'MONTHLY_HOUR_BANK_REMAINING',
+        message: `${timeBankHoursRemaining - data.durationHours} of ${rules.monthlyHourBank} ${periodLabel} hours will remain after this pass.`,
         metadata: {
-          weeklyHourBank: PASS_CONFIG.weeklyHourBank,
-          weeklyHoursUsed,
-          weeklyHoursRemainingAfterApproval: weeklyHoursRemaining - data.durationHours,
+          monthlyHourBank: rules.monthlyHourBank,
+          timeBankPeriod: rules.timeBankPeriod,
+          timeBankHoursUsed,
+          timeBankHoursRemainingAfterApproval: timeBankHoursRemaining - data.durationHours,
         },
       });
     }
@@ -425,30 +436,7 @@ async function fetchBuildingRules(buildingId: string): Promise<ParkingRule> {
   });
 
   if (!rules) {
-    // Return default rules if not configured
-    return {
-      id: 'default',
-      buildingId,
-      maxVehiclesPerUnit: 2,
-      maxConsecutiveHours: 24,
-      cooldownHours: 2,
-      maxExtensions: 1,
-      extensionMaxHours: 4,
-      requireUnitConfirmation: false,
-      maxConsecutiveDays: 3,
-      consecutiveDayCooldownHours: 24,
-      autoExtensionEnabled: true,
-      autoExtensionThresholdHours: 6,
-      autoExtensionDurationHours: 25,
-      inOutPrivileges: true,
-      operatingStartHour: null,
-      operatingEndHour: null,
-      allowedDurations: [2, 4, 8, 12, 24],
-      gracePeriodMinutes: 15,
-      allowEmergencyOverride: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    return createDefaultParkingRule(buildingId);
   }
 
   return rules;
@@ -474,7 +462,9 @@ async function countActivePassesForUnit(unitId: string): Promise<number> {
   return prisma.parkingPass.count({
     where: {
       unitId,
-      status: 'ACTIVE',
+      status: {
+        in: ['ACTIVE', 'EXTENDED'],
+      },
       endTime: { gt: now },
       deletedAt: null,
     },
@@ -524,18 +514,16 @@ async function fetchPassesForDayCount(licensePlate: string, days: number) {
   });
 }
 
-async function fetchWeeklyPassesForPlate(licensePlate: string, buildingId: string) {
-  const normalizedPlate = normalizeLicensePlate(licensePlate);
-  const lookbackTime = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+async function fetchTimeBankPassesForUnit(
+  unitId: string,
+  timeBankPeriod: ParkingRule['timeBankPeriod'],
+  timezone?: string
+) {
+  const lookbackTime = getTimeBankWindowStart(timeBankPeriod, timezone);
 
   return prisma.parkingPass.findMany({
     where: {
-      vehicle: {
-        is: { normalizedPlate },
-      },
-      unit: {
-        is: { buildingId },
-      },
+      unitId,
       startTime: { gte: lookbackTime },
       deletedAt: null,
       status: {
