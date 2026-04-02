@@ -434,7 +434,10 @@ export function ResidentPassesHub() {
         }}
       >
         {selectedPass && (
-          <DialogContent className="max-w-2xl overflow-auto border-0 p-0 md:rounded-[32px] [&>button]:bg-transparent [&>button]:text-white [&>button]:opacity-100">
+          <DialogContent
+            showHandle={false}
+            className="overflow-auto border-0 p-0 md:inset-x-0 md:bottom-0 md:left-0 md:top-auto md:max-h-[90vh] md:w-full md:max-w-none md:translate-x-0 md:translate-y-0 md:rounded-t-[32px] md:rounded-b-none md:border-t md:border-x-0 md:border-b-0 lg:inset-auto lg:left-[50%] lg:top-[50%] lg:max-h-[85vh] lg:w-full lg:max-w-2xl lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[32px] lg:border [&>button]:bg-transparent [&>button]:text-white [&>button]:opacity-100"
+          >
             <div className="bg-[linear-gradient(135deg,_#020617,_#0f172a_55%,_#1e293b)] px-6 py-7 text-white sm:px-8">
               <Badge
                 variant="outline"

@@ -87,7 +87,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="md:inset-x-0 md:bottom-0 md:left-0 md:top-auto md:max-h-[90vh] md:w-full md:max-w-none md:translate-x-0 md:translate-y-0 md:rounded-t-[32px] md:rounded-b-none md:border-t md:border-x-0 md:border-b-0 lg:inset-auto lg:left-[50%] lg:top-[50%] lg:max-h-[85vh] lg:w-full lg:max-w-sm lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-lg lg:border">
         <DialogHeader>
           <DialogTitle>Create Parking Pass</DialogTitle>
         </DialogHeader>
