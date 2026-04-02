@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { locales, defaultLocale, rtlLocales, localeNames, localeDisplayCodes, type Locale } from '../routing';
+import { locales, defaultLocale, rtlLocales, localeNames, localeDisplayCodes } from '../routing';
 
 describe('i18n routing', () => {
   it('should have 8 supported locales', () => {
