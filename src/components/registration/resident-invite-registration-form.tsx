@@ -219,7 +219,7 @@ export function ResidentInviteRegistrationForm({
       }
 
       setSignedIn(true);
-      router.replace('/dashboard/passes');
+      router.replace('/resident/passes');
       router.refresh();
     } catch (submitError) {
       setError(

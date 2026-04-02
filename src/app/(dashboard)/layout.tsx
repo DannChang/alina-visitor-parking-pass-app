@@ -28,6 +28,10 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
+  if (session.user.role === 'RESIDENT') {
+    redirect('/resident/passes');
+  }
+
   const initials = session.user.name
     ? session.user.name
         .split(' ')

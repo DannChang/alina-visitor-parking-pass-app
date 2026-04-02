@@ -9,11 +9,15 @@ import { getToken } from 'next-auth/jwt';
  */
 type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SECURITY' | 'RESIDENT';
 
+function getAuthenticatedDestination(role?: UserRole): string {
+  return role === 'RESIDENT' ? '/resident/passes' : '/dashboard';
+}
+
 // Route permissions - maps routes to roles that can access them
 // Empty array means all authenticated users can access
 const ROUTE_ACCESS: Record<string, UserRole[]> = {
-  '/dashboard': [], // All authenticated users
-  '/dashboard/passes': [], // All authenticated users (data filtering happens at API level)
+  '/dashboard': ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY'],
+  '/dashboard/passes': ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY'],
   '/dashboard/violations': ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY'],
   '/dashboard/units': ['SUPER_ADMIN', 'ADMIN', 'MANAGER'],
   '/dashboard/analytics': ['SUPER_ADMIN', 'ADMIN', 'MANAGER'],
@@ -139,11 +143,10 @@ export async function middleware(request: NextRequest) {
   if (isPublicRoute || isPublicApi) {
     // Redirect logged-in users away from login page
     if (pathname === '/login' && isLoggedIn) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL(getAuthenticatedDestination(userRole), request.url));
     }
     if (pathname === '/resident/login' && isLoggedIn) {
-      const destination = userRole === 'RESIDENT' ? '/resident/passes' : '/dashboard';
-      return NextResponse.redirect(new URL(destination, request.url));
+      return NextResponse.redirect(new URL(getAuthenticatedDestination(userRole), request.url));
     }
     return NextResponse.next();
   }
@@ -155,6 +158,10 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
+
+    if (userRole !== 'RESIDENT') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   // Dashboard routes require authentication AND authorization
@@ -163,6 +170,10 @@ export async function middleware(request: NextRequest) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
+    }
+
+    if (userRole === 'RESIDENT') {
+      return NextResponse.redirect(new URL('/resident/passes', request.url));
     }
 
     // Check route-level permissions using centralized authorization

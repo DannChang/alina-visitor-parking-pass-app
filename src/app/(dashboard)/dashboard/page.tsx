@@ -277,7 +277,7 @@ export default async function DashboardPage() {
 
   // Residents don't need the admin overview — send them to their passes
   if (session.user.role === 'RESIDENT') {
-    redirect('/dashboard/passes');
+    redirect('/resident/passes');
   }
 
   const t = await getTranslations('dashboard.home');

@@ -13,6 +13,10 @@ export default async function HomePage() {
 
   // If user is logged in and has patrol permissions, show patrol dashboard
   if (session?.user) {
+    if (session.user.role === 'RESIDENT') {
+      redirect('/resident/passes');
+    }
+
     const canPatrol = hasPermission(session.user.role, 'passes:view_all');
 
     if (canPatrol) {

@@ -125,4 +125,23 @@ describe('ResidentInviteRegistrationForm', () => {
     ).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it('redirects successful resident registration to the resident passes page', async () => {
+    const user = userEvent.setup();
+    render(<ResidentInviteRegistrationForm token="token-1" invite={invite} />);
+
+    await user.type(screen.getByLabelText(/strata lot/i), 'SL-101');
+    await user.clear(screen.getByPlaceholderText('Assigned stall #1'));
+    await user.type(screen.getByPlaceholderText('Assigned stall #1'), '12');
+    await user.clear(screen.getByPlaceholderText('License plate #1'));
+    await user.type(screen.getByPlaceholderText('License plate #1'), 'abc123');
+    await user.type(screen.getByLabelText(/^password$/i), 'Resident@123!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Resident@123!');
+    await user.click(screen.getByRole('button', { name: /activate account/i }));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/resident/passes');
+    });
+    expect(mockRefresh).toHaveBeenCalled();
+  });
 });
