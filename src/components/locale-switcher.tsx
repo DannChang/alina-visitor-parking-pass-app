@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { useTransition } from 'react';
+import { useState } from 'react';
 import { Globe, ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,21 +10,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { setLocale } from '@/i18n/actions';
+import { persistLocaleAndReload } from '@/i18n/client';
 import { locales, localeNames, localeDisplayCodes, type Locale } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 
 export function LocaleSwitcher() {
   const locale = useLocale() as Locale;
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
-  function handleSelect(newLocale: Locale) {
-    startTransition(async () => {
-      await setLocale(newLocale);
-      // Full page reload to pick up the new cookie — router.refresh() uses
-      // stale cached RSC payloads and renders one selection behind.
-      window.location.reload();
-    });
+  async function handleSelect(newLocale: Locale) {
+    if (newLocale === locale || isPending) {
+      return;
+    }
+
+    try {
+      setIsPending(true);
+      persistLocaleAndReload(newLocale);
+    } finally {
+      setIsPending(false);
+    }
   }
 
   return (
@@ -48,7 +52,7 @@ export function LocaleSwitcher() {
         {locales.map((l) => (
           <DropdownMenuItem
             key={l}
-            onClick={() => handleSelect(l)}
+            onSelect={() => void handleSelect(l)}
             className="flex items-center justify-between gap-2"
           >
             <span>{localeNames[l]}</span>

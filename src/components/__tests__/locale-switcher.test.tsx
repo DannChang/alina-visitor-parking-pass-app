@@ -11,16 +11,9 @@ vi.mock('next-intl', () => ({
   useLocale: vi.fn(() => 'en'),
 }));
 
-// Mock next/navigation
-vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({
-    refresh: vi.fn(),
-  })),
-}));
-
-// Mock the server action
-vi.mock('@/i18n/actions', () => ({
-  setLocale: vi.fn(() => Promise.resolve()),
+// Mock the locale persistence helper
+vi.mock('@/i18n/client', () => ({
+  persistLocaleAndReload: vi.fn(),
 }));
 
 describe('LocaleSwitcher', () => {
@@ -49,11 +42,8 @@ describe('LocaleSwitcher', () => {
     expect(screen.getByText('Tiếng Việt')).toBeInTheDocument();
   });
 
-  it('should call setLocale and refresh when selecting a language', async () => {
-    const { setLocale } = await import('@/i18n/actions');
-    const { useRouter } = await import('next/navigation');
-    const mockRefresh = vi.fn();
-    vi.mocked(useRouter).mockReturnValue({ refresh: mockRefresh } as never);
+  it('should persist the selected locale when selecting a language', async () => {
+    const { persistLocaleAndReload } = await import('@/i18n/client');
 
     const user = userEvent.setup();
     render(<LocaleSwitcher />);
@@ -61,6 +51,20 @@ describe('LocaleSwitcher', () => {
     await user.click(screen.getByRole('button'));
     await user.click(screen.getByText('Español'));
 
-    expect(setLocale).toHaveBeenCalledWith('es');
+    expect(persistLocaleAndReload).toHaveBeenCalledWith('es');
+  });
+
+  it('should use the current selection for consecutive clicks', async () => {
+    const { persistLocaleAndReload } = await import('@/i18n/client');
+    const user = userEvent.setup();
+    render(<LocaleSwitcher />);
+
+    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByText('Tiếng Việt'));
+    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByText('한국어'));
+
+    expect(persistLocaleAndReload).toHaveBeenNthCalledWith(1, 'vi');
+    expect(persistLocaleAndReload).toHaveBeenNthCalledWith(2, 'ko');
   });
 });
