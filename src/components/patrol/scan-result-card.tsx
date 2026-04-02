@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { formatPassContact } from '@/lib/utils/contact';
 import type { PatrolLookupResult, VehicleStatus } from '@/app/api/patrol/lookup/route';
 
 interface ScanResultCardProps {
@@ -191,7 +192,10 @@ export function ScanResultCard({
               <div className="flex items-center gap-1">
                 <User className="h-3 w-3 text-slate-500" />
                 <span className="text-slate-700">
-                  {result.activePass.visitorName || 'Unknown'}
+                  {formatPassContact(
+                    result.activePass.visitorEmail,
+                    result.activePass.visitorPhone
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-1">

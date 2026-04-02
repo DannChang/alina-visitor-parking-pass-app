@@ -36,8 +36,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
   const isResident = role === 'RESIDENT';
 
   const [licensePlate, setLicensePlate] = useState('');
-  const [visitorName, setVisitorName] = useState('');
   const [visitorPhone, setVisitorPhone] = useState('');
+  const [visitorEmail, setVisitorEmail] = useState('');
   const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState('');
@@ -88,8 +88,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
   const resetForm = () => {
     setLicensePlate('');
-    setVisitorName('');
     setVisitorPhone('');
+    setVisitorEmail('');
     setVehicleMake('');
     setVehicleModel('');
     setVehicleYear('');
@@ -116,12 +116,13 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
     if (
       !licensePlate.trim() ||
-      !visitorName.trim() ||
+      !visitorPhone.trim() ||
+      !visitorEmail.trim() ||
       !vehicleMake.trim() ||
       !vehicleModel.trim() ||
       !vehicleYear.trim()
     ) {
-      setError('License plate, visitor name, make, model, and year are required');
+      setError('License plate, phone, email, make, model, and year are required');
       return;
     }
 
@@ -141,7 +142,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
       // Residents have buildingSlug/unitNumber auto-filled from their session
       const body: Record<string, string | number> = {
         licensePlate: normalizedPlate,
-        visitorName: visitorName.trim(),
+        visitorPhone: phone,
+        visitorEmail: visitorEmail.trim(),
         duration,
         buildingSlug,
         unitNumber: unitNumber.trim(),
@@ -149,9 +151,6 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
         vehicleModel: vehicleModel.trim(),
         vehicleYear: Number(vehicleYear),
       };
-      if (phone) {
-        body.visitorPhone = phone;
-      }
 
       const res = await fetch('/api/passes', {
         method: 'POST',
@@ -244,16 +243,6 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
           )}
 
           <div className="space-y-2">
-            <Label>Visitor Name *</Label>
-            <Input
-              value={visitorName}
-              onChange={(e) => setVisitorName(e.target.value)}
-              placeholder="John Smith"
-              className="h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label>License Plate *</Label>
             <Input
               value={licensePlate}
@@ -264,12 +253,23 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
           </div>
 
           <div className="space-y-2">
-            <Label>Phone (optional)</Label>
+            <Label>Phone *</Label>
             <Input
               value={visitorPhone}
               onChange={(e) => setVisitorPhone(e.target.value)}
               placeholder="555-123-4567"
               type="tel"
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Email *</Label>
+            <Input
+              value={visitorEmail}
+              onChange={(e) => setVisitorEmail(e.target.value)}
+              placeholder="guest@example.com"
+              type="email"
               className="h-11"
             />
           </div>

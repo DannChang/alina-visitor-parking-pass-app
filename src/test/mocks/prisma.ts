@@ -80,7 +80,7 @@ export function createMockPass(overrides?: Partial<ParkingPass>): ParkingPass {
     extensionCount: 0,
     lastExtendedAt: null,
     status: 'ACTIVE',
-    visitorName: 'John Doe',
+    visitorName: null,
     visitorPhone: '555-1234',
     visitorEmail: 'john@example.com',
     passType: 'VISITOR',

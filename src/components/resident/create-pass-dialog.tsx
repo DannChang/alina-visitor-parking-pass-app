@@ -23,8 +23,8 @@ interface CreatePassDialogProps {
 
 export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDialogProps) {
   const [licensePlate, setLicensePlate] = useState('');
-  const [visitorName, setVisitorName] = useState('');
   const [visitorPhone, setVisitorPhone] = useState('');
+  const [visitorEmail, setVisitorEmail] = useState('');
   const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState('');
@@ -36,12 +36,13 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
     e.preventDefault();
     if (
       !licensePlate.trim() ||
-      !visitorName.trim() ||
+      !visitorPhone.trim() ||
+      !visitorEmail.trim() ||
       !vehicleMake.trim() ||
       !vehicleModel.trim() ||
       !vehicleYear.trim()
     ) {
-      setError('License plate, visitor name, make, model, and year are required');
+      setError('License plate, phone, email, make, model, and year are required');
       return;
     }
 
@@ -54,8 +55,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           licensePlate: licensePlate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-          visitorName: visitorName.trim(),
-          visitorPhone: visitorPhone.trim() || undefined,
+          visitorPhone: visitorPhone.trim(),
+          visitorEmail: visitorEmail.trim(),
           vehicleMake: vehicleMake.trim(),
           vehicleModel: vehicleModel.trim(),
           vehicleYear: Number(vehicleYear),
@@ -70,8 +71,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
       }
 
       setLicensePlate('');
-      setVisitorName('');
       setVisitorPhone('');
+      setVisitorEmail('');
       setVehicleMake('');
       setVehicleModel('');
       setVehicleYear('');
@@ -99,16 +100,6 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
           )}
 
           <div className="space-y-2">
-            <Label>Visitor Name *</Label>
-            <Input
-              value={visitorName}
-              onChange={(e) => setVisitorName(e.target.value)}
-              placeholder="John Smith"
-              className="h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label>License Plate *</Label>
             <Input
               value={licensePlate}
@@ -119,12 +110,23 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
           </div>
 
           <div className="space-y-2">
-            <Label>Phone (optional)</Label>
+            <Label>Phone *</Label>
             <Input
               value={visitorPhone}
               onChange={(e) => setVisitorPhone(e.target.value)}
               placeholder="555-123-4567"
               type="tel"
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Email *</Label>
+            <Input
+              value={visitorEmail}
+              onChange={(e) => setVisitorEmail(e.target.value)}
+              placeholder="guest@example.com"
+              type="email"
               className="h-11"
             />
           </div>

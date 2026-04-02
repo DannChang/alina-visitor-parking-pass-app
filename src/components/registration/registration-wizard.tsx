@@ -24,10 +24,10 @@ export interface WizardData {
   vehicleMake?: string;
   vehicleModel?: string;
   vehicleColor?: string;
+  vehicleYear?: number;
   // Contact
-  visitorName: string;
-  visitorPhone?: string;
-  visitorEmail?: string;
+  visitorPhone: string;
+  visitorEmail: string;
   // Duration
   duration: number;
   // Access code (verified)

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { format } from 'date-fns';
-import { AlertTriangle, Building2, Clock, Hash, Loader2, MapPin, User } from 'lucide-react';
+import { AlertTriangle, Building2, Clock, Hash, Loader2, Mail, MapPin, Phone } from 'lucide-react';
 import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import {
   Sheet,
@@ -12,6 +12,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { toTelephoneHref } from '@/lib/utils/contact';
 
 interface PassDetailsSheetProps {
   open: boolean;
@@ -25,7 +26,6 @@ interface PassDetails {
   duration: number;
   passType: string;
   confirmationCode: string;
-  visitorName: string | null;
   visitorPhone: string | null;
   visitorEmail: string | null;
   startTime: string;
@@ -170,19 +170,34 @@ export function PassDetailsSheet({
 
               <div className="grid gap-3">
                 <DetailRow
-                  icon={User}
-                  label="Visitor"
+                  icon={Phone}
+                  label="Contact"
                   value={
                     <>
-                      <div>{pass.visitorName || 'Not provided'}</div>
                       {pass.visitorEmail ? (
-                        <div className="text-muted-foreground">{pass.visitorEmail}</div>
+                        <div>
+                          <a className="text-primary hover:underline" href={`mailto:${pass.visitorEmail}`}>
+                            {pass.visitorEmail}
+                          </a>
+                        </div>
                       ) : null}
                       {pass.visitorPhone ? (
-                        <div className="text-muted-foreground">{pass.visitorPhone}</div>
+                        <div>
+                          <a className="text-primary hover:underline" href={toTelephoneHref(pass.visitorPhone)}>
+                            {pass.visitorPhone}
+                          </a>
+                        </div>
+                      ) : null}
+                      {!pass.visitorEmail && !pass.visitorPhone ? (
+                        <div>Not provided</div>
                       ) : null}
                     </>
                   }
+                />
+                <DetailRow
+                  icon={Mail}
+                  label="Notifications"
+                  value="Confirmation and 15-minute reminder emails are sent to the visitor and resident."
                 />
                 <DetailRow
                   icon={Building2}

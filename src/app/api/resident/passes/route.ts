@@ -5,13 +5,14 @@ import { auth } from '@/lib/auth';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import { calculateEndTime } from '@/lib/utils/date-time';
 import { validatePassRequest } from '@/services/validation-service';
+import { sendPassConfirmationNotifications } from '@/services/notification-service';
 import { PassStatus, PassType } from '@prisma/client';
 
 const createPassSchema = z.object({
   licensePlate: z.string().min(2).max(10),
   duration: z.number().int().min(1).max(24),
-  visitorName: z.string().min(1).max(100),
-  visitorPhone: z.string().max(20).optional(),
+  visitorPhone: z.string().trim().min(1).max(20),
+  visitorEmail: z.string().trim().email(),
   vehicleMake: z.string().trim().min(1).max(50),
   vehicleModel: z.string().trim().min(1).max(50),
   vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
@@ -193,8 +194,8 @@ export async function POST(request: NextRequest) {
         duration: data.duration,
         status: PassStatus.ACTIVE,
         passType: PassType.VISITOR,
-        visitorName: data.visitorName,
-        visitorPhone: data.visitorPhone ?? null,
+        visitorPhone: data.visitorPhone,
+        visitorEmail: data.visitorEmail,
         registeredVia: 'RESIDENT_PORTAL',
         createdByResidentId: residentId,
       },
@@ -205,6 +206,12 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    try {
+      await sendPassConfirmationNotifications(pass.id);
+    } catch (error) {
+      console.error('Error sending resident pass confirmation emails:', error);
+    }
 
     return NextResponse.json(
       {

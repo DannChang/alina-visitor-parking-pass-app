@@ -57,7 +57,8 @@ interface Pass {
   duration: number;
   startTime: string;
   endTime: string;
-  visitorName: string | null;
+  visitorPhone: string | null;
+  visitorEmail: string | null;
   vehicle: PassVehicle;
   unit: PassUnit;
 }
@@ -252,9 +253,12 @@ export default function PassesPage() {
                         </TableCell>
                         <TableCell>{pass.unit.unitNumber}</TableCell>
                         <TableCell>
-                          {pass.visitorName || (
-                            <span className="text-muted-foreground">{t('notProvided')}</span>
-                          )}
+                          <div className="text-sm">
+                            <p>{pass.visitorEmail || t('notProvided')}</p>
+                            <p className="text-muted-foreground">
+                              {pass.visitorPhone || t('notProvided')}
+                            </p>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1">

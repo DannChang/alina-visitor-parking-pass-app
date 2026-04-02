@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,22 +24,20 @@ interface StepContactInfoProps {
 }
 
 export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactInfoProps) {
-  const [name, setName] = useState(data.visitorName ?? '');
   const [phone, setPhone] = useState(data.visitorPhone ?? '');
   const [email, setEmail] = useState(data.visitorEmail ?? '');
   const [duration, setDuration] = useState(data.duration ?? 2);
   const [error, setError] = useState<string | null>(null);
 
   const handleContinue = () => {
-    if (!name.trim()) {
-      setError('Please enter your name');
+    if (!phone.trim() || !email.trim()) {
+      setError('Phone and email are required');
       return;
     }
     setError(null);
     onUpdate({
-      visitorName: name.trim(),
-      visitorPhone: phone.trim() || '',
-      visitorEmail: email.trim() || '',
+      visitorPhone: phone.trim(),
+      visitorEmail: email.trim(),
       duration,
     });
     onNext();
@@ -49,28 +47,12 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
     <Card>
       <CardHeader className="text-center">
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <User className="h-6 w-6 text-primary" />
+          <Mail className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>Your Information</CardTitle>
-        <CardDescription>Enter your name and select parking duration</CardDescription>
+        <CardTitle>Contact Information</CardTitle>
+        <CardDescription>Enter the required contact details and duration</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="visitorName">Your Name *</Label>
-          <Input
-            id="visitorName"
-            placeholder="John Smith"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setError(null);
-            }}
-            className="h-12 text-base"
-            autoFocus
-          />
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
-
         <div className="space-y-2">
           <Label>Parking Duration *</Label>
           <div className="grid grid-cols-5 gap-2">
@@ -90,7 +72,7 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone (optional)</Label>
+          <Label htmlFor="phone">Phone *</Label>
           <Input
             id="phone"
             type="tel"
@@ -98,14 +80,13 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="h-11 text-base"
+            autoFocus
           />
-          <p className="text-xs text-muted-foreground">
-            Get text alerts before your pass expires
-          </p>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email (optional)</Label>
+          <Label htmlFor="email">Email *</Label>
           <Input
             id="email"
             type="email"

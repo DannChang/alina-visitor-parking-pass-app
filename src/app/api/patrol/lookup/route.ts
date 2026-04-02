@@ -23,7 +23,8 @@ export interface PassInfo {
   status: string;
   startTime: string;
   endTime: string;
-  visitorName: string | null;
+  visitorPhone: string | null;
+  visitorEmail: string | null;
   unitNumber: string;
   buildingName: string;
   passType: string;
@@ -149,7 +150,8 @@ export async function POST(request: NextRequest) {
           status: pass.status,
           startTime: pass.startTime.toISOString(),
           endTime: pass.endTime.toISOString(),
-          visitorName: pass.visitorName,
+          visitorPhone: pass.visitorPhone,
+          visitorEmail: pass.visitorEmail,
           unitNumber: pass.unit.unitNumber,
           buildingName: pass.unit.building.name,
           passType: pass.passType,
@@ -191,7 +193,8 @@ export async function POST(request: NextRequest) {
           status: pass.status,
           startTime: pass.startTime.toISOString(),
           endTime: pass.endTime.toISOString(),
-          visitorName: pass.visitorName,
+          visitorPhone: pass.visitorPhone,
+          visitorEmail: pass.visitorEmail,
           unitNumber: pass.unit.unitNumber,
           buildingName: pass.unit.building.name,
           passType: pass.passType,
@@ -300,7 +303,8 @@ export async function POST(request: NextRequest) {
             status: activePass.status,
             startTime: activePass.startTime.toISOString(),
             endTime: activePass.endTime.toISOString(),
-            visitorName: activePass.visitorName,
+            visitorPhone: activePass.visitorPhone,
+            visitorEmail: activePass.visitorEmail,
             unitNumber: activePass.unit.unitNumber,
             buildingName: activePass.unit.building.name,
             passType: activePass.passType,
@@ -313,7 +317,8 @@ export async function POST(request: NextRequest) {
         status: pass.status,
         startTime: pass.startTime.toISOString(),
         endTime: pass.endTime.toISOString(),
-        visitorName: pass.visitorName,
+        visitorPhone: pass.visitorPhone,
+        visitorEmail: pass.visitorEmail,
         unitNumber: pass.unit.unitNumber,
         buildingName: pass.unit.building.name,
         passType: pass.passType,

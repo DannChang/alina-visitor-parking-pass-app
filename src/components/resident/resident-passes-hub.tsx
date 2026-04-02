@@ -10,9 +10,9 @@ import {
   ChevronRight,
   Clock3,
   Loader2,
+  Phone,
   Plus,
   Ticket,
-  UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CountdownTimer } from '@/components/pass/countdown-timer';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { formatPassContact, toTelephoneHref } from '@/lib/utils/contact';
 import { CreatePassDialog } from './create-pass-dialog';
 import { useCountdown } from '@/hooks/use-countdown';
 
@@ -39,8 +40,8 @@ interface ResidentPass {
   endTime: string;
   createdAt: string;
   confirmationCode: string;
-  visitorName: string | null;
   visitorPhone: string | null;
+  visitorEmail: string | null;
   deletionReason: string | null;
   vehicle: {
     id: string;
@@ -344,7 +345,7 @@ export function ResidentPassesHub() {
                                 {pass.vehicle.licensePlate}
                               </p>
                               <p className="truncate text-sm text-slate-600">
-                                {pass.visitorName || 'Visitor name not provided'}
+                                {formatPassContact(pass.visitorEmail, pass.visitorPhone)}
                               </p>
                             </div>
                           </div>
@@ -449,14 +450,14 @@ export function ResidentPassesHub() {
                 {formatStatusLabel(getDisplayStatus(selectedPass))}
               </Badge>
 
-              <DialogHeader className="mt-5 text-left">
-                <DialogTitle className="font-mono text-3xl font-semibold tracking-tight text-white">
-                  {selectedPass.vehicle.licensePlate}
-                </DialogTitle>
-                <DialogDescription className="text-sm text-slate-300">
-                  {selectedPass.visitorName || 'Visitor name not provided'}
-                </DialogDescription>
-              </DialogHeader>
+                <DialogHeader className="mt-5 text-left">
+                  <DialogTitle className="font-mono text-3xl font-semibold tracking-tight text-white">
+                    {selectedPass.vehicle.licensePlate}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-slate-300">
+                    {formatPassContact(selectedPass.visitorEmail, selectedPass.visitorPhone)}
+                  </DialogDescription>
+                </DialogHeader>
             </div>
 
             <div className="space-y-6 bg-white px-6 py-6 sm:px-8">
@@ -468,27 +469,41 @@ export function ResidentPassesHub() {
                 <Card className="rounded-3xl border-slate-200 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <UserRound className="h-4 w-4 text-slate-500" />
-                      Visitor
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      Contact
                     </CardTitle>
                     <CardDescription>Primary contact details for this pass</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Name
+                        Phone
                       </p>
-                      <p className="mt-1 font-medium text-slate-950">
-                        {selectedPass.visitorName || 'Not provided'}
-                      </p>
+                      {selectedPass.visitorPhone ? (
+                        <a
+                          className="mt-1 inline-flex font-medium text-primary hover:underline"
+                          href={toTelephoneHref(selectedPass.visitorPhone)}
+                        >
+                          {selectedPass.visitorPhone}
+                        </a>
+                      ) : (
+                        <p className="mt-1 font-medium text-slate-950">Not provided</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Phone
+                        Email
                       </p>
-                      <p className="mt-1 font-medium text-slate-950">
-                        {selectedPass.visitorPhone || 'Not provided'}
-                      </p>
+                      {selectedPass.visitorEmail ? (
+                        <a
+                          className="mt-1 inline-flex font-medium text-primary hover:underline"
+                          href={`mailto:${selectedPass.visitorEmail}`}
+                        >
+                          {selectedPass.visitorEmail}
+                        </a>
+                      ) : (
+                        <p className="mt-1 font-medium text-slate-950">Not provided</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

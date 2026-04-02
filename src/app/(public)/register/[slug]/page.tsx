@@ -36,9 +36,8 @@ const registerSchema = z.object({
     .regex(/^[A-Za-z0-9]+$/, 'License plate can only contain letters and numbers'),
   unitNumber: z.string().min(1, 'Please select a unit'),
   duration: z.number().int().min(1).max(24),
-  visitorName: z.string().min(1, 'Name is required').max(100),
-  visitorPhone: z.string().max(20).optional(),
-  visitorEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  visitorPhone: z.string().trim().min(1, 'Phone is required').max(20),
+  visitorEmail: z.string().trim().email('Invalid email'),
   vehicleMake: z.string().trim().min(1, 'Make is required').max(50),
   vehicleModel: z.string().trim().min(1, 'Model is required').max(50),
   vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
@@ -153,7 +152,6 @@ export default function RegisterPage({
         body: JSON.stringify({
           ...data,
           buildingSlug: slug,
-          visitorEmail: data.visitorEmail || undefined,
         }),
       });
 
@@ -219,7 +217,7 @@ export default function RegisterPage({
               <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
             <CardTitle className="text-success">Pass Registered!</CardTitle>
-            <CardDescription>Your visitor parking pass has been created</CardDescription>
+            <CardDescription>Your parking pass has been created</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted p-4 text-center">
@@ -303,20 +301,6 @@ export default function RegisterPage({
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="visitorName">Your Name *</Label>
-              <Input
-                id="visitorName"
-                placeholder="John Smith"
-                disabled={isSubmitting}
-                className="h-11 md:h-10 text-base md:text-sm"
-                {...register('visitorName')}
-              />
-              {errors.visitorName && (
-                <p className="text-sm text-destructive">{errors.visitorName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="licensePlate">License Plate *</Label>
               <Input
                 id="licensePlate"
@@ -376,7 +360,7 @@ export default function RegisterPage({
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="visitorPhone">Phone (optional)</Label>
+                <Label htmlFor="visitorPhone">Phone *</Label>
                 <Input
                   id="visitorPhone"
                   type="tel"
@@ -385,9 +369,12 @@ export default function RegisterPage({
                   className="h-11 md:h-10 text-base md:text-sm"
                   {...register('visitorPhone')}
                 />
+                {errors.visitorPhone && (
+                  <p className="text-sm text-destructive">{errors.visitorPhone.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="visitorEmail">Email (optional)</Label>
+                <Label htmlFor="visitorEmail">Email *</Label>
                 <Input
                   id="visitorEmail"
                   type="email"

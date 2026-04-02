@@ -21,21 +21,22 @@ interface SendEmailOptions {
 
 interface PassConfirmationData {
   recipientEmail: string;
-  visitorName: string;
   licensePlate: string;
   unitNumber: string;
   buildingName: string;
   startTime: Date;
   endTime: Date;
+  durationHours: number;
   confirmationCode: string;
   passId: string;
 }
 
 interface PassExpirationWarningData {
   recipientEmail: string;
-  visitorName: string;
   licensePlate: string;
   unitNumber: string;
+  buildingName: string;
+  durationHours: number;
   endTime: Date;
   passId: string;
 }
@@ -67,6 +68,30 @@ interface PasswordChangedConfirmationEmailData {
 }
 
 const FROM_EMAIL = process.env.EMAIL_FROM?.trim() || 'Alina Parking <noreply@alinaparking.com>';
+
+interface PassNotificationContext {
+  id: string;
+  confirmationCode: string;
+  duration: number;
+  startTime: Date;
+  endTime: Date;
+  visitorEmail: string | null;
+  vehicle: {
+    licensePlate: string;
+  };
+  unit: {
+    unitNumber: string;
+    building: {
+      name: string;
+    };
+    residents: Array<{
+      email: string | null;
+    }>;
+  };
+  createdByResident: {
+    email: string | null;
+  } | null;
+}
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   // Create notification queue entry
@@ -160,9 +185,7 @@ export async function sendPassConfirmation(data: PassConfirmationData): Promise<
       </div>
 
       <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-        <p style="margin-top: 0;">Hi ${data.visitorName},</p>
-
-        <p>Your visitor parking pass has been registered successfully.</p>
+        <p style="margin-top: 0;">Your parking pass has been registered successfully.</p>
 
         <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef;">
           <div style="text-align: center; margin-bottom: 15px;">
@@ -195,6 +218,10 @@ export async function sendPassConfirmation(data: PassConfirmationData): Promise<
               <td style="padding: 8px 0; color: #666;">Valid Until</td>
               <td style="padding: 8px 0; text-align: right; font-weight: 500;">${formattedEnd}</td>
             </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Duration</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 500;">${data.durationHours} hour${data.durationHours === 1 ? '' : 's'}</td>
+            </tr>
           </table>
         </div>
 
@@ -218,9 +245,7 @@ export async function sendPassConfirmation(data: PassConfirmationData): Promise<
   const text = `
 Parking Pass Confirmed
 
-Hi ${data.visitorName},
-
-Your visitor parking pass has been registered successfully.
+Your parking pass has been registered successfully.
 
 Confirmation Code: ${data.confirmationCode.slice(0, 8).toUpperCase()}
 
@@ -230,6 +255,7 @@ Details:
 - Visiting Unit: ${data.unitNumber}
 - Valid From: ${formattedStart}
 - Valid Until: ${formattedEnd}
+- Duration: ${data.durationHours} hour${data.durationHours === 1 ? '' : 's'}
 
 Please ensure you move your vehicle before the pass expires to avoid any violations or citations.
 
@@ -486,8 +512,6 @@ export async function sendPassExpirationWarning(data: PassExpirationWarningData)
       </div>
 
       <div style="background: #fef2f2; padding: 30px; border-radius: 0 0 10px 10px;">
-        <p style="margin-top: 0;">Hi ${data.visitorName},</p>
-
         <p>Your parking pass for <strong>${data.licensePlate}</strong> is about to expire.</p>
 
         <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #fecaca; text-align: center;">
@@ -496,6 +520,10 @@ export async function sendPassExpirationWarning(data: PassExpirationWarningData)
             ${formattedEnd}
           </div>
         </div>
+
+        <p style="font-size: 14px; color: #666;">
+          ${data.buildingName}, unit ${data.unitNumber}. Pass duration: ${data.durationHours} hour${data.durationHours === 1 ? '' : 's'}.
+        </p>
 
         <p style="font-size: 14px; color: #666;">
           Please move your vehicle or extend your pass (if eligible) to avoid any violations or citations.
@@ -517,6 +545,179 @@ export async function sendPassExpirationWarning(data: PassExpirationWarningData)
     entityType: 'ParkingPass',
     entityId: data.passId,
   });
+}
+
+function getResidentRecipientEmails(pass: PassNotificationContext): string[] {
+  const emails = [
+    pass.createdByResident?.email ?? null,
+    ...pass.unit.residents.map((resident) => resident.email),
+  ];
+
+  return [...new Set(emails.filter((email): email is string => Boolean(email?.trim())))];
+}
+
+async function getPassNotificationContext(passId: string): Promise<PassNotificationContext | null> {
+  return prisma.parkingPass.findUnique({
+    where: { id: passId, deletedAt: null },
+    select: {
+      id: true,
+      confirmationCode: true,
+      duration: true,
+      startTime: true,
+      endTime: true,
+      visitorEmail: true,
+      vehicle: {
+        select: {
+          licensePlate: true,
+        },
+      },
+      unit: {
+        select: {
+          unitNumber: true,
+          building: {
+            select: {
+              name: true,
+            },
+          },
+          residents: {
+            where: {
+              isPrimary: true,
+              isActive: true,
+              deletedAt: null,
+            },
+            select: {
+              email: true,
+            },
+          },
+        },
+      },
+      createdByResident: {
+        select: {
+          email: true,
+        },
+      },
+    },
+  });
+}
+
+export async function sendPassConfirmationNotifications(passId: string): Promise<number> {
+  const pass = await getPassNotificationContext(passId);
+
+  if (!pass) {
+    return 0;
+  }
+
+  const recipients = [
+    pass.visitorEmail,
+    ...getResidentRecipientEmails(pass),
+  ].filter((email, index, all): email is string => Boolean(email?.trim()) && all.indexOf(email) === index);
+
+  if (recipients.length === 0) {
+    return 0;
+  }
+
+  const results = await Promise.allSettled(
+    recipients.map((recipientEmail) =>
+      sendPassConfirmation({
+        recipientEmail,
+        licensePlate: pass.vehicle.licensePlate,
+        unitNumber: pass.unit.unitNumber,
+        buildingName: pass.unit.building.name,
+        startTime: pass.startTime,
+        endTime: pass.endTime,
+        durationHours: pass.duration,
+        confirmationCode: pass.confirmationCode,
+        passId: pass.id,
+      })
+    )
+  );
+
+  const sentCount = results.filter(
+    (result) => result.status === 'fulfilled' && result.value
+  ).length;
+
+  if (sentCount > 0) {
+    await prisma.parkingPass.update({
+      where: { id: pass.id },
+      data: {
+        confirmationSent: true,
+        confirmationSentAt: new Date(),
+      },
+    });
+  }
+
+  return sentCount;
+}
+
+export async function processPassExpirationWarnings(): Promise<number> {
+  const now = new Date();
+  const warningThreshold = new Date(now.getTime() + 15 * 60 * 1000);
+
+  const passes = await prisma.parkingPass.findMany({
+    where: {
+      deletedAt: null,
+      status: {
+        in: ['ACTIVE', 'EXTENDED'],
+      },
+      expirationWarningSent: false,
+      endTime: {
+        gte: now,
+        lte: warningThreshold,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  let processed = 0;
+
+  for (const passRecord of passes) {
+    const pass = await getPassNotificationContext(passRecord.id);
+
+    if (!pass) {
+      continue;
+    }
+
+    const recipients = [
+      pass.visitorEmail,
+      ...getResidentRecipientEmails(pass),
+    ].filter((email, index, all): email is string => Boolean(email?.trim()) && all.indexOf(email) === index);
+
+    if (recipients.length === 0) {
+      continue;
+    }
+
+    const results = await Promise.allSettled(
+      recipients.map((recipientEmail) =>
+        sendPassExpirationWarning({
+          recipientEmail,
+          licensePlate: pass.vehicle.licensePlate,
+          unitNumber: pass.unit.unitNumber,
+          buildingName: pass.unit.building.name,
+          durationHours: pass.duration,
+          endTime: pass.endTime,
+          passId: pass.id,
+        })
+      )
+    );
+
+    const sentCount = results.filter(
+      (result) => result.status === 'fulfilled' && result.value
+    ).length;
+
+    if (sentCount > 0) {
+      await prisma.parkingPass.update({
+        where: { id: pass.id },
+        data: {
+          expirationWarningSent: true,
+        },
+      });
+      processed += 1;
+    }
+  }
+
+  return processed;
 }
 
 export async function retryFailedNotifications(): Promise<number> {
