@@ -21,10 +21,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useTranslations } from 'next-intl';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email(),
+  password: z.string().min(1),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -38,6 +39,8 @@ function getStaffCallbackUrl(rawCallbackUrl?: string | null) {
 }
 
 function LoginForm() {
+  const t = useTranslations('auth');
+  const tc = useTranslations('common');
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallbackUrl = searchParams.get('callbackUrl');
@@ -67,13 +70,13 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password. Please try again.');
+        setError(t('invalidCredentials'));
       } else if (result?.ok) {
         router.replace(result.url ?? callbackUrl);
         router.refresh();
       }
     } catch {
-      setError('An unexpected error occurred. Please try again.');
+      setError(t('unexpectedError'));
     } finally {
       setIsLoading(false);
     }
@@ -86,10 +89,8 @@ function LoginForm() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <Car className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
-            Sign in to the Alina Visitor Parking Management System
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold">{t('welcomeBack')}</CardTitle>
+          <CardDescription>{t('signInDescription')}</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -98,7 +99,7 @@ function LoginForm() {
               <Alert>
                 <Mail className="h-4 w-4" />
                 <AlertDescription>
-                  Your password has been changed. Sign in with your new password.
+                  {t('passwordChanged')}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -110,42 +111,42 @@ function LoginForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{tc('email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 autoComplete="email"
                 disabled={isLoading}
                 className="h-11 md:h-10 text-base md:text-sm"
                 {...register('email')}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+                <p className="text-sm text-destructive">{t('invalidEmail')}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{tc('password')}</Label>
                 <Link
                   href="/forgot-password"
                   className="text-xs font-medium text-primary hover:underline"
                 >
-                  Forgot Password?
+                  {t('forgotPassword')}
                 </Link>
               </div>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t('passwordPlaceholder')}
                 autoComplete="current-password"
                 disabled={isLoading}
                 className="h-11 md:h-10 text-base md:text-sm"
                 {...register('password')}
               />
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p className="text-sm text-destructive">{t('passwordRequired')}</p>
               )}
             </div>
           </CardContent>
@@ -155,20 +156,20 @@ function LoginForm() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  {t('signingIn')}
                 </>
               ) : (
-                'Sign In'
+                t('signIn')
               )}
             </Button>
 
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Shield className="h-4 w-4" />
-              <span>Secure login for authorized personnel only</span>
+              <span>{t('secureLogin')}</span>
             </div>
 
             <Button asChild variant="ghost" className="w-full">
-              <Link href="/resident/login">Resident Portal</Link>
+              <Link href="/resident/login">{t('residentPortal')}</Link>
             </Button>
           </CardFooter>
         </form>

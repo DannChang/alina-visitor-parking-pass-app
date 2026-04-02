@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { NAV_ICONS, type NavItem } from '@/lib/navigation';
+import { useTranslations } from 'next-intl';
 
 interface MobileNavProps {
   navItems: NavItem[];
@@ -28,6 +29,7 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ navItems, user, initials, signOutAction }: MobileNavProps) {
+  const tc = useTranslations('common');
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -40,7 +42,7 @@ export function MobileNav({ navItems, user, initials, signOutAction }: MobileNav
           className="min-h-touch min-w-touch touch-manipulation"
         >
           <Menu className="h-6 w-6" />
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">{tc('openMenu')}</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
@@ -95,7 +97,7 @@ export function MobileNav({ navItems, user, initials, signOutAction }: MobileNav
               type="submit"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Sign out
+              {tc('signOut')}
             </Button>
           </form>
         </div>

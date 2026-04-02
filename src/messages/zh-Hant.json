@@ -105,7 +105,25 @@
     "saving": "儲存中...",
     "logEntryCreated": "日誌記錄建立成功",
     "licensePlateRequired": "車牌號碼為必填",
-    "vehicleHistory": "車輛歷史"
+    "vehicleHistory": "車輛歷史",
+    "logbookTitle": "巡邏日誌",
+    "filtersActive": "（已啟用）",
+    "clearFilters": "清除",
+    "applyFilters": "套用篩選",
+    "dateFromLabel": "開始日期",
+    "dateToLabel": "結束日期",
+    "noEntriesMsg": "未找到日誌條目。新增一條開始。",
+    "loadingHistory": "載入歷史記錄...",
+    "noRecords": "未找到記錄",
+    "tabPatrolLog": "巡邏日誌",
+    "fullHistoryFor": "車牌完整歷史：",
+    "vehicleResident": "住戶",
+    "riskScore": "風險：",
+    "confirmCode": "代碼：",
+    "openViolation": "未關閉",
+    "byLabel": "記錄人：",
+    "patrollerLabel": "巡邏人員：",
+    "locationColonLabel": "位置："
   },
   "dashboard": {
     "overview": "概覽",
@@ -460,6 +478,7 @@
     "visitor": "訪客",
     "floor": "樓層",
     "contact": "聯絡方式",
-    "noContact": "無聯絡方式"
+    "noContact": "無聯絡方式",
+    "password": "密碼"
   }
 }

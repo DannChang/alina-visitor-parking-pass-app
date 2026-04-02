@@ -105,7 +105,25 @@
     "saving": "Đang lưu...",
     "logEntryCreated": "Đã tạo mục nhật ký thành công",
     "licensePlateRequired": "Biển số xe là bắt buộc",
-    "vehicleHistory": "Lịch Sử Xe"
+    "vehicleHistory": "Lịch Sử Xe",
+    "logbookTitle": "Nhật ký tuần tra",
+    "filtersActive": "(đang lọc)",
+    "clearFilters": "Xóa",
+    "applyFilters": "Áp dụng bộ lọc",
+    "dateFromLabel": "Từ ngày",
+    "dateToLabel": "Đến ngày",
+    "noEntriesMsg": "Không tìm thấy mục nhật ký. Thêm mục để bắt đầu.",
+    "loadingHistory": "Đang tải lịch sử...",
+    "noRecords": "Không tìm thấy bản ghi",
+    "tabPatrolLog": "Nhật ký tuần tra",
+    "fullHistoryFor": "Lịch sử đầy đủ cho biển số:",
+    "vehicleResident": "Cư dân",
+    "riskScore": "Rủi ro:",
+    "confirmCode": "Mã:",
+    "openViolation": "Mở",
+    "byLabel": "Bởi:",
+    "patrollerLabel": "Tuần tra:",
+    "locationColonLabel": "Vị trí:"
   },
   "dashboard": {
     "overview": "Tổng Quan",
@@ -460,6 +478,7 @@
     "visitor": "Khách",
     "floor": "Tầng",
     "contact": "Liên Hệ",
-    "noContact": "Không có liên hệ"
+    "noContact": "Không có liên hệ",
+    "password": "Mật khẩu"
   }
 }

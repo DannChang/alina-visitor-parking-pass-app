@@ -105,7 +105,25 @@
     "saving": "در حال ذخیره...",
     "logEntryCreated": "ورودی گزارش با موفقیت ایجاد شد",
     "licensePlateRequired": "پلاک خودرو ضروری است",
-    "vehicleHistory": "تاریخچه خودرو"
+    "vehicleHistory": "تاریخچه خودرو",
+    "logbookTitle": "دفترچه گشت",
+    "filtersActive": "(فعال)",
+    "clearFilters": "پاک کردن",
+    "applyFilters": "اعمال فیلترها",
+    "dateFromLabel": "از تاریخ",
+    "dateToLabel": "تا تاریخ",
+    "noEntriesMsg": "هیچ ورودی‌ای یافت نشد. برای شروع ورودی اضافه کنید.",
+    "loadingHistory": "در حال بارگذاری تاریخچه...",
+    "noRecords": "هیچ رکوردی یافت نشد",
+    "tabPatrolLog": "گزارش گشت",
+    "fullHistoryFor": "تاریخچه کامل برای پلاک:",
+    "vehicleResident": "ساکن",
+    "riskScore": "ریسک:",
+    "confirmCode": "کد:",
+    "openViolation": "باز",
+    "byLabel": "توسط:",
+    "patrollerLabel": "گشتی:",
+    "locationColonLabel": "مکان:"
   },
   "dashboard": {
     "overview": "نمای کلی",
@@ -460,6 +478,7 @@
     "visitor": "بازدیدکننده",
     "floor": "طبقه",
     "contact": "تماس",
-    "noContact": "بدون تماس"
+    "noContact": "بدون تماس",
+    "password": "رمز عبور"
   }
 }

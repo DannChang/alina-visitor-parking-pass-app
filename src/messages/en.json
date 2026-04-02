@@ -105,7 +105,25 @@
     "saving": "Saving...",
     "logEntryCreated": "Log entry created successfully",
     "licensePlateRequired": "License plate is required",
-    "vehicleHistory": "Vehicle History"
+    "vehicleHistory": "Vehicle History",
+    "logbookTitle": "Patrol Logbook",
+    "filtersActive": "(active)",
+    "clearFilters": "Clear",
+    "applyFilters": "Apply Filters",
+    "dateFromLabel": "From Date",
+    "dateToLabel": "To Date",
+    "noEntriesMsg": "No log entries found. Add an entry to get started.",
+    "loadingHistory": "Loading history...",
+    "noRecords": "No records found",
+    "tabPatrolLog": "Patrol Log",
+    "fullHistoryFor": "Full history for plate:",
+    "vehicleResident": "Resident",
+    "riskScore": "Risk:",
+    "confirmCode": "Code:",
+    "openViolation": "Open",
+    "byLabel": "By:",
+    "patrollerLabel": "Patroller:",
+    "locationColonLabel": "Location:"
   },
   "dashboard": {
     "overview": "Overview",
@@ -460,6 +478,7 @@
     "visitor": "Visitor",
     "floor": "Floor",
     "contact": "Contact",
-    "noContact": "No contact"
+    "noContact": "No contact",
+    "password": "Password"
   }
 }

@@ -105,7 +105,25 @@
     "saving": "저장 중...",
     "logEntryCreated": "일지 항목이 성공적으로 생성되었습니다",
     "licensePlateRequired": "번호판은 필수입니다",
-    "vehicleHistory": "차량 이력"
+    "vehicleHistory": "차량 이력",
+    "logbookTitle": "순찰 일지",
+    "filtersActive": "(활성)",
+    "clearFilters": "지우기",
+    "applyFilters": "필터 적용",
+    "dateFromLabel": "시작 날짜",
+    "dateToLabel": "종료 날짜",
+    "noEntriesMsg": "로그 항목이 없습니다. 항목을 추가하여 시작하세요.",
+    "loadingHistory": "기록 불러오는 중...",
+    "noRecords": "기록이 없습니다",
+    "tabPatrolLog": "순찰 일지",
+    "fullHistoryFor": "번호판 전체 기록:",
+    "vehicleResident": "입주민",
+    "riskScore": "위험도:",
+    "confirmCode": "코드:",
+    "openViolation": "미해결",
+    "byLabel": "담당:",
+    "patrollerLabel": "순찰자:",
+    "locationColonLabel": "위치:"
   },
   "dashboard": {
     "overview": "개요",
@@ -460,6 +478,7 @@
     "visitor": "방문객",
     "floor": "층",
     "contact": "연락처",
-    "noContact": "연락처 없음"
+    "noContact": "연락처 없음",
+    "password": "비밀번호"
   }
 }

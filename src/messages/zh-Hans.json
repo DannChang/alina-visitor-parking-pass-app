@@ -105,7 +105,25 @@
     "saving": "正在保存...",
     "logEntryCreated": "日志记录创建成功",
     "licensePlateRequired": "车牌号为必填项",
-    "vehicleHistory": "车辆历史"
+    "vehicleHistory": "车辆历史",
+    "logbookTitle": "巡逻日志",
+    "filtersActive": "（已激活）",
+    "clearFilters": "清除",
+    "applyFilters": "应用筛选",
+    "dateFromLabel": "开始日期",
+    "dateToLabel": "结束日期",
+    "noEntriesMsg": "未找到日志条目。添加一条开始。",
+    "loadingHistory": "加载历史记录...",
+    "noRecords": "未找到记录",
+    "tabPatrolLog": "巡逻日志",
+    "fullHistoryFor": "车牌完整历史：",
+    "vehicleResident": "住户",
+    "riskScore": "风险：",
+    "confirmCode": "代码：",
+    "openViolation": "未关闭",
+    "byLabel": "记录人：",
+    "patrollerLabel": "巡逻人员：",
+    "locationColonLabel": "位置："
   },
   "dashboard": {
     "overview": "概览",
@@ -460,6 +478,7 @@
     "visitor": "访客",
     "floor": "楼层",
     "contact": "联系方式",
-    "noContact": "无联系方式"
+    "noContact": "无联系方式",
+    "password": "密码"
   }
 }

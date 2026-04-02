@@ -15,8 +15,11 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslations } from 'next-intl';
 
 export function ForgotPasswordForm() {
+  const t = useTranslations('auth');
+  const tc = useTranslations('common');
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -27,7 +30,7 @@ export function ForgotPasswordForm() {
     setError(null);
 
     if (!email.trim()) {
-      setError('Email is required.');
+      setError(t('emailRequired'));
       return;
     }
 
@@ -66,30 +69,22 @@ export function ForgotPasswordForm() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <ShieldCheck className="h-8 w-8 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Forgot Password</CardTitle>
-        <CardDescription>
-          Enter your staff account email and we&apos;ll send a reset link if the
-          account exists.
-        </CardDescription>
+        <CardTitle className="text-2xl font-bold">{t('forgotPasswordTitle')}</CardTitle>
+        <CardDescription>{t('forgotPasswordDesc')}</CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <Alert>
-            <AlertTitle>Resident account?</AlertTitle>
-            <AlertDescription>
-              Residents should use the resident reset flow so the system can verify
-              building and unit details.
-            </AlertDescription>
+            <AlertTitle>{t('residentAccountTitle')}</AlertTitle>
+            <AlertDescription>{t('residentAccountDesc')}</AlertDescription>
           </Alert>
 
           {submitted ? (
             <Alert>
               <Mail className="h-4 w-4" />
-              <AlertTitle>Check your email</AlertTitle>
-              <AlertDescription>
-                If an active account matches that email, a reset link is on the way.
-              </AlertDescription>
+              <AlertTitle>{t('checkEmailTitle')}</AlertTitle>
+              <AlertDescription>{t('checkEmailDesc')}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -100,14 +95,14 @@ export function ForgotPasswordForm() {
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="forgot-password-email">Email</Label>
+            <Label htmlFor="forgot-password-email">{tc('email')}</Label>
             <Input
               id="forgot-password-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('emailPlaceholder')}
               className="h-11 md:h-10"
               disabled={isSubmitting}
               required
@@ -120,19 +115,19 @@ export function ForgotPasswordForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending reset link...
+                {t('sendingResetLink')}
               </>
             ) : (
-              'Send Reset Link'
+              t('sendResetLink')
             )}
           </Button>
 
           <Button asChild variant="ghost" className="w-full">
-            <Link href="/login">Back to Login</Link>
+            <Link href="/login">{t('backToLogin')}</Link>
           </Button>
 
           <Button asChild variant="outline" className="w-full">
-            <Link href="/resident/forgot-password">Resident Password Reset</Link>
+            <Link href="/resident/forgot-password">{t('residentPasswordReset')}</Link>
           </Button>
         </CardFooter>
       </form>

@@ -105,7 +105,25 @@
     "saving": "Guardando...",
     "logEntryCreated": "Entrada de registro creada exitosamente",
     "licensePlateRequired": "La placa del vehículo es obligatoria",
-    "vehicleHistory": "Historial del Vehículo"
+    "vehicleHistory": "Historial del Vehículo",
+    "logbookTitle": "Bitácora de Patrullaje",
+    "filtersActive": "(activo)",
+    "clearFilters": "Limpiar",
+    "applyFilters": "Aplicar filtros",
+    "dateFromLabel": "Desde",
+    "dateToLabel": "Hasta",
+    "noEntriesMsg": "No se encontraron entradas. Agrega una para comenzar.",
+    "loadingHistory": "Cargando historial...",
+    "noRecords": "No se encontraron registros",
+    "tabPatrolLog": "Registro de patrulla",
+    "fullHistoryFor": "Historial completo para placa:",
+    "vehicleResident": "Residente",
+    "riskScore": "Riesgo:",
+    "confirmCode": "Código:",
+    "openViolation": "Abierto",
+    "byLabel": "Por:",
+    "patrollerLabel": "Patrullero:",
+    "locationColonLabel": "Ubicación:"
   },
   "dashboard": {
     "overview": "Resumen",
@@ -460,6 +478,7 @@
     "visitor": "Visitante",
     "floor": "Piso",
     "contact": "Contacto",
-    "noContact": "Sin contacto"
+    "noContact": "Sin contacto",
+    "password": "Contraseña"
   }
 }

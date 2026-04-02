@@ -105,7 +105,25 @@
     "saving": "Enregistrement...",
     "logEntryCreated": "Entrée de journal créée avec succès",
     "licensePlateRequired": "La plaque d'immatriculation est requise",
-    "vehicleHistory": "Historique du Véhicule"
+    "vehicleHistory": "Historique du Véhicule",
+    "logbookTitle": "Journal de patrouille",
+    "filtersActive": "(actif)",
+    "clearFilters": "Effacer",
+    "applyFilters": "Appliquer les filtres",
+    "dateFromLabel": "Date de début",
+    "dateToLabel": "Date de fin",
+    "noEntriesMsg": "Aucune entrée trouvée. Ajoutez-en une pour commencer.",
+    "loadingHistory": "Chargement de l'historique...",
+    "noRecords": "Aucun enregistrement trouvé",
+    "tabPatrolLog": "Journal de patrouille",
+    "fullHistoryFor": "Historique complet pour la plaque :",
+    "vehicleResident": "Résident",
+    "riskScore": "Risque :",
+    "confirmCode": "Code :",
+    "openViolation": "Ouvert",
+    "byLabel": "Par :",
+    "patrollerLabel": "Patrouilleur :",
+    "locationColonLabel": "Emplacement :"
   },
   "dashboard": {
     "overview": "Aperçu",
@@ -460,6 +478,7 @@
     "visitor": "Visiteur",
     "floor": "Étage",
     "contact": "Contact",
-    "noContact": "Sans contact"
+    "noContact": "Sans contact",
+    "password": "Mot de passe"
   }
 }
