@@ -34,15 +34,13 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
   const tc = useTranslations('common');
 
   const ENTRY_TYPES = [
-    { value: 'ENTRY', label: t('entryEntry') },
-    { value: 'EXIT', label: t('entryExit') },
     { value: 'SPOT_CHECK', label: t('entrySpotCheck') },
     { value: 'NOTE', label: t('entryNote') },
   ] as const;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [licensePlate, setLicensePlate] = useState('');
-  const [entryType, setEntryType] = useState<string>('ENTRY');
+  const [entryType, setEntryType] = useState<string>('SPOT_CHECK');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -70,7 +68,7 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
 
   const resetForm = () => {
     setLicensePlate('');
-    setEntryType('ENTRY');
+    setEntryType('SPOT_CHECK');
     setLocation('');
     setNotes('');
     setPhoto(null);

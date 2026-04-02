@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/api-auth';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
+import { detectAndCreateViolation } from '@/services/violation-detection-service';
+import type { ViolationType, ViolationSeverity } from '@prisma/client';
 
 const lookupSchema = z.object({
   licensePlate: z.string().min(2).max(10),
@@ -53,6 +55,14 @@ export interface VehicleInfo {
   riskScore: number;
 }
 
+export interface AutoCreatedViolation {
+  id: string;
+  type: ViolationType;
+  severity: ViolationSeverity;
+  isNew: boolean;
+  skippedReason?: string;
+}
+
 export interface PatrolLookupResult {
   status: VehicleStatus;
   statusMessage: string;
@@ -60,6 +70,7 @@ export interface PatrolLookupResult {
   activePass: PassInfo | null;
   recentPasses: PassInfo[];
   violations: ViolationInfo[];
+  autoCreatedViolation?: AutoCreatedViolation;
   lookupTime: string;
 }
 
@@ -97,7 +108,11 @@ export async function POST(request: NextRequest) {
           include: {
             unit: {
               include: {
-                building: true,
+                building: {
+                  include: {
+                    parkingRules: true,
+                  },
+                },
               },
             },
           },
@@ -221,23 +236,16 @@ export async function POST(request: NextRequest) {
         pass.startTime <= now &&
         pass.endTime > now
     );
+    const recentExpired = vehicle.parkingPasses.find(
+      (pass) =>
+        (pass.status === 'EXPIRED' || pass.status === 'ACTIVE' || pass.status === 'EXTENDED') &&
+        pass.endTime <= now &&
+        pass.endTime > new Date(now.getTime() - 60 * 60 * 1000)
+    );
+    const passForRules = activePass ?? recentExpired ?? vehicle.parkingPasses[0] ?? null;
 
-    // Fetch building rules for grace period
-    const buildingForRules = activePass
-      ? null
-      : await prisma.building.findFirst({
-          where: {
-            units: {
-              some: {
-                parkingPasses: {
-                  some: { vehicleId: vehicle.id },
-                },
-              },
-            },
-          },
-          include: { parkingRules: true },
-        });
-    const gracePeriodMinutes = buildingForRules?.parkingRules?.gracePeriodMinutes ?? 15;
+    const parkingRules = passForRules?.unit.building.parkingRules ?? null;
+    const gracePeriodMinutes = parkingRules?.gracePeriodMinutes ?? 15;
 
     // Determine status
     let status: VehicleStatus;
@@ -255,14 +263,6 @@ export async function POST(request: NextRequest) {
         statusMessage = `Valid pass until ${activePass.endTime.toLocaleTimeString()}`;
       }
     } else {
-      // Check for recently expired pass
-      const recentExpired = vehicle.parkingPasses.find(
-        (pass) =>
-          (pass.status === 'EXPIRED' || pass.status === 'ACTIVE' || pass.status === 'EXTENDED') &&
-          pass.endTime <= now &&
-          pass.endTime > new Date(now.getTime() - 60 * 60 * 1000)
-      );
-
       if (recentExpired) {
         const minutesAgo = Math.round(
           (now.getTime() - recentExpired.endTime.getTime()) / 60000
@@ -281,6 +281,108 @@ export async function POST(request: NextRequest) {
         status = 'UNREGISTERED';
         statusMessage = 'Vehicle has no active parking pass';
       }
+    }
+
+    // Auto-detect and create violation for actionable statuses
+    let autoCreatedViolation: AutoCreatedViolation | undefined;
+    const VIOLATION_STATUSES: VehicleStatus[] = ['EXPIRED', 'UNREGISTERED'];
+
+    if (VIOLATION_STATUSES.includes(status)) {
+      const detection = await detectAndCreateViolation({
+        vehicleId: vehicle.id,
+        licensePlate: vehicle.licensePlate,
+        normalizedPlate,
+        status,
+        loggedById: authResult.request.userId,
+        expiredPass: recentExpired
+          ? {
+              endTime: recentExpired.endTime,
+              startTime: recentExpired.startTime,
+            duration: recentExpired.duration,
+          }
+          : null,
+        buildingRules: parkingRules
+          ? {
+              maxConsecutiveHours: parkingRules.maxConsecutiveHours,
+              gracePeriodMinutes: parkingRules.gracePeriodMinutes,
+            }
+          : null,
+        vehicleStats: {
+          violationCount: vehicle.violationCount,
+          riskScore: vehicle.riskScore,
+          isBlacklisted: vehicle.isBlacklisted,
+        },
+      });
+
+      if (detection.violated && detection.violation) {
+        autoCreatedViolation = {
+          id: detection.violation.id,
+          type: detection.violation.type,
+          severity: detection.violation.severity,
+          isNew: true,
+        };
+      }
+    }
+
+    // Check for overstay on active passes
+    if (
+      !autoCreatedViolation?.isNew &&
+      activePass &&
+      parkingRules
+    ) {
+      const hoursParked =
+        (now.getTime() - activePass.startTime.getTime()) / (1000 * 60 * 60);
+      if (hoursParked > (parkingRules.maxConsecutiveHours ?? 24)) {
+        const detection = await detectAndCreateViolation({
+          vehicleId: vehicle.id,
+          licensePlate: vehicle.licensePlate,
+          normalizedPlate,
+          status: 'VALID',
+          loggedById: authResult.request.userId,
+          activePass: {
+            startTime: activePass.startTime,
+            endTime: activePass.endTime,
+          },
+          buildingRules: {
+            maxConsecutiveHours: parkingRules.maxConsecutiveHours,
+            gracePeriodMinutes: parkingRules.gracePeriodMinutes,
+          },
+          vehicleStats: {
+            violationCount: vehicle.violationCount,
+            riskScore: vehicle.riskScore,
+            isBlacklisted: vehicle.isBlacklisted,
+          },
+        });
+
+        if (detection.violated && detection.violation) {
+          autoCreatedViolation = {
+            id: detection.violation.id,
+            type: detection.violation.type,
+            severity: detection.violation.severity,
+            isNew: true,
+          };
+        }
+      }
+    }
+
+    const violations = vehicle.violations.map((v) => ({
+      id: v.id,
+      type: v.type,
+      severity: v.severity,
+      createdAt: v.createdAt.toISOString(),
+      isResolved: v.isResolved,
+      location: v.location,
+    }));
+
+    if (autoCreatedViolation?.isNew) {
+      violations.unshift({
+        id: autoCreatedViolation.id,
+        type: autoCreatedViolation.type,
+        severity: autoCreatedViolation.severity,
+        createdAt: now.toISOString(),
+        isResolved: false,
+        location: null,
+      });
     }
 
     const result: PatrolLookupResult = {
@@ -325,14 +427,8 @@ export async function POST(request: NextRequest) {
         isEmergency: pass.isEmergency,
         confirmationCode: pass.confirmationCode,
       })),
-      violations: vehicle.violations.map((v) => ({
-        id: v.id,
-        type: v.type,
-        severity: v.severity,
-        createdAt: v.createdAt.toISOString(),
-        isResolved: v.isResolved,
-        location: v.location,
-      })),
+      violations,
+      ...(autoCreatedViolation ? { autoCreatedViolation } : {}),
       lookupTime: now.toISOString(),
     };
 

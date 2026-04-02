@@ -3,6 +3,10 @@
     {
       "path": "/api/notifications/pass-reminders",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/violations/scan-expired",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

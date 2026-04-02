@@ -264,6 +264,8 @@ export const QR_CODE_CONFIG = {
   imageFormat: 'png',
 } as const;
 
+export const SYSTEM_USER_EMAIL = 'system@automated.internal';
+
 export const TIMEZONE_DEFAULT = 'America/New_York';
 
 export const DATE_FORMATS = {
