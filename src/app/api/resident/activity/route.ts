@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { parkingPassListSelect } from '@/lib/prisma/parking-pass-selects';
 
 // GET /api/resident/activity - Get unit activity history (paginated)
 export async function GET(request: NextRequest) {
@@ -29,17 +30,7 @@ export async function GET(request: NextRequest) {
     const [passes, total] = await Promise.all([
       prisma.parkingPass.findMany({
         where,
-        include: {
-          vehicle: {
-            select: {
-              id: true,
-              licensePlate: true,
-              make: true,
-              model: true,
-              color: true,
-            },
-          },
-        },
+        select: parkingPassListSelect,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,

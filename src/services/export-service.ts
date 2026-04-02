@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { parkingPassListSelect } from '@/lib/prisma/parking-pass-selects';
 import { format } from 'date-fns';
 
 export type ExportType = 'passes' | 'violations' | 'vehicles' | 'analytics' | 'audit-logs';
@@ -54,10 +55,7 @@ async function exportPasses(options: ExportOptions): Promise<{ headers: string[]
 
   const passes = await prisma.parkingPass.findMany({
     where,
-    include: {
-      vehicle: { select: { licensePlate: true, make: true, model: true, color: true } },
-      unit: { select: { unitNumber: true, building: { select: { name: true } } } },
-    },
+    select: parkingPassListSelect,
     orderBy: { createdAt: 'desc' },
   });
 

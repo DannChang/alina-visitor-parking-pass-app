@@ -322,7 +322,7 @@ model ParkingPass {
 
   // Recurring pass settings
   isRecurring     Boolean   @default(false)
-  recurringDays   Int[]     // 0=Sun, 1=Mon, etc.
+  recurringDays   Int[]     @default([]) // 0=Sun, 1=Mon, etc.
   recurringEndDate DateTime?
   parentPassId    String?
 
