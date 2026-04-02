@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { parkingPassDetailsSelect } from '@/lib/prisma/parking-pass-selects';
 import { PassStatus } from '@prisma/client';
 
 const updatePassSchema = z.object({
@@ -23,7 +22,47 @@ export async function GET(
   try {
     const pass = await prisma.parkingPass.findUnique({
       where: { id, deletedAt: null },
-      select: parkingPassDetailsSelect,
+      include: {
+        vehicle: {
+          select: {
+            id: true,
+            licensePlate: true,
+            make: true,
+            model: true,
+            year: true,
+            color: true,
+            state: true,
+            isBlacklisted: true,
+            violationCount: true,
+            riskScore: true,
+          },
+        },
+        unit: {
+          select: {
+            id: true,
+            unitNumber: true,
+            floor: true,
+            section: true,
+            building: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                address: true,
+                timezone: true,
+              },
+            },
+          },
+        },
+        parkingZone: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            description: true,
+          },
+        },
+      },
     });
 
     if (!pass) {
@@ -95,7 +134,13 @@ export async function PATCH(
     const pass = await prisma.parkingPass.update({
       where: { id },
       data: updateData,
-      select: parkingPassDetailsSelect,
+      include: {
+        vehicle: true,
+        unit: {
+          include: { building: true },
+        },
+        parkingZone: true,
+      },
     });
 
     // Create audit log

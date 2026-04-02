@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { parkingPassDetailsSelect, parkingPassListSelect } from '@/lib/prisma/parking-pass-selects';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import { calculateEndTime } from '@/lib/utils/date-time';
 import { validatePassRequest } from '@/services/validation-service';
@@ -84,7 +83,40 @@ export async function GET(request: NextRequest) {
     const [passes, total] = await Promise.all([
       prisma.parkingPass.findMany({
         where,
-        select: parkingPassListSelect,
+        include: {
+          vehicle: {
+            select: {
+              id: true,
+              licensePlate: true,
+              make: true,
+              model: true,
+              year: true,
+              color: true,
+              isBlacklisted: true,
+              violationCount: true,
+            },
+          },
+          unit: {
+            select: {
+              id: true,
+              unitNumber: true,
+              building: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
+          parkingZone: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -233,8 +265,6 @@ export async function POST(request: NextRequest) {
         duration: data.duration,
         status: PassStatus.ACTIVE,
         passType: data.passType ?? PassType.VISITOR,
-        isRecurring: false,
-        recurringDays: [],
         visitorName: data.visitorName ?? null,
         visitorPhone: data.visitorPhone ?? null,
         visitorEmail: data.visitorEmail ?? null,
@@ -242,7 +272,15 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
       },
-      select: parkingPassDetailsSelect,
+      include: {
+        vehicle: true,
+        unit: {
+          include: {
+            building: true,
+          },
+        },
+        parkingZone: true,
+      },
     });
 
     // Log the QR scan if applicable

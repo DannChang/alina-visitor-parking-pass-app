@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { parkingPassListSelect } from '@/lib/prisma/parking-pass-selects';
 import { redirect } from 'next/navigation';
 import { Car, AlertTriangle, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,7 +47,20 @@ async function getRecentPasses() {
     where: {
       deletedAt: null,
     },
-    select: parkingPassListSelect,
+    include: {
+      vehicle: {
+        select: {
+          licensePlate: true,
+          make: true,
+          color: true,
+        },
+      },
+      unit: {
+        select: {
+          unitNumber: true,
+        },
+      },
+    },
     orderBy: { createdAt: 'desc' },
     take: 5,
   });

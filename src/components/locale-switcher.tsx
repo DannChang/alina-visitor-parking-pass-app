@@ -23,7 +23,9 @@ export function LocaleSwitcher() {
   function handleSelect(newLocale: Locale) {
     startTransition(async () => {
       await setLocale(newLocale);
-      router.refresh();
+      // Full page reload to pick up the new cookie — router.refresh() uses
+      // stale cached RSC payloads and renders one selection behind.
+      window.location.reload();
     });
   }
 

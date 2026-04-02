@@ -1,6 +1,22 @@
 import { getRequestConfig } from 'next-intl/server';
 import { cookies, headers } from 'next/headers';
 import { locales, defaultLocale, type Locale } from './routing';
+import en from '../messages/en.json';
+import es from '../messages/es.json';
+import fr from '../messages/fr.json';
+
+// Static message map — locales without a dedicated file fall back to English
+const messagesByLocale: Record<Locale, Record<string, unknown>> = {
+  en,
+  es,
+  fr,
+  'zh-Hans': en,
+  'zh-Hant': en,
+  fa: en,
+  ko: en,
+  vi: en,
+};
+
 
 // Map browser locale variants to our supported locales
 const localeMapping: Record<string, Locale> = {
@@ -57,7 +73,7 @@ export default getRequestConfig(async () => {
   if (cookieLocale && locales.includes(cookieLocale as Locale)) {
     return {
       locale: cookieLocale as Locale,
-      messages: (await import(`../messages/${cookieLocale}.json`)).default,
+      messages: messagesByLocale[cookieLocale as Locale],
     };
   }
 
@@ -68,6 +84,6 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: messagesByLocale[locale],
   };
 });
