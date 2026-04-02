@@ -2,7 +2,13 @@ import { Resend } from 'resend';
 import { prisma } from '@/lib/prisma';
 import { NotificationType, NotificationStatus } from '@prisma/client';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
+function getResendClient(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 interface SendEmailOptions {
   to: string;
@@ -77,7 +83,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   });
 
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: options.subject,
