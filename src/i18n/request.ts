@@ -4,17 +4,21 @@ import { locales, defaultLocale, type Locale } from './routing';
 import en from '../messages/en.json';
 import es from '../messages/es.json';
 import fr from '../messages/fr.json';
+import vi from '../messages/vi.json';
+import zhHans from '../messages/zh-Hans.json';
+import zhHant from '../messages/zh-Hant.json';
+import fa from '../messages/fa.json';
+import ko from '../messages/ko.json';
 
-// Static message map — locales without a dedicated file fall back to English
 const messagesByLocale: Record<Locale, Record<string, unknown>> = {
   en,
   es,
   fr,
-  'zh-Hans': en,
-  'zh-Hant': en,
-  fa: en,
-  ko: en,
-  vi: en,
+  vi,
+  'zh-Hans': zhHans,
+  'zh-Hant': zhHant,
+  fa,
+  ko,
 };
 
 
