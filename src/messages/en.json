@@ -404,6 +404,19 @@
     "patrolLogPage": {
       "title": "Patrol Log",
       "description": "Electronic logbook for patrol observations and vehicle tracking"
+    },
+    "nav": {
+      "overview": "Overview",
+      "activePasses": "Active Passes",
+      "violations": "Violations",
+      "patrolLog": "Patrol Log",
+      "vehicles": "Vehicles",
+      "units": "Units",
+      "analytics": "Analytics",
+      "systemHealth": "System Health",
+      "users": "Users",
+      "registrationPasses": "Registration Passes",
+      "settings": "Settings"
     }
   },
   "auth": {

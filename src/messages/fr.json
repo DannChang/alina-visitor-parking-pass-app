@@ -404,6 +404,19 @@
     "patrolLogPage": {
       "title": "Journal de Patrouille",
       "description": "Journal électronique pour les observations de patrouille et le suivi des véhicules"
+    },
+    "nav": {
+      "overview": "Vue d'ensemble",
+      "activePasses": "Passes actifs",
+      "violations": "Infractions",
+      "patrolLog": "Journal de patrouille",
+      "vehicles": "Véhicules",
+      "units": "Unités",
+      "analytics": "Analytique",
+      "systemHealth": "Santé du système",
+      "users": "Utilisateurs",
+      "registrationPasses": "Passes d'inscription",
+      "settings": "Paramètres"
     }
   },
   "auth": {

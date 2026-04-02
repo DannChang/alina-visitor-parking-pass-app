@@ -404,6 +404,19 @@
     "patrolLogPage": {
       "title": "巡邏日誌",
       "description": "巡邏觀察和車輛追蹤的電子日誌"
+    },
+    "nav": {
+      "overview": "概覽",
+      "activePasses": "有效通行證",
+      "violations": "違規記錄",
+      "patrolLog": "巡邏日誌",
+      "vehicles": "車輛",
+      "units": "單元",
+      "analytics": "分析",
+      "systemHealth": "系統健康",
+      "users": "用戶",
+      "registrationPasses": "注冊通行證",
+      "settings": "設定"
     }
   },
   "auth": {

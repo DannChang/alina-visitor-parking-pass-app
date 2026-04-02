@@ -404,6 +404,19 @@
     "patrolLogPage": {
       "title": "Nhật Ký Tuần Tra",
       "description": "Sổ nhật ký điện tử để ghi lại quan sát tuần tra và theo dõi xe"
+    },
+    "nav": {
+      "overview": "Tổng quan",
+      "activePasses": "Thẻ đang hoạt động",
+      "violations": "Vi phạm",
+      "patrolLog": "Nhật ký tuần tra",
+      "vehicles": "Phương tiện",
+      "units": "Căn hộ",
+      "analytics": "Phân tích",
+      "systemHealth": "Sức khỏe hệ thống",
+      "users": "Người dùng",
+      "registrationPasses": "Thẻ đăng ký",
+      "settings": "Cài đặt"
     }
   },
   "auth": {

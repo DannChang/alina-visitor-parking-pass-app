@@ -404,6 +404,19 @@
     "patrolLogPage": {
       "title": "گزارش گشت",
       "description": "دفتر گزارش الکترونیکی برای مشاهدات گشت و ردیابی خودرو"
+    },
+    "nav": {
+      "overview": "نمای کلی",
+      "activePasses": "مجوزهای فعال",
+      "violations": "تخلفات",
+      "patrolLog": "گزارش گشت",
+      "vehicles": "وسایل نقلیه",
+      "units": "واحدها",
+      "analytics": "تحلیل‌ها",
+      "systemHealth": "سلامت سیستم",
+      "users": "کاربران",
+      "registrationPasses": "مجوزهای ثبت‌نام",
+      "settings": "تنظیمات"
     }
   },
   "auth": {

@@ -22,7 +22,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [session, t] = await Promise.all([auth(), getTranslations('common')]);
+  const [session, t, tNav] = await Promise.all([auth(), getTranslations('common'), getTranslations('dashboard.nav')]);
 
   if (!session?.user) {
     redirect('/login');
@@ -36,8 +36,11 @@ export default async function DashboardLayout({
         .toUpperCase()
     : session.user.email?.charAt(0).toUpperCase() || 'U';
 
-  // Get navigation items based on user's role
-  const navItems = getNavItemsForRole(session.user.role);
+  // Get navigation items based on user's role (with translated labels)
+  const navItems = getNavItemsForRole(session.user.role).map((item) => ({
+    ...item,
+    label: tNav(item.labelKey),
+  }));
 
   // Server action for sign out
   async function handleSignOut() {
