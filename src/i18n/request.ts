@@ -1,24 +1,68 @@
 import { getRequestConfig } from 'next-intl/server';
 import { cookies, headers } from 'next/headers';
 import { locales, defaultLocale, type Locale } from './routing';
+import en from '../messages/en.json';
+import es from '../messages/es.json';
+import fr from '../messages/fr.json';
+import vi from '../messages/vi.json';
+import zhHans from '../messages/zh-Hans.json';
+import zhHant from '../messages/zh-Hant.json';
+import fa from '../messages/fa.json';
+import ko from '../messages/ko.json';
 
-function negotiateLocale(acceptLanguage: string | null): Locale {
+const messagesByLocale: Record<Locale, Record<string, unknown>> = {
+  en,
+  es,
+  fr,
+  vi,
+  'zh-Hans': zhHans,
+  'zh-Hant': zhHant,
+  fa,
+  ko,
+};
+
+
+// Map browser locale variants to our supported locales
+const localeMapping: Record<string, Locale> = {
+  'zh-cn': 'zh-Hans',
+  'zh-sg': 'zh-Hans',
+  'zh-hans': 'zh-Hans',
+  zh: 'zh-Hans',
+  'zh-tw': 'zh-Hant',
+  'zh-hk': 'zh-Hant',
+  'zh-mo': 'zh-Hant',
+  'zh-hant': 'zh-Hant',
+};
+
+export function negotiateLocale(acceptLanguage: string | null): Locale {
   if (!acceptLanguage) return defaultLocale;
 
-  // Parse Accept-Language header (e.g., "en-US,en;q=0.9,es;q=0.8")
   const preferredLocales = acceptLanguage
     .split(',')
     .map((lang) => {
       const [locale, qStr] = lang.trim().split(';');
       const q = qStr ? parseFloat(qStr.split('=')[1] || '1') : 1;
-      return { locale: locale?.split('-')[0] || '', q };
+      return { locale: locale?.trim().toLowerCase() || '', q };
     })
     .sort((a, b) => b.q - a.q);
 
-  // Find first supported locale
   for (const { locale } of preferredLocales) {
+    // 1. Check explicit mapping (e.g., zh-CN → zh-Hans)
+    const mapped = localeMapping[locale];
+    if (mapped) return mapped;
+
+    // 2. Check direct match (e.g., "fr" matches "fr", "ko" matches "ko")
     if (locales.includes(locale as Locale)) {
       return locale as Locale;
+    }
+
+    // 3. Check base language match (e.g., "fr-CA" → "fr", "ko-KR" → "ko")
+    const base = locale.split('-')[0] || '';
+    const baseMapping = localeMapping[base];
+    if (baseMapping) return baseMapping;
+
+    if (locales.includes(base as Locale)) {
+      return base as Locale;
     }
   }
 
@@ -33,7 +77,7 @@ export default getRequestConfig(async () => {
   if (cookieLocale && locales.includes(cookieLocale as Locale)) {
     return {
       locale: cookieLocale as Locale,
-      messages: (await import(`../messages/${cookieLocale}.json`)).default,
+      messages: messagesByLocale[cookieLocale as Locale],
     };
   }
 
@@ -44,6 +88,6 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: messagesByLocale[locale],
   };
 });

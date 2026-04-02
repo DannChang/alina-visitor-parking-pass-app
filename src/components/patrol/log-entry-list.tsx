@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export interface PatrolLogEntry {
   id: string;
+  vehicleId: string | null;
   licensePlate: string;
   normalizedPlate: string;
   entryType: 'ENTRY' | 'EXIT' | 'SPOT_CHECK' | 'NOTE';
@@ -25,31 +27,17 @@ export interface PatrolLogEntry {
 
 interface LogEntryListProps {
   entries: PatrolLogEntry[];
+  onEntrySelect?: (entry: PatrolLogEntry) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoading?: boolean;
 }
 
-const ENTRY_TYPE_CONFIG: Record<
-  PatrolLogEntry['entryType'],
-  { label: string; className: string }
-> = {
-  ENTRY: {
-    label: 'Entry',
-    className: 'bg-green-100 text-green-800 border-green-200',
-  },
-  EXIT: {
-    label: 'Exit',
-    className: 'bg-red-100 text-red-800 border-red-200',
-  },
-  SPOT_CHECK: {
-    label: 'Spot Check',
-    className: 'bg-blue-100 text-blue-800 border-blue-200',
-  },
-  NOTE: {
-    label: 'Note',
-    className: 'bg-gray-100 text-gray-800 border-gray-200',
-  },
+const ENTRY_TYPE_CLASSNAME: Record<PatrolLogEntry['entryType'], string> = {
+  ENTRY: 'bg-green-100 text-green-800 border-green-200',
+  EXIT: 'bg-red-100 text-red-800 border-red-200',
+  SPOT_CHECK: 'bg-blue-100 text-blue-800 border-blue-200',
+  NOTE: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
 function LogEntrySkeleton() {
@@ -74,10 +62,21 @@ function LogEntrySkeleton() {
 
 export function LogEntryList({
   entries,
+  onEntrySelect,
   onLoadMore,
   hasMore = false,
   isLoading = false,
 }: LogEntryListProps) {
+  const t = useTranslations('patrol');
+  const tc = useTranslations('common');
+
+  const ENTRY_TYPE_LABEL: Record<PatrolLogEntry['entryType'], string> = {
+    ENTRY: t('entryEntry'),
+    EXIT: t('entryExit'),
+    SPOT_CHECK: t('entrySpotCheck'),
+    NOTE: t('entryNote'),
+  };
+
   if (isLoading && entries.length === 0) {
     return (
       <div className="space-y-3">
@@ -93,7 +92,7 @@ export function LogEntryList({
       <Card>
         <CardContent className="py-8 text-center">
           <p className="text-sm text-muted-foreground">
-            No log entries found. Add an entry to get started.
+            {t('noEntriesMsg')}
           </p>
         </CardContent>
       </Card>
@@ -102,70 +101,79 @@ export function LogEntryList({
 
   return (
     <div className="space-y-3">
-      {entries.map((entry) => {
-        const typeConfig = ENTRY_TYPE_CONFIG[entry.entryType];
+      {entries.map((entry) => (
+        <Card
+          key={entry.id}
+          tabIndex={0}
+          className="cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={() => onEntrySelect?.(entry)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+              return;
+            }
 
-        return (
-          <Card key={entry.id}>
-            <CardContent className="py-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="font-mono font-bold text-base text-slate-900 shrink-0">
-                    {entry.licensePlate}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className={cn('shrink-0 text-xs', typeConfig.className)}
-                  >
-                    {typeConfig.label}
-                  </Badge>
-                </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  {format(new Date(entry.createdAt), 'MMM d, h:mm a')}
+            event.preventDefault();
+            onEntrySelect?.(entry);
+          }}
+        >
+          <CardContent className="py-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="font-mono font-bold text-base text-slate-900 shrink-0">
+                  {entry.licensePlate}
                 </span>
+                <Badge
+                  variant="outline"
+                  className={cn('shrink-0 text-xs', ENTRY_TYPE_CLASSNAME[entry.entryType])}
+                >
+                  {ENTRY_TYPE_LABEL[entry.entryType]}
+                </Badge>
               </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                {format(new Date(entry.createdAt), 'MMM d, h:mm a')}
+              </span>
+            </div>
 
-              <div className="mt-2 space-y-1">
-                {entry.location && (
-                  <div className="flex items-center gap-1.5 text-sm text-slate-600">
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    <span>{entry.location}</span>
-                  </div>
-                )}
-
-                {entry.notes && (
-                  <div className="flex items-start gap-1.5 text-sm text-slate-600">
-                    <StickyNote className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
-                    <span>{entry.notes}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                  <User className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <span>{entry.patroller.name || 'Unknown'}</span>
-                </div>
-              </div>
-
-              {entry.photoUrls.length > 0 && (
-                <div className="mt-3 flex gap-2">
-                  {entry.photoUrls.map((url, index) => (
-                    <div
-                      key={index}
-                      className="w-16 h-16 rounded-md overflow-hidden border"
-                    >
-                      <img
-                        src={url}
-                        alt={`Photo ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
+            <div className="mt-2 space-y-1">
+              {entry.location && (
+                <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span>{entry.location}</span>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        );
-      })}
+
+              {entry.notes && (
+                <div className="flex items-start gap-1.5 text-sm text-slate-600">
+                  <StickyNote className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
+                  <span>{entry.notes}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                <User className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span>{entry.patroller.name || 'Unknown'}</span>
+              </div>
+            </div>
+
+            {entry.photoUrls.length > 0 && (
+              <div className="mt-3 flex gap-2">
+                {entry.photoUrls.map((url, index) => (
+                  <div
+                    key={index}
+                    className="w-16 h-16 rounded-md overflow-hidden border"
+                  >
+                    <img
+                      src={url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
 
       {hasMore && (
         <Button
@@ -177,10 +185,10 @@ export function LogEntryList({
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading...
+              {tc('loading')}
             </>
           ) : (
-            'Load More'
+            tc('loadMore')
           )}
         </Button>
       )}

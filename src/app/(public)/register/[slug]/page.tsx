@@ -39,8 +39,9 @@ const registerSchema = z.object({
   visitorName: z.string().min(1, 'Name is required').max(100),
   visitorPhone: z.string().max(20).optional(),
   visitorEmail: z.string().email('Invalid email').optional().or(z.literal('')),
-  vehicleMake: z.string().max(50).optional(),
-  vehicleModel: z.string().max(50).optional(),
+  vehicleMake: z.string().trim().min(1, 'Make is required').max(50),
+  vehicleModel: z.string().trim().min(1, 'Model is required').max(50),
+  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
   vehicleColor: z.string().max(30).optional(),
 });
 
@@ -401,9 +402,9 @@ export default function RegisterPage({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 xs:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="vehicleMake">Make</Label>
+                <Label htmlFor="vehicleMake">Make *</Label>
                 <Input
                   id="vehicleMake"
                   placeholder="Toyota"
@@ -411,9 +412,12 @@ export default function RegisterPage({
                   className="h-11 md:h-10 text-base md:text-sm"
                   {...register('vehicleMake')}
                 />
+                {errors.vehicleMake && (
+                  <p className="text-sm text-destructive">{errors.vehicleMake.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vehicleModel">Model</Label>
+                <Label htmlFor="vehicleModel">Model *</Label>
                 <Input
                   id="vehicleModel"
                   placeholder="Camry"
@@ -421,6 +425,25 @@ export default function RegisterPage({
                   className="h-11 md:h-10 text-base md:text-sm"
                   {...register('vehicleModel')}
                 />
+                {errors.vehicleModel && (
+                  <p className="text-sm text-destructive">{errors.vehicleModel.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vehicleYear">Year *</Label>
+                <Input
+                  id="vehicleYear"
+                  placeholder="2024"
+                  disabled={isSubmitting}
+                  inputMode="numeric"
+                  className="h-11 md:h-10 text-base md:text-sm"
+                  {...register('vehicleYear', {
+                    setValueAs: (value) => (value ? Number(value) : undefined),
+                  })}
+                />
+                {errors.vehicleYear && (
+                  <p className="text-sm text-destructive">{errors.vehicleYear.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vehicleColor">Color</Label>

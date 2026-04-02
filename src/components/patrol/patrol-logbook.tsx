@@ -18,24 +18,31 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { LogEntryForm } from './log-entry-form';
 import { LogEntryList, type PatrolLogEntry } from './log-entry-list';
+import { VehicleHistoryDialog } from './vehicle-history-dialog';
+import { LogEntryDetailsSheet } from './log-entry-details-sheet';
+import { useTranslations } from 'next-intl';
 
 const PAGE_SIZE = 20;
 
-const ENTRY_TYPE_OPTIONS = [
-  { value: 'ALL', label: 'All Types' },
-  { value: 'ENTRY', label: 'Entry' },
-  { value: 'EXIT', label: 'Exit' },
-  { value: 'SPOT_CHECK', label: 'Spot Check' },
-  { value: 'NOTE', label: 'Note' },
-] as const;
-
 export function PatrolLogbook() {
+  const t = useTranslations('patrol');
+  const tc = useTranslations('common');
+
+  const ENTRY_TYPE_OPTIONS = [
+    { value: 'ALL', label: t('allTypes') },
+    { value: 'ENTRY', label: t('entryEntry') },
+    { value: 'EXIT', label: t('entryExit') },
+    { value: 'SPOT_CHECK', label: t('entrySpotCheck') },
+    { value: 'NOTE', label: t('entryNote') },
+  ] as const;
+
   const [entries, setEntries] = useState<PatrolLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<PatrolLogEntry | null>(null);
 
   // Filter state
   const [filterType, setFilterType] = useState('ALL');
@@ -144,7 +151,7 @@ export function PatrolLogbook() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900">Patrol Logbook</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t('logbookTitle')}</h2>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -153,11 +160,11 @@ export function PatrolLogbook() {
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {tc('refresh')}
           </Button>
           <Button size="sm" onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Entry
+            {t('addEntry')}
           </Button>
         </div>
       </div>
@@ -171,9 +178,9 @@ export function PatrolLogbook() {
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="h-4 w-4" />
-              Filters
+              {t('filters')}
               {hasActiveFilters && (
-                <span className="text-xs text-primary font-normal">(active)</span>
+                <span className="text-xs text-primary font-normal">{t('filtersActive')}</span>
               )}
             </CardTitle>
             {hasActiveFilters && (
@@ -183,7 +190,7 @@ export function PatrolLogbook() {
                 className="text-xs h-7"
                 onClick={handleClearFilters}
               >
-                Clear
+                {t('clearFilters')}
               </Button>
             )}
           </div>
@@ -197,7 +204,7 @@ export function PatrolLogbook() {
               {/* Entry Type Filter */}
               <div className="space-y-2">
                 <Label htmlFor="filterType" className="text-xs">
-                  Entry Type
+                  {t('entryTypeLabel')}
                 </Label>
                 <Select value={filterType} onValueChange={setFilterType}>
                   <SelectTrigger id="filterType" className="h-9">
@@ -216,7 +223,7 @@ export function PatrolLogbook() {
               {/* Date From */}
               <div className="space-y-2">
                 <Label htmlFor="filterDateFrom" className="text-xs">
-                  From Date
+                  {t('dateFromLabel')}
                 </Label>
                 <Input
                   id="filterDateFrom"
@@ -230,7 +237,7 @@ export function PatrolLogbook() {
               {/* Date To */}
               <div className="space-y-2">
                 <Label htmlFor="filterDateTo" className="text-xs">
-                  To Date
+                  {t('dateToLabel')}
                 </Label>
                 <Input
                   id="filterDateTo"
@@ -248,7 +255,7 @@ export function PatrolLogbook() {
               className="w-full sm:w-auto"
               onClick={handleFilterChange}
             >
-              Apply Filters
+              {t('applyFilters')}
             </Button>
           </CardContent>
         )}
@@ -257,6 +264,7 @@ export function PatrolLogbook() {
       {/* Entry List */}
       <LogEntryList
         entries={entries}
+        onEntrySelect={setSelectedEntry}
         onLoadMore={loadMore}
         hasMore={hasMore}
         isLoading={isLoading || isLoadingMore}
@@ -267,6 +275,25 @@ export function PatrolLogbook() {
         open={showForm}
         onOpenChange={setShowForm}
         onSuccess={handleFormSuccess}
+      />
+      <VehicleHistoryDialog
+        open={!!selectedEntry?.vehicleId}
+        onOpenChange={(open) => {
+          if (!open && selectedEntry?.vehicleId) {
+            setSelectedEntry(null);
+          }
+        }}
+        vehicleId={selectedEntry?.vehicleId || null}
+        licensePlate={selectedEntry?.licensePlate || ''}
+      />
+      <LogEntryDetailsSheet
+        entry={selectedEntry && !selectedEntry.vehicleId ? selectedEntry : null}
+        open={!!selectedEntry && !selectedEntry.vehicleId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedEntry(null);
+          }
+        }}
       />
     </div>
   );

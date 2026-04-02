@@ -35,6 +35,11 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  handleClickableRowKeyDown,
+  stopClickableRowPropagation,
+} from '@/components/dashboard/clickable-row';
+import { useTranslations } from 'next-intl';
 
 interface User {
   id: string;
@@ -51,12 +56,6 @@ interface User {
   };
 }
 
-const roleLabels: Record<string, { label: string; color: string }> = {
-  SUPER_ADMIN: { label: 'Super Admin', color: 'destructive' },
-  ADMIN: { label: 'Admin', color: 'default' },
-  MANAGER: { label: 'Manager', color: 'secondary' },
-  SECURITY: { label: 'Security', color: 'outline' },
-};
 
 function UsersLoading() {
   return (
@@ -69,6 +68,14 @@ function UsersLoading() {
 }
 
 export default function UsersPage() {
+  const t = useTranslations('dashboard.usersPage');
+  const tc = useTranslations('common');
+  const roleLabels: Record<string, { label: string; color: string }> = {
+    SUPER_ADMIN: { label: t('superAdmin'), color: 'destructive' },
+    ADMIN: { label: t('admin'), color: 'default' },
+    MANAGER: { label: t('manager'), color: 'secondary' },
+    SECURITY: { label: t('security'), color: 'outline' },
+  };
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -94,7 +101,7 @@ export default function UsersPage() {
       const data = await response.json();
       setUsers(data.users || []);
     } catch (error) {
-      toast.error('Failed to load users');
+      toast.error(t('noUsersFound'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -149,11 +156,11 @@ export default function UsersPage() {
         throw new Error(error.error || 'Failed to save user');
       }
 
-      toast.success(editingUser ? 'User updated successfully' : 'User created successfully');
+      toast.success(editingUser ? t('editUser') : t('addUser'));
       setIsDialogOpen(false);
       fetchUsers();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save user');
+      toast.error(error instanceof Error ? error.message : tc('error'));
     }
   };
 
@@ -204,12 +211,12 @@ export default function UsersPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage staff users and their permissions</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto min-h-[44px] md:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
-          Add User
+          {t('addUser')}
         </Button>
       </div>
 
@@ -217,7 +224,7 @@ export default function UsersPage() {
         <div className="relative w-full md:flex-1 md:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by email or name..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-11 md:h-10 text-base md:text-sm"
@@ -225,24 +232,22 @@ export default function UsersPage() {
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-full md:w-[180px] h-11 md:h-10">
-            <SelectValue placeholder="Filter by role" />
+            <SelectValue placeholder={t('allRoles')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-            <SelectItem value="ADMIN">Admin</SelectItem>
-            <SelectItem value="MANAGER">Manager</SelectItem>
-            <SelectItem value="SECURITY">Security</SelectItem>
+            <SelectItem value="all">{t('allRoles')}</SelectItem>
+            <SelectItem value="SUPER_ADMIN">{t('superAdmin')}</SelectItem>
+            <SelectItem value="ADMIN">{t('admin')}</SelectItem>
+            <SelectItem value="MANAGER">{t('manager')}</SelectItem>
+            <SelectItem value="SECURITY">{t('security')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <Card>
         <CardHeader className="px-4 md:px-6">
-          <CardTitle className="text-lg md:text-xl">Users</CardTitle>
-          <CardDescription>
-            {users.length} user{users.length !== 1 ? 's' : ''} found
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">{t('title')}</CardTitle>
+          <CardDescription>{t('usersFound', { count: users.length })}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {loading ? (
@@ -251,24 +256,32 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
+                  <TableHead>{t('name')}</TableHead>
+                  <TableHead>{t('role')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead>{t('lastLogin')}</TableHead>
                   <TableHead>Activity</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">{t('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No users found
+                      {t('noUsersFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow
+                      key={user.id}
+                      tabIndex={0}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      onClick={() => handleOpenDialog(user)}
+                      onKeyDown={(event) =>
+                        handleClickableRowKeyDown(event, () => handleOpenDialog(user))
+                      }
+                    >
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -288,10 +301,10 @@ export default function UsersPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <Badge variant={user.isActive ? 'default' : 'secondary'}>
-                            {user.isActive ? 'Active' : 'Inactive'}
+                            {user.isActive ? t('active') : tc('inactive')}
                           </Badge>
                           {user.isSuspended && (
-                            <Badge variant="destructive">Suspended</Badge>
+                            <Badge variant="destructive">{t('suspended')}</Badge>
                           )}
                         </div>
                       </TableCell>
@@ -301,7 +314,7 @@ export default function UsersPage() {
                             {formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })}
                           </span>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Never</span>
+                          <span className="text-sm text-muted-foreground">{t('never')}</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -315,16 +328,24 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleOpenDialog(user)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleOpenDialog(user);
+                            }}
                             title="Edit user"
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleToggleSuspend(user)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleToggleSuspend(user);
+                            }}
                             title={user.isSuspended ? 'Unsuspend user' : 'Suspend user'}
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             {user.isSuspended ? (
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -335,8 +356,12 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(user)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleDelete(user);
+                            }}
                             title="Delete user"
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -354,17 +379,15 @@ export default function UsersPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+            <DialogTitle>{editingUser ? t('editUser') : t('addUser')}</DialogTitle>
             <DialogDescription>
-              {editingUser
-                ? 'Make changes to the user account.'
-                : 'Create a new user account.'}
+              {editingUser ? t('description') : t('description')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -376,7 +399,7 @@ export default function UsersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('name')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -397,7 +420,7 @@ export default function UsersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">{t('role')}</Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value) => setFormData({ ...formData, role: value })}
@@ -406,14 +429,14 @@ export default function UsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MANAGER">Manager</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="SECURITY">Security</SelectItem>
+                    <SelectItem value="MANAGER">{t('manager')}</SelectItem>
+                    <SelectItem value="ADMIN">{t('admin')}</SelectItem>
+                    <SelectItem value="SECURITY">{t('security')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center justify-between py-2">
-                <Label htmlFor="isActive">Active</Label>
+                <Label htmlFor="isActive">{t('active')}</Label>
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isActive"
@@ -421,17 +444,17 @@ export default function UsersPage() {
                     onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                   />
                   <Label htmlFor="isActive" className="font-normal">
-                    {formData.isActive ? 'Yes' : 'No'}
+                    {formData.isActive ? tc('yes') : tc('no')}
                   </Label>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="min-h-[44px] md:min-h-0">
-                Cancel
+                {tc('cancel')}
               </Button>
               <Button type="submit" className="min-h-[44px] md:min-h-0">
-                {editingUser ? 'Save Changes' : 'Create User'}
+                {editingUser ? tc('save') : t('addUser')}
               </Button>
             </DialogFooter>
           </form>

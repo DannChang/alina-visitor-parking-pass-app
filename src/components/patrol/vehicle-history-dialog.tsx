@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 interface VehicleHistoryDialogProps {
   open: boolean;
@@ -104,6 +105,8 @@ export function VehicleHistoryDialog({
   vehicleId,
   licensePlate,
 }: VehicleHistoryDialogProps) {
+  const t = useTranslations('patrol');
+  const tc = useTranslations('common');
   const [activeTab, setActiveTab] = useState<TabId>('passes');
   const [data, setData] = useState<HistoryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -139,9 +142,9 @@ export function VehicleHistoryDialog({
   }, [open, vehicleId, fetchHistory]);
 
   const tabs: { id: TabId; label: string; icon: React.ElementType; count: number }[] = [
-    { id: 'passes', label: 'Passes', icon: Car, count: data?.passes.length ?? 0 },
-    { id: 'violations', label: 'Violations', icon: AlertTriangle, count: data?.violations.length ?? 0 },
-    { id: 'patrol', label: 'Patrol Log', icon: ClipboardList, count: data?.patrolLogs.length ?? 0 },
+    { id: 'passes', label: tc('passes'), icon: Car, count: data?.passes.length ?? 0 },
+    { id: 'violations', label: tc('violations'), icon: AlertTriangle, count: data?.violations.length ?? 0 },
+    { id: 'patrol', label: t('tabPatrolLog'), icon: ClipboardList, count: data?.patrolLogs.length ?? 0 },
   ];
 
   return (
@@ -150,10 +153,10 @@ export function VehicleHistoryDialog({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Car className="h-5 w-5" />
-            Vehicle History
+            {t('vehicleHistory')}
           </SheetTitle>
           <SheetDescription>
-            Full history for plate: <strong>{licensePlate}</strong>
+            {t('fullHistoryFor')} <strong>{licensePlate}</strong>
           </SheetDescription>
         </SheetHeader>
 
@@ -166,10 +169,10 @@ export function VehicleHistoryDialog({
               </span>
               <div className="flex gap-1">
                 {data.vehicle.isBlacklisted && (
-                  <Badge variant="destructive">Blacklisted</Badge>
+                  <Badge variant="destructive">{tc('blacklisted')}</Badge>
                 )}
                 {data.vehicle.isResidentVehicle && (
-                  <Badge variant="outline">Resident</Badge>
+                  <Badge variant="outline">{t('vehicleResident')}</Badge>
                 )}
               </div>
             </div>
@@ -181,8 +184,8 @@ export function VehicleHistoryDialog({
               </p>
             )}
             <div className="flex gap-4 text-sm text-slate-500">
-              <span>{data.vehicle.violationCount} violation(s)</span>
-              <span>Risk: {data.vehicle.riskScore}/100</span>
+              <span>{data.vehicle.violationCount} {tc('violations').toLowerCase()}</span>
+              <span>{t('riskScore')} {data.vehicle.riskScore}/100</span>
             </div>
           </div>
         )}
@@ -219,7 +222,7 @@ export function VehicleHistoryDialog({
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading history...</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t('loadingHistory')}</span>
             </div>
           )}
 
@@ -236,7 +239,7 @@ export function VehicleHistoryDialog({
                 <div className="space-y-2">
                   {data.passes.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
-                      No records found
+                      {t('noRecords')}
                     </p>
                   ) : (
                     data.passes.map((pass) => {
@@ -258,11 +261,11 @@ export function VehicleHistoryDialog({
                             </span>
                           </div>
                           <div className="text-sm text-slate-700">
-                            {pass.buildingName} - Unit {pass.unitNumber}
+                            {pass.buildingName} - {tc('unit')} {pass.unitNumber}
                           </div>
                           {pass.visitorName && (
                             <div className="text-sm text-slate-600">
-                              Visitor: {pass.visitorName}
+                              {tc('visitor')}: {pass.visitorName}
                             </div>
                           )}
                           <div className="text-xs text-muted-foreground">
@@ -270,7 +273,7 @@ export function VehicleHistoryDialog({
                             {format(new Date(pass.endTime), 'MMM d, yyyy h:mm a')}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Code: {pass.confirmationCode}
+                            {t('confirmCode')} {pass.confirmationCode}
                           </div>
                         </div>
                       );
@@ -284,7 +287,7 @@ export function VehicleHistoryDialog({
                 <div className="space-y-2">
                   {data.violations.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
-                      No records found
+                      {t('noRecords')}
                     </p>
                   ) : (
                     data.violations.map((violation) => {
@@ -306,7 +309,7 @@ export function VehicleHistoryDialog({
                             <Badge
                               variant={violation.isResolved ? 'secondary' : 'destructive'}
                             >
-                              {violation.isResolved ? 'Resolved' : 'Open'}
+                              {violation.isResolved ? tc('resolved') : t('openViolation')}
                             </Badge>
                           </div>
                           {violation.description && (
@@ -316,7 +319,7 @@ export function VehicleHistoryDialog({
                           )}
                           {violation.location && (
                             <p className="text-xs text-muted-foreground">
-                              Location: {violation.location}
+                              {t('locationColonLabel')} {violation.location}
                             </p>
                           )}
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -324,7 +327,7 @@ export function VehicleHistoryDialog({
                               {format(new Date(violation.createdAt), 'MMM d, yyyy h:mm a')}
                             </span>
                             {violation.loggedBy && (
-                              <span>By: {violation.loggedBy}</span>
+                              <span>{t('byLabel')} {violation.loggedBy}</span>
                             )}
                           </div>
                         </div>
@@ -339,7 +342,7 @@ export function VehicleHistoryDialog({
                 <div className="space-y-2">
                   {data.patrolLogs.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
-                      No records found
+                      {t('noRecords')}
                     </p>
                   ) : (
                     data.patrolLogs.map((entry) => {
@@ -362,7 +365,7 @@ export function VehicleHistoryDialog({
                           </div>
                           {entry.location && (
                             <p className="text-sm text-slate-600">
-                              Location: {entry.location}
+                              {t('locationColonLabel')} {entry.location}
                             </p>
                           )}
                           {entry.notes && (
@@ -372,7 +375,7 @@ export function VehicleHistoryDialog({
                           )}
                           {entry.patroller && (
                             <p className="text-xs text-muted-foreground">
-                              Patroller: {entry.patroller}
+                              {t('patrollerLabel')} {entry.patroller}
                             </p>
                           )}
                         </div>

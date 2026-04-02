@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 interface LogEntryFormProps {
   open: boolean;
@@ -28,14 +29,17 @@ interface LogEntryFormProps {
   onSuccess: () => void;
 }
 
-const ENTRY_TYPES = [
-  { value: 'ENTRY', label: 'Entry' },
-  { value: 'EXIT', label: 'Exit' },
-  { value: 'SPOT_CHECK', label: 'Spot Check' },
-  { value: 'NOTE', label: 'Note' },
-] as const;
-
 export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProps) {
+  const t = useTranslations('patrol');
+  const tc = useTranslations('common');
+
+  const ENTRY_TYPES = [
+    { value: 'ENTRY', label: t('entryEntry') },
+    { value: 'EXIT', label: t('entryExit') },
+    { value: 'SPOT_CHECK', label: t('entrySpotCheck') },
+    { value: 'NOTE', label: t('entryNote') },
+  ] as const;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [licensePlate, setLicensePlate] = useState('');
   const [entryType, setEntryType] = useState<string>('ENTRY');
@@ -76,7 +80,7 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
     e.preventDefault();
 
     if (!licensePlate.trim()) {
-      toast.error('License plate is required');
+      toast.error(t('licensePlateRequired'));
       return;
     }
 
@@ -107,7 +111,7 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
         throw new Error(error.error || 'Failed to create log entry');
       }
 
-      toast.success('Log entry created successfully');
+      toast.success(t('logEntryCreated'));
       resetForm();
       onSuccess();
       onOpenChange(false);
@@ -124,13 +128,13 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Patrol Log Entry</DialogTitle>
+          <DialogTitle>{t('logEntryTitle')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* License Plate */}
           <div className="space-y-2">
-            <Label htmlFor="licensePlate">License Plate</Label>
+            <Label htmlFor="licensePlate">{t('licensePlateLabel')}</Label>
             <Input
               id="licensePlate"
               placeholder="e.g., ABC1234"
@@ -143,7 +147,7 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
 
           {/* Entry Type */}
           <div className="space-y-2">
-            <Label htmlFor="entryType">Entry Type</Label>
+            <Label htmlFor="entryType">{t('entryTypeLabel')}</Label>
             <Select value={entryType} onValueChange={setEntryType}>
               <SelectTrigger id="entryType">
                 <SelectValue placeholder="Select type" />
@@ -160,10 +164,10 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
 
           {/* Location */}
           <div className="space-y-2">
-            <Label htmlFor="location">Location (optional)</Label>
+            <Label htmlFor="location">{t('locationLabel')}</Label>
             <Input
               id="location"
-              placeholder="e.g., Lot A, Row 3, Spot 15"
+              placeholder={t('locationPlaceholder')}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
@@ -171,10 +175,10 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
+            <Label htmlFor="notes">{t('notesLabel')}</Label>
             <Textarea
               id="notes"
-              placeholder="Additional details..."
+              placeholder={t('notesPlaceholder')}
               className="resize-none"
               rows={3}
               value={notes}
@@ -184,7 +188,7 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
 
           {/* Photo */}
           <div className="space-y-2">
-            <Label>Photo (optional)</Label>
+            <Label>{t('photoLabel')}</Label>
             {photo ? (
               <div className="relative w-32 aspect-square rounded-md overflow-hidden border">
                 <img
@@ -203,7 +207,7 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
             ) : (
               <label className="w-32 aspect-square rounded-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 hover:bg-slate-50">
                 <Camera className="h-6 w-6 text-slate-400" />
-                <span className="text-xs text-slate-500 mt-1">Add Photo</span>
+                <span className="text-xs text-slate-500 mt-1">{t('addPhoto')}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -222,18 +226,18 @@ export function LogEntryForm({ open, onOpenChange, onSuccess }: LogEntryFormProp
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting || !licensePlate.trim()}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t('saving')}
                 </>
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Entry
+                  {t('addEntry')}
                 </>
               )}
             </Button>

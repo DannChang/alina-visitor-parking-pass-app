@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Car, Clock, Search, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -21,6 +28,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { CreatePassDialog } from '@/components/dashboard/create-pass-dialog';
+import { handleClickableRowKeyDown } from '@/components/dashboard/clickable-row';
+import { PassDetailsSheet } from '@/components/dashboard/pass-details-sheet';
+import { useTranslations } from 'next-intl';
 
 interface PassVehicle {
   id: string;
@@ -76,13 +86,17 @@ function PassesLoading() {
 }
 
 export default function PassesPage() {
+  const t = useTranslations('dashboard.passes');
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [passes, setPasses] = useState<Pass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const debouncedSearch = useDebouncedValue(searchValue, 400);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedPassId, setSelectedPassId] = useState<string | null>(null);
 
   const role = session?.user?.role;
   const canCreate = role ? PASSES_CREATE_ROLES.includes(role) : false;
@@ -94,12 +108,15 @@ export default function PassesPage() {
     }
   }, [sessionStatus, router]);
 
-  const fetchPasses = useCallback(async (search: string) => {
+  const fetchPasses = useCallback(async (search: string, status: string) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ limit: '100' });
       if (search) {
         params.set('search', search);
+      }
+      if (status !== 'all') {
+        params.set('status', status);
       }
       const res = await fetch(`/api/passes?${params.toString()}`);
       if (res.ok) {
@@ -116,12 +133,12 @@ export default function PassesPage() {
   // Fetch passes when search changes
   useFetchOnChange(() => {
     if (sessionStatus === 'authenticated') {
-      fetchPasses(debouncedSearch);
+      fetchPasses(debouncedSearch, statusFilter);
     }
-  }, [debouncedSearch, sessionStatus, fetchPasses]);
+  }, [debouncedSearch, sessionStatus, fetchPasses, statusFilter]);
 
   const handlePassCreated = () => {
-    fetchPasses(debouncedSearch);
+    fetchPasses(debouncedSearch, statusFilter);
   };
 
   if (sessionStatus === 'loading') {
@@ -137,23 +154,36 @@ export default function PassesPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Parking Passes</h1>
-          <p className="text-sm md:text-base text-muted-foreground">View and manage all parking passes</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by plate or name..."
+              placeholder={t('searchPlaceholder')}
               className="pl-9 h-11 md:h-10 text-base md:text-sm"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
             />
           </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-11 w-[180px] md:h-10">
+              <SelectValue placeholder={t('status')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('allStatuses')}</SelectItem>
+              <SelectItem value="ACTIVE">{t('active')}</SelectItem>
+              <SelectItem value="EXPIRING_SOON">{t('expiringSoon')}</SelectItem>
+              <SelectItem value="EXPIRED">{t('expired')}</SelectItem>
+              <SelectItem value="CANCELLED">{t('cancelled')}</SelectItem>
+              <SelectItem value="SUSPENDED">{t('suspended')}</SelectItem>
+            </SelectContent>
+          </Select>
           {canCreate && (
             <Button onClick={() => setDialogOpen(true)} size="sm" className="shrink-0">
               <Plus className="h-4 w-4 mr-1" />
-              New Pass
+              {t('newPass')}
             </Button>
           )}
         </div>
@@ -161,10 +191,8 @@ export default function PassesPage() {
 
       <Card>
         <CardHeader className="px-4 md:px-6">
-          <CardTitle className="text-lg md:text-xl">All Passes</CardTitle>
-          <CardDescription>
-            A list of all registered parking passes across all buildings
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">{t('allPasses')}</CardTitle>
+          <CardDescription>{t('allPassesDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {isLoading ? (
@@ -173,19 +201,19 @@ export default function PassesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Visitor</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expires</TableHead>
+                  <TableHead>{t('vehicle')}</TableHead>
+                  <TableHead>{t('unit')}</TableHead>
+                  <TableHead>{t('visitor')}</TableHead>
+                  <TableHead>{t('duration')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead>{t('expires')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {passes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No parking passes found
+                      {t('noPassesFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -193,7 +221,15 @@ export default function PassesPage() {
                     const endTime = new Date(pass.endTime);
                     const isExpired = endTime < new Date();
                     return (
-                      <TableRow key={pass.id}>
+                      <TableRow
+                        key={pass.id}
+                        tabIndex={0}
+                        className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                        onClick={() => setSelectedPassId(pass.id)}
+                        onKeyDown={(event) =>
+                          handleClickableRowKeyDown(event, () => setSelectedPassId(pass.id))
+                        }
+                      >
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -209,7 +245,7 @@ export default function PassesPage() {
                             </div>
                             {pass.vehicle.isBlacklisted && (
                               <Badge variant="destructive" className="text-xs">
-                                Blacklisted
+                                {t('blacklisted')}
                               </Badge>
                             )}
                           </div>
@@ -217,7 +253,7 @@ export default function PassesPage() {
                         <TableCell>{pass.unit.unitNumber}</TableCell>
                         <TableCell>
                           {pass.visitorName || (
-                            <span className="text-muted-foreground">Not provided</span>
+                            <span className="text-muted-foreground">{t('notProvided')}</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -252,6 +288,15 @@ export default function PassesPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={handlePassCreated}
+      />
+      <PassDetailsSheet
+        open={!!selectedPassId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedPassId(null);
+          }
+        }}
+        passId={selectedPassId}
       />
     </div>
   );

@@ -16,8 +16,9 @@ const createPassSchema = z.object({
   visitorName: z.string().min(1).max(100).optional(),
   visitorPhone: z.string().max(20).optional(),
   visitorEmail: z.string().email().optional(),
-  vehicleMake: z.string().max(50).optional(),
-  vehicleModel: z.string().max(50).optional(),
+  vehicleMake: z.string().trim().min(1).max(50),
+  vehicleModel: z.string().trim().min(1).max(50),
+  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
   vehicleColor: z.string().max(30).optional(),
   vehicleState: z.string().max(10).optional(),
   passType: z.nativeEnum(PassType).optional(),
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status') as PassStatus | null;
+  const status = searchParams.get('status');
   const buildingId = searchParams.get('buildingId');
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
@@ -50,17 +51,29 @@ export async function GET(request: NextRequest) {
     where.unitId = unitId;
   }
 
-  if (status) {
-    where.status = status;
+  if (status === 'EXPIRING_SOON') {
+    where.status = PassStatus.ACTIVE;
+    where.endTime = {
+      gt: new Date(),
+      lte: new Date(Date.now() + 60 * 60 * 1000),
+    };
+  } else if (status) {
+    where.status = status as PassStatus;
   }
 
   if (buildingId) {
-    where.unit = { buildingId };
+    where.unit = { is: { buildingId } };
   }
 
   if (search) {
     where.OR = [
-      { vehicle: { normalizedPlate: { contains: normalizeLicensePlate(search) } } },
+      {
+        vehicle: {
+          is: {
+            normalizedPlate: { contains: normalizeLicensePlate(search) },
+          },
+        },
+      },
       { visitorName: { contains: search, mode: 'insensitive' } },
       { confirmationCode: { contains: search } },
     ];
@@ -77,6 +90,7 @@ export async function GET(request: NextRequest) {
               licensePlate: true,
               make: true,
               model: true,
+              year: true,
               color: true,
               isBlacklisted: true,
               violationCount: true,
@@ -209,17 +223,19 @@ export async function POST(request: NextRequest) {
           normalizedPlate,
           make: data.vehicleMake ?? null,
           model: data.vehicleModel ?? null,
+          year: data.vehicleYear,
           color: data.vehicleColor ?? null,
           state: data.vehicleState ?? null,
         },
       });
-    } else if (data.vehicleMake || data.vehicleModel || data.vehicleColor) {
+    } else {
       // Update vehicle details if provided
       vehicle = await prisma.vehicle.update({
         where: { id: vehicle.id },
         data: {
-          make: data.vehicleMake ?? vehicle.make,
-          model: data.vehicleModel ?? vehicle.model,
+          make: data.vehicleMake,
+          model: data.vehicleModel,
+          year: data.vehicleYear,
           color: data.vehicleColor ?? vehicle.color,
           state: data.vehicleState ?? vehicle.state,
         },

@@ -34,6 +34,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import {
+  handleClickableRowKeyDown,
+  stopClickableRowPropagation,
+} from '@/components/dashboard/clickable-row';
+import { useTranslations } from 'next-intl';
 
 interface Building {
   id: string;
@@ -71,6 +76,8 @@ function UnitsLoading() {
 }
 
 export default function UnitsPage() {
+  const t = useTranslations('dashboard.unitsPage');
+  const tc = useTranslations('common');
   const [units, setUnits] = useState<Unit[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +111,7 @@ export default function UnitsPage() {
       setUnits(data.units || []);
       setBuildings(data.buildings || []);
     } catch (error) {
-      toast.error('Failed to load units');
+      toast.error(t('failedToLoad'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -167,16 +174,16 @@ export default function UnitsPage() {
         throw new Error(error.error || 'Failed to save unit');
       }
 
-      toast.success(editingUnit ? 'Unit updated successfully' : 'Unit created successfully');
+      toast.success(editingUnit ? t('unitUpdated') : t('unitCreated'));
       setIsDialogOpen(false);
       fetchUnits();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save unit');
+      toast.error(error instanceof Error ? error.message : t('failedToSave'));
     }
   };
 
   const handleDelete = async (unit: Unit) => {
-    if (!confirm(`Are you sure you want to delete unit ${unit.unitNumber}?`)) {
+    if (!confirm(t('deleteConfirm', { number: unit.unitNumber }))) {
       return;
     }
 
@@ -187,10 +194,10 @@ export default function UnitsPage() {
 
       if (!response.ok) throw new Error('Failed to delete unit');
 
-      toast.success('Unit deleted successfully');
+      toast.success(t('unitDeleted'));
       fetchUnits();
     } catch (error) {
-      toast.error('Failed to delete unit');
+      toast.error(t('failedToDelete'));
       console.error(error);
     }
   };
@@ -208,12 +215,12 @@ export default function UnitsPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Unit Management</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage building units and their configuration</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto min-h-[44px] md:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
-          Add Unit
+          {t('addUnit')}
         </Button>
       </div>
 
@@ -221,7 +228,7 @@ export default function UnitsPage() {
         <div className="relative w-full md:flex-1 md:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search units..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-11 md:h-10 text-base md:text-sm"
@@ -229,10 +236,10 @@ export default function UnitsPage() {
         </div>
         <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
           <SelectTrigger className="w-full md:w-[200px] h-11 md:h-10">
-            <SelectValue placeholder="Filter by building" />
+            <SelectValue placeholder={t('filterBuilding')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Buildings</SelectItem>
+            <SelectItem value="all">{t('allBuildings')}</SelectItem>
             {buildings.map((building) => (
               <SelectItem key={building.id} value={building.id}>
                 {building.name}
@@ -244,10 +251,8 @@ export default function UnitsPage() {
 
       <Card>
         <CardHeader className="px-4 md:px-6">
-          <CardTitle className="text-lg md:text-xl">Units</CardTitle>
-          <CardDescription>
-            {filteredUnits.length} unit{filteredUnits.length !== 1 ? 's' : ''} found
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">{t('unit')}</CardTitle>
+          <CardDescription>{t('unitsFound', { count: filteredUnits.length })}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {loading ? (
@@ -256,25 +261,33 @@ export default function UnitsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Building</TableHead>
-                  <TableHead>Floor/Section</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Passes</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('unit')}</TableHead>
+                  <TableHead>{t('building')}</TableHead>
+                  <TableHead>{t('floorSection')}</TableHead>
+                  <TableHead>{t('contact')}</TableHead>
+                  <TableHead>{t('passes')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead className="text-right">{t('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUnits.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground">
-                      No units found
+                      {t('noUnitsFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUnits.map((unit) => (
-                    <TableRow key={unit.id}>
+                    <TableRow
+                      key={unit.id}
+                      tabIndex={0}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      onClick={() => handleOpenDialog(unit)}
+                      onKeyDown={(event) =>
+                        handleClickableRowKeyDown(event, () => handleOpenDialog(unit))
+                      }
+                    >
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -290,7 +303,7 @@ export default function UnitsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {unit.floor && <span>Floor {unit.floor}</span>}
+                        {unit.floor && <span>{t('floor', { number: unit.floor })}</span>}
                         {unit.floor && unit.section && ' - '}
                         {unit.section && <span>{unit.section}</span>}
                         {!unit.floor && !unit.section && (
@@ -312,20 +325,20 @@ export default function UnitsPage() {
                             </div>
                           )}
                           {!unit.primaryEmail && !unit.primaryPhone && (
-                            <span className="text-muted-foreground text-xs">No contact</span>
+                            <span className="text-muted-foreground text-xs">{t('noContact')}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{unit._count.parkingPasses} passes</Badge>
+                        <Badge variant="outline">{t('passesCount', { count: unit._count.parkingPasses })}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <Badge variant={unit.isActive ? 'default' : 'secondary'}>
-                            {unit.isActive ? 'Active' : 'Inactive'}
+                            {unit.isActive ? t('active') : t('inactive')}
                           </Badge>
                           <Badge variant={unit.isOccupied ? 'outline' : 'secondary'}>
-                            {unit.isOccupied ? 'Occupied' : 'Vacant'}
+                            {unit.isOccupied ? t('occupied') : t('vacant')}
                           </Badge>
                         </div>
                       </TableCell>
@@ -334,14 +347,22 @@ export default function UnitsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleOpenDialog(unit)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleOpenDialog(unit);
+                            }}
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(unit)}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              handleDelete(unit);
+                            }}
+                            onKeyDown={stopClickableRowPropagation}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -359,23 +380,21 @@ export default function UnitsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingUnit ? 'Edit Unit' : 'Add New Unit'}</DialogTitle>
+            <DialogTitle>{editingUnit ? t('editUnit') : t('addNewUnit')}</DialogTitle>
             <DialogDescription>
-              {editingUnit
-                ? 'Make changes to the unit configuration.'
-                : 'Add a new unit to the building.'}
+              {editingUnit ? t('editUnitDesc') : t('addNewUnitDesc')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="buildingId">Building</Label>
+                <Label htmlFor="buildingId">{t('building')}</Label>
                 <Select
                   value={formData.buildingId}
                   onValueChange={(value) => setFormData({ ...formData, buildingId: value })}
                 >
                   <SelectTrigger className="h-11 md:h-10">
-                    <SelectValue placeholder="Select building" />
+                    <SelectValue placeholder={t('selectBuilding')} />
                   </SelectTrigger>
                   <SelectContent>
                     {buildings.map((building) => (
@@ -388,7 +407,7 @@ export default function UnitsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="unitNumber">Unit #</Label>
+                  <Label htmlFor="unitNumber">{t('unitNumber')}</Label>
                   <Input
                     id="unitNumber"
                     value={formData.unitNumber}
@@ -398,7 +417,7 @@ export default function UnitsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="floor">Floor</Label>
+                  <Label htmlFor="floor">{t('floorSection').split('/')[0]}</Label>
                   <Input
                     id="floor"
                     type="number"
@@ -409,17 +428,17 @@ export default function UnitsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="section">Section</Label>
+                <Label htmlFor="section">{t('section')}</Label>
                 <Input
                   id="section"
                   value={formData.section}
                   onChange={(e) => setFormData({ ...formData, section: e.target.value })}
                   className="h-11 md:h-10 text-base md:text-sm"
-                  placeholder="e.g., Wing A"
+                  placeholder={t('sectionPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="primaryEmail">Email</Label>
+                <Label htmlFor="primaryEmail">{t('contact')}</Label>
                 <Input
                   id="primaryEmail"
                   type="email"
@@ -429,7 +448,7 @@ export default function UnitsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="primaryPhone">Phone</Label>
+                <Label htmlFor="primaryPhone">{t('contact')}</Label>
                 <Input
                   id="primaryPhone"
                   type="tel"
@@ -439,7 +458,7 @@ export default function UnitsPage() {
                 />
               </div>
               <div className="flex items-center justify-between py-2">
-                <Label htmlFor="isOccupied">Occupied</Label>
+                <Label htmlFor="isOccupied">{t('occupied')}</Label>
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isOccupied"
@@ -447,12 +466,12 @@ export default function UnitsPage() {
                     onCheckedChange={(checked) => setFormData({ ...formData, isOccupied: checked })}
                   />
                   <Label htmlFor="isOccupied" className="font-normal">
-                    {formData.isOccupied ? 'Yes' : 'No'}
+                    {formData.isOccupied ? t('yes') : t('no')}
                   </Label>
                 </div>
               </div>
               <div className="flex items-center justify-between py-2">
-                <Label htmlFor="isActive">Active</Label>
+                <Label htmlFor="isActive">{t('active')}</Label>
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isActive"
@@ -460,17 +479,17 @@ export default function UnitsPage() {
                     onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                   />
                   <Label htmlFor="isActive" className="font-normal">
-                    {formData.isActive ? 'Yes' : 'No'}
+                    {formData.isActive ? t('yes') : t('no')}
                   </Label>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="min-h-[44px] md:min-h-0">
-                Cancel
+                {tc('cancel')}
               </Button>
               <Button type="submit" className="min-h-[44px] md:min-h-0">
-                {editingUnit ? 'Save Changes' : 'Create Unit'}
+                {editingUnit ? t('saveChanges') : t('createUnit')}
               </Button>
             </DialogFooter>
           </form>

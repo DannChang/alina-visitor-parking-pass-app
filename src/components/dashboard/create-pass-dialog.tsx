@@ -38,6 +38,9 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
   const [licensePlate, setLicensePlate] = useState('');
   const [visitorName, setVisitorName] = useState('');
   const [visitorPhone, setVisitorPhone] = useState('');
+  const [vehicleMake, setVehicleMake] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYear, setVehicleYear] = useState('');
   const [duration, setDuration] = useState(2);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +90,9 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
     setLicensePlate('');
     setVisitorName('');
     setVisitorPhone('');
+    setVehicleMake('');
+    setVehicleModel('');
+    setVehicleYear('');
     setDuration(2);
     setError(null);
     // Only reset building/unit for staff — residents keep their auto-filled values
@@ -108,8 +114,14 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!licensePlate.trim() || !visitorName.trim()) {
-      setError('License plate and visitor name are required');
+    if (
+      !licensePlate.trim() ||
+      !visitorName.trim() ||
+      !vehicleMake.trim() ||
+      !vehicleModel.trim() ||
+      !vehicleYear.trim()
+    ) {
+      setError('License plate, visitor name, make, model, and year are required');
       return;
     }
 
@@ -133,6 +145,9 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
         duration,
         buildingSlug,
         unitNumber: unitNumber.trim(),
+        vehicleMake: vehicleMake.trim(),
+        vehicleModel: vehicleModel.trim(),
+        vehicleYear: Number(vehicleYear),
       };
       if (phone) {
         body.visitorPhone = phone;
@@ -257,6 +272,37 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
               type="tel"
               className="h-11"
             />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Make *</Label>
+              <Input
+                value={vehicleMake}
+                onChange={(e) => setVehicleMake(e.target.value)}
+                placeholder="Toyota"
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Model *</Label>
+              <Input
+                value={vehicleModel}
+                onChange={(e) => setVehicleModel(e.target.value)}
+                placeholder="Camry"
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Year *</Label>
+              <Input
+                value={vehicleYear}
+                onChange={(e) => setVehicleYear(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="2024"
+                inputMode="numeric"
+                className="h-11"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth, signOut } from '@/lib/auth';
 import { Car, LogOut } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -14,13 +15,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getNavItemsForRole, NAV_ICONS } from '@/lib/navigation';
 import { MobileNav } from '@/components/mobile-nav';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const [session, t, tNav] = await Promise.all([auth(), getTranslations('common'), getTranslations('dashboard.nav')]);
 
   if (!session?.user) {
     redirect('/login');
@@ -34,8 +36,11 @@ export default async function DashboardLayout({
         .toUpperCase()
     : session.user.email?.charAt(0).toUpperCase() || 'U';
 
-  // Get navigation items based on user's role
-  const navItems = getNavItemsForRole(session.user.role);
+  // Get navigation items based on user's role (with translated labels)
+  const navItems = getNavItemsForRole(session.user.role).map((item) => ({
+    ...item,
+    label: tNav(item.labelKey),
+  }));
 
   // Server action for sign out
   async function handleSignOut() {
@@ -61,8 +66,7 @@ export default async function DashboardLayout({
           <Car className="mr-2 h-6 w-6 text-primary" />
           <span className="font-semibold">Alina Parking</span>
         </div>
-        {/* Spacer for centering */}
-        <div className="w-11" />
+        <LocaleSwitcher />
       </header>
 
       {/* Desktop Sidebar - hidden on mobile */}
@@ -91,8 +95,11 @@ export default async function DashboardLayout({
             })}
           </nav>
 
-          {/* User menu */}
-          <div className="border-t p-4">
+          {/* Language & User menu */}
+          <div className="border-t p-4 space-y-2">
+            <div className="flex justify-end">
+              <LocaleSwitcher />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start px-2">
@@ -121,7 +128,7 @@ export default async function DashboardLayout({
                   <form action={handleSignOut}>
                     <button type="submit" className="flex w-full items-center">
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
+                      {t('signOut')}
                     </button>
                   </form>
                 </DropdownMenuItem>

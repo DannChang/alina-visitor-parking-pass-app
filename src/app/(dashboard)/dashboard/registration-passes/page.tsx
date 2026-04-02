@@ -41,6 +41,11 @@ import {
 import {
   RevokeResidentInviteDialog,
 } from '@/components/dashboard/revoke-resident-invite-dialog';
+import {
+  handleClickableRowKeyDown,
+  stopClickableRowPropagation,
+} from '@/components/dashboard/clickable-row';
+import { ResidentInviteDetailsSheet } from '@/components/dashboard/resident-invite-details-sheet';
 import type {
   ResidentInviteBuildingOption,
   ResidentInviteMutationResult,
@@ -93,6 +98,7 @@ export default function RegistrationPassesPage() {
   const [inviteToRevoke, setInviteToRevoke] = useState<ResidentInviteSummary | null>(null);
   const [reissuingInviteId, setReissuingInviteId] = useState<string | null>(null);
   const [latestInvite, setLatestInvite] = useState<ResidentInviteMutationResult | null>(null);
+  const [selectedInvite, setSelectedInvite] = useState<ResidentInviteSummary | null>(null);
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
@@ -356,7 +362,15 @@ export default function RegistrationPassesPage() {
                   </TableRow>
                 ) : (
                   invites.map((invite) => (
-                    <TableRow key={invite.id}>
+                    <TableRow
+                      key={invite.id}
+                      tabIndex={0}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      onClick={() => setSelectedInvite(invite)}
+                      onKeyDown={(event) =>
+                        handleClickableRowKeyDown(event, () => setSelectedInvite(invite))
+                      }
+                    >
                       <TableCell>
                         <div className="space-y-1">
                           <p className="font-medium">{invite.recipientName}</p>
@@ -422,8 +436,12 @@ export default function RegistrationPassesPage() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => handleReissue(invite)}
+                              onClick={(event) => {
+                                stopClickableRowPropagation(event);
+                                handleReissue(invite);
+                              }}
                               disabled={reissuingInviteId === invite.id}
+                              onKeyDown={stopClickableRowPropagation}
                             >
                               {reissuingInviteId === invite.id ? (
                                 <>
@@ -443,7 +461,11 @@ export default function RegistrationPassesPage() {
                               type="button"
                               variant="destructive"
                               size="sm"
-                              onClick={() => setInviteToRevoke(invite)}
+                              onClick={(event) => {
+                                stopClickableRowPropagation(event);
+                                setInviteToRevoke(invite);
+                              }}
+                              onKeyDown={stopClickableRowPropagation}
                             >
                               Revoke
                             </Button>
@@ -476,6 +498,15 @@ export default function RegistrationPassesPage() {
         }}
         invite={inviteToRevoke}
         onRevoked={handleRevoked}
+      />
+      <ResidentInviteDetailsSheet
+        invite={selectedInvite}
+        open={!!selectedInvite}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedInvite(null);
+          }
+        }}
       />
     </div>
   );
