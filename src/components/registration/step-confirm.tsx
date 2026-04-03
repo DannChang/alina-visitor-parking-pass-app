@@ -1,7 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, ChevronLeft, Loader2, Car, Building, Clock, Mail, Phone } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  Loader2,
+  Car,
+  Building,
+  Clock,
+  Mail,
+  Phone,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -82,68 +91,76 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
           </Alert>
         )}
 
-        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div className="flex items-center gap-3">
-            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Building className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Building</p>
               <p className="font-medium">{data.buildingName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Building className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Unit</p>
               <p className="font-medium">{data.unitNumber}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Car className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Car className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">License Plate</p>
-              <p className="font-medium font-mono">{data.licensePlate}</p>
+              <p className="font-mono font-medium">{data.licensePlate}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Phone</p>
               <p className="font-medium">{data.visitorPhone}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Email</p>
               <p className="font-medium">{data.visitorEmail}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Duration</p>
-              <p className="font-medium">{data.duration} hour{data.duration !== 1 ? 's' : ''}</p>
+              <p className="font-medium">
+                {data.duration} hour{data.duration !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          By registering, you agree to follow all parking rules. Violations may result in citation or towing.
+        <p className="text-center text-xs text-muted-foreground">
+          By registering, you agree to follow all parking rules. Violations may result in citation
+          or towing.
         </p>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onBack} className="min-h-[48px]" disabled={isSubmitting}>
-            <ChevronLeft className="h-4 w-4 mr-1" />
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="min-h-[48px]"
+            disabled={isSubmitting}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
             Back
           </Button>
           <Button
             onClick={handleStartParking}
             disabled={isSubmitting}
-            className="flex-1 min-h-[48px] text-base"
+            className="min-h-[48px] flex-1 text-base"
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Registering...
               </>
             ) : (

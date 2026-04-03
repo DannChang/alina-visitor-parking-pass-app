@@ -84,6 +84,7 @@ export async function middleware(request: NextRequest) {
     '/forgot-password',
     '/register',
     '/reset-password',
+    '/privacy-policy',
     '/resident/login',
     '/resident/forgot-password',
     '/api/health',

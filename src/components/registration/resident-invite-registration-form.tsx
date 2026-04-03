@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { ResidentInviteStatus } from '@/components/dashboard/resident-invite-shared';
+import { PrivacyConsentNotice } from './privacy-consent-notice';
+import { PRIVACY_POLICY_VERSION } from '@/lib/privacy-policy';
 
 interface ResidentInvitePreview {
   id: string;
@@ -94,6 +96,7 @@ export function ResidentInviteRegistrationForm({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
   const blockedContent = useMemo(() => getBlockedMessage(invite), [invite]);
 
@@ -132,10 +135,7 @@ export function ResidentInviteRegistrationForm({
     setter((currentValues) => [...currentValues, '']);
   }
 
-  function removeListValue(
-    setter: Dispatch<SetStateAction<string[]>>,
-    index: number
-  ) {
+  function removeListValue(setter: Dispatch<SetStateAction<string[]>>, index: number) {
     setter((currentValues) =>
       currentValues.length === 1
         ? currentValues
@@ -182,6 +182,11 @@ export function ResidentInviteRegistrationForm({
       return;
     }
 
+    if (!privacyAgreed) {
+      setError('You must review and accept the privacy policy before activating your account.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -195,6 +200,8 @@ export function ResidentInviteRegistrationForm({
           strataLotNumber: cleanedStrataLotNumber,
           assignedStallNumbers: cleanedAssignedStallNumbers,
           personalLicensePlates: cleanedPersonalLicensePlates,
+          privacyConsent: true,
+          privacyPolicyVersion: PRIVACY_POLICY_VERSION,
         }),
       });
       const data = await response.json();
@@ -223,9 +230,7 @@ export function ResidentInviteRegistrationForm({
       router.refresh();
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Failed to complete registration'
+        submitError instanceof Error ? submitError.message : 'Failed to complete registration'
       );
     } finally {
       setIsSubmitting(false);
@@ -314,11 +319,7 @@ export function ResidentInviteRegistrationForm({
                   <Input
                     value={stallNumber}
                     onChange={(event) =>
-                      updateListValue(
-                        setAssignedStallNumbers,
-                        index,
-                        event.target.value
-                      )
+                      updateListValue(setAssignedStallNumbers, index, event.target.value)
                     }
                     className="h-11 md:h-10"
                     placeholder={`Assigned stall #${index + 1}`}
@@ -372,10 +373,7 @@ export function ResidentInviteRegistrationForm({
                 }}
               />
               <div className="space-y-1">
-                <Label
-                  htmlFor="resident-registration-no-vehicle"
-                  className="cursor-pointer"
-                >
+                <Label htmlFor="resident-registration-no-vehicle" className="cursor-pointer">
                   I don&apos;t have a vehicle
                 </Label>
                 <p className="text-sm text-muted-foreground">
@@ -385,10 +383,7 @@ export function ResidentInviteRegistrationForm({
               </div>
             </div>
 
-            <div
-              className="space-y-2"
-              aria-hidden={!hasVehicle}
-            >
+            <div className="space-y-2" aria-hidden={!hasVehicle}>
               {personalLicensePlates.map((licensePlate, index) => (
                 <div key={`plate-${index}`} className="flex items-center gap-2">
                   <Input
@@ -435,9 +430,7 @@ export function ResidentInviteRegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="resident-registration-password-confirm">
-              Confirm Password
-            </Label>
+            <Label htmlFor="resident-registration-password-confirm">Confirm Password</Label>
             <Input
               id="resident-registration-password-confirm"
               type="password"
@@ -449,6 +442,13 @@ export function ResidentInviteRegistrationForm({
               required
             />
           </div>
+
+          <PrivacyConsentNotice
+            agreed={privacyAgreed}
+            checkboxId="resident-registration-privacy-consent"
+            onAgreedChange={setPrivacyAgreed}
+            context="resident-account"
+          />
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? (

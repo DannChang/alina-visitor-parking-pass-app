@@ -1,48 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import {
-  consumeResidentInvite,
-  ResidentInviteError,
-} from '@/services/resident-invite-service';
+import { consumeResidentInvite, ResidentInviteError } from '@/services/resident-invite-service';
+import { PRIVACY_POLICY_VERSION } from '@/lib/privacy-policy';
 
-const consumeSchema = z.object({
-  token: z.string().min(1),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  hasVehicle: z.boolean(),
-  strataLotNumber: z.string().trim().min(1, 'Strata lot number is required'),
-  assignedStallNumbers: z
-    .array(z.string().trim().min(1, 'Assigned stall number is required'))
-    .min(1, 'At least one assigned stall number is required'),
-  personalLicensePlates: z.array(
-    z.string().trim().min(2, 'License plate must be at least 2 characters')
-  ),
-}).superRefine((data, ctx) => {
-  if (data.hasVehicle && data.personalLicensePlates.length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['personalLicensePlates'],
-      message: 'At least one personal license plate is required',
-    });
-  }
+const consumeSchema = z
+  .object({
+    token: z.string().min(1),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    hasVehicle: z.boolean(),
+    strataLotNumber: z.string().trim().min(1, 'Strata lot number is required'),
+    assignedStallNumbers: z
+      .array(z.string().trim().min(1, 'Assigned stall number is required'))
+      .min(1, 'At least one assigned stall number is required'),
+    personalLicensePlates: z.array(
+      z.string().trim().min(2, 'License plate must be at least 2 characters')
+    ),
+    privacyConsent: z.literal(true, {
+      errorMap: () => ({
+        message: 'You must accept the privacy policy before activating your account',
+      }),
+    }),
+    privacyPolicyVersion: z.string().min(1),
+  })
+  .superRefine((data, ctx) => {
+    if (data.hasVehicle && data.personalLicensePlates.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['personalLicensePlates'],
+        message: 'At least one personal license plate is required',
+      });
+    }
 
-  if (!data.hasVehicle && data.personalLicensePlates.length > 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['personalLicensePlates'],
-      message: 'Personal license plates must be empty when no vehicle is selected',
-    });
-  }
-});
+    if (!data.hasVehicle && data.personalLicensePlates.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['personalLicensePlates'],
+        message: 'Personal license plates must be empty when no vehicle is selected',
+      });
+    }
+  });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = consumeSchema.parse(body);
 
+    if (data.privacyPolicyVersion !== PRIVACY_POLICY_VERSION) {
+      return NextResponse.json(
+        { error: 'Privacy policy acknowledgement is out of date. Please review and try again.' },
+        { status: 400 }
+      );
+    }
+
     const ipAddress =
-      request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      null;
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null;
     const userAgent = request.headers.get('user-agent');
 
     const result = await consumeResidentInvite({
@@ -66,13 +77,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (error instanceof ResidentInviteError) {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status }
+      );
     }
 
     console.error('Error consuming resident invite:', error);
-    return NextResponse.json(
-      { error: 'Failed to complete registration' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to complete registration' }, { status: 500 });
   }
 }
