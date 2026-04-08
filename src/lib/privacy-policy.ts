@@ -1,0 +1,2 @@
+export const PRIVACY_POLICY_VERSION = '2026-04-02';
+export const PRIVACY_POLICY_LAST_UPDATED = 'April 2, 2026';

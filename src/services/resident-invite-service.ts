@@ -3,19 +3,17 @@ import { createHash, randomBytes } from 'crypto';
 import { Prisma, UserRole } from '@prisma/client';
 import { getBaseUrl } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
+import { normalizeLicensePlate, validateLicensePlate } from '@/lib/utils/license-plate';
 import {
-  normalizeLicensePlate,
-  validateLicensePlate,
-} from '@/lib/utils/license-plate';
+  getAssignedStallValidationError,
+  getPasswordValidationError,
+  getStrataLotValidationError,
+} from '@/lib/validation';
 import { sendResidentInviteEmail } from '@/services/notification-service';
 
 type ScopedClient = Prisma.TransactionClient | typeof prisma;
 
-export type ResidentInviteStatus =
-  | 'PENDING'
-  | 'EXPIRED'
-  | 'REVOKED'
-  | 'CONSUMED';
+export type ResidentInviteStatus = 'PENDING' | 'EXPIRED' | 'REVOKED' | 'CONSUMED';
 
 export interface ResidentInviteSummary {
   id: string;
@@ -325,10 +323,7 @@ async function assertInviteEligibility(
           consumedAt: null,
           revokedAt: null,
           expiresAt: { gt: now },
-          OR: [
-            { unitId },
-            { recipientEmail },
-          ],
+          OR: [{ unitId }, { recipientEmail }],
         },
         select: {
           id: true,
@@ -999,9 +994,7 @@ export async function getResidentInvitePreviewByToken(
   };
 }
 
-export async function consumeResidentInvite(
-  input: ConsumeResidentInviteInput
-): Promise<{
+export async function consumeResidentInvite(input: ConsumeResidentInviteInput): Promise<{
   buildingSlug: string;
   unitNumber: string;
 }> {
@@ -1013,12 +1006,9 @@ export async function consumeResidentInvite(
     ? input.personalLicensePlates.map((licensePlate) => licensePlate.trim()).filter(Boolean)
     : [];
 
-  if (!strataLotNumber) {
-    throw new ResidentInviteError(
-      'Strata lot number is required',
-      400,
-      'STRATA_LOT_REQUIRED'
-    );
+  const strataLotError = getStrataLotValidationError(strataLotNumber);
+  if (strataLotError) {
+    throw new ResidentInviteError(strataLotError.replace(/\.$/, ''), 400, 'STRATA_LOT_REQUIRED');
   }
 
   if (assignedStallNumbers.length === 0) {
@@ -1026,6 +1016,19 @@ export async function consumeResidentInvite(
       'At least one assigned stall number is required',
       400,
       'STALL_REQUIRED'
+    );
+  }
+
+  const invalidAssignedStallNumber = assignedStallNumbers.find(
+    (stallNumber) => getAssignedStallValidationError(stallNumber) !== null
+  );
+
+  if (invalidAssignedStallNumber) {
+    throw new ResidentInviteError(
+      getAssignedStallValidationError(invalidAssignedStallNumber)?.replace(/\.$/, '') ??
+        'Assigned stall number is invalid',
+      400,
+      'STALL_INVALID'
     );
   }
 
@@ -1037,12 +1040,20 @@ export async function consumeResidentInvite(
     );
   }
 
-  if (!input.hasVehicle && input.personalLicensePlates.some((licensePlate) => licensePlate.trim())) {
+  if (
+    !input.hasVehicle &&
+    input.personalLicensePlates.some((licensePlate) => licensePlate.trim())
+  ) {
     throw new ResidentInviteError(
       'Personal license plates must be empty when no vehicle is selected',
       400,
       'LICENSE_PLATE_NOT_ALLOWED'
     );
+  }
+
+  const passwordError = getPasswordValidationError(input.password);
+  if (passwordError) {
+    throw new ResidentInviteError(passwordError.replace(/\.$/, ''), 400, 'PASSWORD_INVALID');
   }
 
   const uniqueAssignedStallNumbers = Array.from(new Set(assignedStallNumbers));
@@ -1103,11 +1114,7 @@ export async function consumeResidentInvite(
   });
 
   if (!invite) {
-    throw new ResidentInviteError(
-      'This registration link is invalid',
-      404,
-      'INVITE_NOT_FOUND'
-    );
+    throw new ResidentInviteError('This registration link is invalid', 404, 'INVITE_NOT_FOUND');
   }
 
   const inviteStatus = getResidentInviteStatus(invite);
@@ -1119,18 +1126,10 @@ export async function consumeResidentInvite(
     );
   }
   if (inviteStatus === 'REVOKED') {
-    throw new ResidentInviteError(
-      'This registration link has been revoked',
-      400,
-      'INVITE_REVOKED'
-    );
+    throw new ResidentInviteError('This registration link has been revoked', 400, 'INVITE_REVOKED');
   }
   if (inviteStatus === 'EXPIRED') {
-    throw new ResidentInviteError(
-      'This registration link has expired',
-      400,
-      'INVITE_EXPIRED'
-    );
+    throw new ResidentInviteError('This registration link has expired', 400, 'INVITE_EXPIRED');
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
@@ -1153,11 +1152,7 @@ export async function consumeResidentInvite(
       });
 
       if (!currentInvite) {
-        throw new ResidentInviteError(
-          'This registration link is invalid',
-          404,
-          'INVITE_NOT_FOUND'
-        );
+        throw new ResidentInviteError('This registration link is invalid', 404, 'INVITE_NOT_FOUND');
       }
 
       const currentStatus = getResidentInviteStatus(currentInvite);
@@ -1191,9 +1186,7 @@ export async function consumeResidentInvite(
         },
       });
 
-      const conflictingVehicle = existingVehicles.find(
-        (vehicle) => vehicle.residentId !== null
-      );
+      const conflictingVehicle = existingVehicles.find((vehicle) => vehicle.residentId !== null);
 
       if (conflictingVehicle) {
         throw new ResidentInviteError(
@@ -1293,10 +1286,7 @@ export async function consumeResidentInvite(
       throw error;
     }
 
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new ResidentInviteError(
         'This registration link has already been processed',
         409,

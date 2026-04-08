@@ -5,10 +5,16 @@ import { Send } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 
-export default async function HomePage() {
+type HomePageProps = {
+  searchParams?: Promise<{ showAuthChooser?: string }>;
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const shouldShowAuthChooser = params?.showAuthChooser === '1';
   const session = await auth();
 
-  if (session?.user) {
+  if (session?.user && !shouldShowAuthChooser) {
     if (session.user.role === 'RESIDENT') {
       redirect('/resident/passes');
     }
@@ -37,7 +43,7 @@ export default async function HomePage() {
         {/* Main Actions */}
         <div className="space-y-3">
           <Link
-            href="/resident/login"
+            href="/resident/login?showResidentLogin=1"
             className="flex items-center justify-center gap-3 w-full rounded-xl bg-primary px-6 py-5 text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors min-h-[64px] touch-manipulation"
           >
             <Send className="h-6 w-6" />

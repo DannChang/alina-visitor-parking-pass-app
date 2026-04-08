@@ -3,27 +3,30 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { strongPasswordSchema } from '@/lib/validation';
 
-const updateSettingsSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().max(20).optional(),
-  accessCode: z.string().min(4).max(10).optional(),
-  password: z.string().min(8).max(100).optional(),
-  currentPassword: z.string().min(1).optional(),
-}).refine(
-  (data) => {
-    // If password is provided, currentPassword must also be provided
-    if (data.password && !data.currentPassword) {
-      return false;
+const updateSettingsSchema = z
+  .object({
+    name: z.string().min(1).max(100).optional(),
+    email: z.string().email().optional(),
+    phone: z.string().max(20).optional(),
+    accessCode: z.string().min(4).max(10).optional(),
+    password: strongPasswordSchema.optional(),
+    currentPassword: z.string().min(1).optional(),
+  })
+  .refine(
+    (data) => {
+      // If password is provided, currentPassword must also be provided
+      if (data.password && !data.currentPassword) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'Current password is required when setting a new password',
+      path: ['currentPassword'],
     }
-    return true;
-  },
-  {
-    message: 'Current password is required when setting a new password',
-    path: ['currentPassword'],
-  }
-);
+  );
 
 // GET /api/resident/settings - Get resident info
 export async function GET() {

@@ -51,14 +51,7 @@ interface RegistrationWizardProps {
   initialBuildingSlug?: string;
 }
 
-const STEPS = [
-  'building',
-  'suite',
-  'vehicle',
-  'contact',
-  'access-code',
-  'confirm',
-] as const;
+const STEPS = ['building', 'suite', 'vehicle', 'contact', 'access-code', 'confirm'] as const;
 type Step = (typeof STEPS)[number];
 
 export function RegistrationWizard({
@@ -68,9 +61,7 @@ export function RegistrationWizard({
 }: RegistrationWizardProps) {
   const skipBuildingSearch = !!(initialBuildingId && initialBuildingName && initialBuildingSlug);
 
-  const [currentStep, setCurrentStep] = useState<Step>(
-    skipBuildingSearch ? 'suite' : 'building'
-  );
+  const [currentStep, setCurrentStep] = useState<Step>(skipBuildingSearch ? 'suite' : 'building');
   const [passResult, setPassResult] = useState<PassResult | null>(null);
   const [wizardData, setWizardData] = useState<Partial<WizardData>>({
     buildingId: initialBuildingId || '',
@@ -80,12 +71,9 @@ export function RegistrationWizard({
     accessCodeVerified: false,
   });
 
-  const updateData = useCallback(
-    (updates: Partial<WizardData>) => {
-      setWizardData((prev) => ({ ...prev, ...updates }));
-    },
-    []
-  );
+  const updateData = useCallback((updates: Partial<WizardData>) => {
+    setWizardData((prev) => ({ ...prev, ...updates }));
+  }, []);
 
   const goToStep = useCallback((step: Step) => {
     setCurrentStep(step);
@@ -134,9 +122,9 @@ export function RegistrationWizard({
   const currentVisibleIndex = visibleSteps.indexOf(currentStep);
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="mx-auto w-full max-w-md">
       {/* Step Indicator */}
-      <div className="flex items-center justify-center gap-2 mb-6">
+      <div className="mb-6 flex items-center justify-center gap-2">
         {visibleSteps.map((_, i) => (
           <div
             key={i}

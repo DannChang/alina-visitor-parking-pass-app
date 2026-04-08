@@ -40,7 +40,11 @@ const registerSchema = z.object({
   visitorEmail: z.string().trim().email('Invalid email'),
   vehicleMake: z.string().trim().min(1, 'Make is required').max(50),
   vehicleModel: z.string().trim().min(1, 'Model is required').max(50),
-  vehicleYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
+  vehicleYear: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear() + 1),
   vehicleColor: z.string().max(30).optional(),
 });
 
@@ -86,11 +90,7 @@ const DURATION_OPTIONS = [
   { value: 24, label: '24 hours' },
 ];
 
-export default function RegisterPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default function RegisterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
   const [units, setUnits] = useState<Unit[]>([]);
@@ -193,12 +193,11 @@ export default function RegisterPage({
             </div>
             <CardTitle>Building Not Found</CardTitle>
             <CardDescription>
-              The parking registration link you used is invalid or the building is no longer
-              active.
+              The parking registration link you used is invalid or the building is no longer active.
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button onClick={() => router.push('/')} className="w-full min-h-[48px]">
+            <Button onClick={() => router.push('/')} className="min-h-[48px] w-full">
               Go Home
             </Button>
           </CardFooter>
@@ -268,7 +267,7 @@ export default function RegisterPage({
                 setError(null);
               }}
               variant="outline"
-              className="w-full min-h-[48px]"
+              className="min-h-[48px] w-full"
             >
               Register Another Vehicle
             </Button>
@@ -305,7 +304,7 @@ export default function RegisterPage({
               <Input
                 id="licensePlate"
                 placeholder="ABC1234"
-                className="uppercase h-11 md:h-10 text-base md:text-sm"
+                className="h-11 text-base uppercase md:h-10 md:text-sm"
                 disabled={isSubmitting}
                 {...register('licensePlate', {
                   setValueAs: (v) => v?.toUpperCase().replace(/[^A-Z0-9]/g, ''),
@@ -350,7 +349,7 @@ export default function RegisterPage({
                     size="sm"
                     onClick={() => setValue('duration', option.value)}
                     disabled={isSubmitting}
-                    className="text-xs min-h-[44px] touch-manipulation"
+                    className="min-h-[44px] touch-manipulation text-xs"
                   >
                     {option.label}
                   </Button>
@@ -366,7 +365,7 @@ export default function RegisterPage({
                   type="tel"
                   placeholder="555-123-4567"
                   disabled={isSubmitting}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   {...register('visitorPhone')}
                 />
                 {errors.visitorPhone && (
@@ -380,7 +379,7 @@ export default function RegisterPage({
                   type="email"
                   placeholder="you@email.com"
                   disabled={isSubmitting}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   {...register('visitorEmail')}
                 />
                 {errors.visitorEmail && (
@@ -396,7 +395,7 @@ export default function RegisterPage({
                   id="vehicleMake"
                   placeholder="Toyota"
                   disabled={isSubmitting}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   {...register('vehicleMake')}
                 />
                 {errors.vehicleMake && (
@@ -409,7 +408,7 @@ export default function RegisterPage({
                   id="vehicleModel"
                   placeholder="Camry"
                   disabled={isSubmitting}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   {...register('vehicleModel')}
                 />
                 {errors.vehicleModel && (
@@ -423,7 +422,7 @@ export default function RegisterPage({
                   placeholder="2024"
                   disabled={isSubmitting}
                   inputMode="numeric"
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   {...register('vehicleYear', {
                     setValueAs: (value) => (value ? Number(value) : undefined),
                   })}
@@ -438,7 +437,7 @@ export default function RegisterPage({
                   id="vehicleColor"
                   placeholder="Blue"
                   disabled={isSubmitting}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   {...register('vehicleColor')}
                 />
               </div>
@@ -446,7 +445,7 @@ export default function RegisterPage({
           </CardContent>
 
           <CardFooter className="flex-col space-y-4">
-            <Button type="submit" className="w-full min-h-[48px] text-base" disabled={isSubmitting}>
+            <Button type="submit" className="min-h-[48px] w-full text-base" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -461,8 +460,8 @@ export default function RegisterPage({
             </Button>
 
             <p className="text-center text-xs text-muted-foreground">
-              By registering, you agree to follow all parking rules and regulations.
-              Violations may result in citation or towing.
+              By registering, you agree to follow all parking rules and regulations. Violations may
+              result in citation or towing.
             </p>
           </CardFooter>
         </form>

@@ -157,11 +157,14 @@ describe('Resident invite API routes', () => {
       emailSent: false,
     });
 
-    const response = await reissuePOST(new Request('http://localhost:3000/api/resident-invites/invite-1/reissue', {
-      method: 'POST',
-    }), {
-      params: Promise.resolve({ id: 'invite-1' }),
-    });
+    const response = await reissuePOST(
+      new Request('http://localhost:3000/api/resident-invites/invite-1/reissue', {
+        method: 'POST',
+      }),
+      {
+        params: Promise.resolve({ id: 'invite-1' }),
+      }
+    );
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -185,9 +188,11 @@ describe('Resident invite API routes', () => {
         token: 'token-1',
         password: 'Resident@123!',
         hasVehicle: true,
-        strataLotNumber: 'SL-101',
+        strataLotNumber: '123',
         assignedStallNumbers: ['12'],
         personalLicensePlates: ['ABC123'],
+        privacyConsent: true,
+        privacyPolicyVersion: '2026-04-02',
       },
       {
         'user-agent': 'vitest',
@@ -203,7 +208,7 @@ describe('Resident invite API routes', () => {
       token: 'token-1',
       password: 'Resident@123!',
       hasVehicle: true,
-      strataLotNumber: 'SL-101',
+      strataLotNumber: '123',
       assignedStallNumbers: ['12'],
       personalLicensePlates: ['ABC123'],
       ipAddress: null,
@@ -217,17 +222,16 @@ describe('Resident invite API routes', () => {
       unitNumber: '101',
     });
 
-    const request = createMockPostRequest(
-      'http://localhost:3000/api/resident-invites/consume',
-      {
-        token: 'token-2',
-        password: 'Resident@123!',
-        hasVehicle: false,
-        strataLotNumber: 'SL-101',
-        assignedStallNumbers: ['12'],
-        personalLicensePlates: [],
-      }
-    );
+    const request = createMockPostRequest('http://localhost:3000/api/resident-invites/consume', {
+      token: 'token-2',
+      password: 'Resident@123!',
+      hasVehicle: false,
+      strataLotNumber: '123',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: [],
+      privacyConsent: true,
+      privacyPolicyVersion: '2026-04-02',
+    });
 
     const response = await consumePOST(request);
 
@@ -236,7 +240,7 @@ describe('Resident invite API routes', () => {
       token: 'token-2',
       password: 'Resident@123!',
       hasVehicle: false,
-      strataLotNumber: 'SL-101',
+      strataLotNumber: '123',
       assignedStallNumbers: ['12'],
       personalLicensePlates: [],
       ipAddress: null,
@@ -244,18 +248,34 @@ describe('Resident invite API routes', () => {
     });
   });
 
+  it('rejects resident activation when privacy consent is missing', async () => {
+    const request = createMockPostRequest('http://localhost:3000/api/resident-invites/consume', {
+      token: 'token-4',
+      password: 'Resident@123!',
+      hasVehicle: false,
+      strataLotNumber: '123',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: [],
+    });
+
+    const response = await consumePOST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe('You must accept the privacy policy before activating your account');
+  });
+
   it('rejects a no-vehicle payload that still includes license plates', async () => {
-    const request = createMockPostRequest(
-      'http://localhost:3000/api/resident-invites/consume',
-      {
-        token: 'token-3',
-        password: 'Resident@123!',
-        hasVehicle: false,
-        strataLotNumber: 'SL-101',
-        assignedStallNumbers: ['12'],
-        personalLicensePlates: ['ABC123'],
-      }
-    );
+    const request = createMockPostRequest('http://localhost:3000/api/resident-invites/consume', {
+      token: 'token-3',
+      password: 'Resident@123!',
+      hasVehicle: false,
+      strataLotNumber: '123',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: ['ABC123'],
+      privacyConsent: true,
+      privacyPolicyVersion: '2026-04-02',
+    });
 
     const response = await consumePOST(request);
     const data = await response.json();
@@ -270,9 +290,7 @@ describe('Resident invite API routes', () => {
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
     });
 
-    const response = await GET(
-      createMockGetRequest('http://localhost:3000/api/resident-invites')
-    );
+    const response = await GET(createMockGetRequest('http://localhost:3000/api/resident-invites'));
 
     expect(response.status).toBe(403);
   });

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import {
-  PasswordResetError,
-  resetPassword,
-} from '@/services/password-reset-service';
+import { PasswordResetError, resetPassword } from '@/services/password-reset-service';
+import { strongPasswordSchema } from '@/lib/validation';
 
 const passwordResetConfirmSchema = z.object({
   token: z.string().min(1, 'Reset token is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: strongPasswordSchema,
 });
 
 export async function POST(request: NextRequest) {
@@ -30,13 +28,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (error instanceof PasswordResetError) {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status }
+      );
     }
 
     console.error('Error confirming password reset:', error);
-    return NextResponse.json(
-      { error: 'Failed to reset password' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to reset password' }, { status: 500 });
   }
 }

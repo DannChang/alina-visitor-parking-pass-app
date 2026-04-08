@@ -55,23 +55,23 @@ export function validateLicensePlate(plate: string): {
     };
   }
 
-  const normalized = normalizeLicensePlate(plate);
+  const trimmed = plate.trim().toUpperCase();
 
-  if (normalized.length < LICENSE_PLATE_CONFIG.minLength) {
+  if (trimmed.length < LICENSE_PLATE_CONFIG.minLength) {
     return {
       isValid: false,
       error: VALIDATION_MESSAGES.licensePlate.minLength,
     };
   }
 
-  if (normalized.length > LICENSE_PLATE_CONFIG.maxLength) {
+  if (trimmed.length > LICENSE_PLATE_CONFIG.maxLength) {
     return {
       isValid: false,
       error: VALIDATION_MESSAGES.licensePlate.maxLength,
     };
   }
 
-  if (!LICENSE_PLATE_CONFIG.validPattern.test(normalized)) {
+  if (!LICENSE_PLATE_CONFIG.validPattern.test(trimmed)) {
     return {
       isValid: false,
       error: VALIDATION_MESSAGES.licensePlate.invalid,
@@ -88,8 +88,8 @@ export function validateLicensePlate(plate: string): {
 export function sanitizeLicensePlateInput(input: string): string {
   return input
     .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, '') // Allow alphanumeric, spaces, and dashes
-    .slice(0, LICENSE_PLATE_CONFIG.maxLength + 2); // Account for spacing
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, LICENSE_PLATE_CONFIG.maxLength);
 }
 
 /**
