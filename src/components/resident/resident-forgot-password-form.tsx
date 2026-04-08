@@ -147,7 +147,7 @@ export function ResidentForgotPasswordForm() {
           </Button>
 
           <Button asChild variant="ghost" className="w-full">
-            <Link href="/resident/login">Back to Resident Login</Link>
+            <Link href="/resident/login?showResidentLogin=1">Back to Resident Login</Link>
           </Button>
         </CardFooter>
       </form>

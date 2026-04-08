@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, useCallback } from 'react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
@@ -21,8 +21,18 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { ResidentInviteStatus } from '@/components/dashboard/resident-invite-shared';
-import { PrivacyConsentNotice } from './privacy-consent-notice';
 import { PRIVACY_POLICY_VERSION } from '@/lib/privacy-policy';
+import { PrivacyPolicyContent } from './privacy-policy-content';
+import {
+  PASSWORD_REQUIREMENTS_TEXT,
+  RESIDENT_INTEGER_FIELD_MAX_LENGTH,
+  getAssignedStallValidationError,
+  getPasswordValidationError,
+  getStrataLotValidationError,
+  sanitizeIntegerFieldInput,
+  sanitizeStrictLicensePlateInput,
+} from '@/lib/validation';
+import { LICENSE_PLATE_CONFIG } from '@/lib/constants';
 
 interface ResidentInvitePreview {
   id: string;
@@ -97,8 +107,79 @@ export function ResidentInviteRegistrationForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [hasScrolledPolicy, setHasScrolledPolicy] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [strataLotTouched, setStrataLotTouched] = useState(false);
+  const [assignedStallTouched, setAssignedStallTouched] = useState<boolean[]>([false]);
+  const [licensePlateTouched, setLicensePlateTouched] = useState<boolean[]>([false]);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  const policyScrollRef = useRef<HTMLDivElement>(null);
 
   const blockedContent = useMemo(() => getBlockedMessage(invite), [invite]);
+
+  const cleanedStrataLotNumber = strataLotNumber.trim();
+  const cleanedAssignedStallNumbers = assignedStallNumbers.map((stallNumber) => stallNumber.trim());
+  const cleanedPersonalLicensePlates = hasVehicle
+    ? personalLicensePlates.map((licensePlate) => licensePlate.trim().toUpperCase())
+    : [];
+
+  const strataLotError = getStrataLotValidationError(cleanedStrataLotNumber);
+  const assignedStallErrors = cleanedAssignedStallNumbers.map(getAssignedStallValidationError);
+  const hasAssignedStallErrors = assignedStallErrors.some(Boolean);
+  const licensePlateErrors = hasVehicle
+    ? cleanedPersonalLicensePlates.map((licensePlate) => {
+        if (!licensePlate) {
+          return 'Personal license plate is required.';
+        }
+
+        if (
+          !new RegExp(
+            `^[A-Z0-9]{${LICENSE_PLATE_CONFIG.minLength},${LICENSE_PLATE_CONFIG.maxLength}}$`
+          ).test(licensePlate)
+        ) {
+          return `License plate must be ${LICENSE_PLATE_CONFIG.minLength} to ${LICENSE_PLATE_CONFIG.maxLength} alphanumeric characters.`;
+        }
+
+        return null;
+      })
+    : [];
+  const hasLicensePlateErrors = licensePlateErrors.some(Boolean);
+  const passwordError = getPasswordValidationError(password);
+  const confirmPasswordError =
+    confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match.' : null;
+  const showStrataLotError = Boolean(strataLotError && (hasAttemptedSubmit || strataLotTouched));
+  const showAssignedStallErrors = assignedStallErrors.map(
+    (stallError, index) => Boolean(stallError && (hasAttemptedSubmit || assignedStallTouched[index]))
+  );
+  const showLicensePlateErrors = licensePlateErrors.map(
+    (licensePlateError, index) =>
+      Boolean(licensePlateError && (hasAttemptedSubmit || licensePlateTouched[index]))
+  );
+  const showPasswordError = Boolean(passwordError && (hasAttemptedSubmit || passwordTouched));
+  const showConfirmPasswordError = Boolean(
+    confirmPasswordError && (hasAttemptedSubmit || confirmPasswordTouched)
+  );
+
+  const canSubmit =
+    !isSubmitting &&
+    !strataLotError &&
+    cleanedAssignedStallNumbers.length > 0 &&
+    !hasAssignedStallErrors &&
+    (!hasVehicle || (cleanedPersonalLicensePlates.length > 0 && !hasLicensePlateErrors)) &&
+    !passwordError &&
+    !confirmPasswordError &&
+    hasScrolledPolicy &&
+    privacyAgreed;
+
+  const handlePolicyScroll = useCallback(() => {
+    const el = policyScrollRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+    if (atBottom && !hasScrolledPolicy) {
+      setHasScrolledPolicy(true);
+    }
+  }, [hasScrolledPolicy]);
 
   if (!invite || invite.status !== 'PENDING') {
     return (
@@ -112,7 +193,7 @@ export function ResidentInviteRegistrationForm({
         </CardHeader>
         <CardFooter className="flex justify-center">
           <Button asChild variant="outline">
-            <Link href="/resident/login">Go to Resident Login</Link>
+            <Link href="/resident/login?showResidentLogin=1">Go to Resident Login</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -146,39 +227,39 @@ export function ResidentInviteRegistrationForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setHasAttemptedSubmit(true);
 
-    const cleanedStrataLotNumber = strataLotNumber.trim();
-    const cleanedAssignedStallNumbers = assignedStallNumbers
-      .map((stallNumber) => stallNumber.trim())
-      .filter(Boolean);
-    const cleanedPersonalLicensePlates = hasVehicle
-      ? personalLicensePlates
-          .map((licensePlate) => licensePlate.trim().toUpperCase())
-          .filter(Boolean)
-      : [];
-
-    if (!cleanedStrataLotNumber) {
-      setError('Strata lot number is required.');
+    if (strataLotError) {
+      setError(strataLotError);
       return;
     }
 
-    if (cleanedAssignedStallNumbers.length === 0) {
-      setError('At least one assigned stall number is required.');
+    if (cleanedAssignedStallNumbers.length === 0 || hasAssignedStallErrors) {
+      setError(
+        assignedStallErrors.find(Boolean) ?? 'At least one assigned stall number is required.'
+      );
       return;
     }
 
-    if (hasVehicle && cleanedPersonalLicensePlates.length === 0) {
-      setError('At least one personal license plate is required.');
+    if (hasVehicle && (cleanedPersonalLicensePlates.length === 0 || hasLicensePlateErrors)) {
+      setError(
+        licensePlateErrors.find(Boolean) ?? 'At least one personal license plate is required.'
+      );
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+    if (confirmPasswordError) {
+      setError(confirmPasswordError);
+      return;
+    }
+
+    if (!hasScrolledPolicy) {
+      setError('Please scroll through the privacy policy before activating your account.');
       return;
     }
 
@@ -198,8 +279,8 @@ export function ResidentInviteRegistrationForm({
           password,
           hasVehicle,
           strataLotNumber: cleanedStrataLotNumber,
-          assignedStallNumbers: cleanedAssignedStallNumbers,
-          personalLicensePlates: cleanedPersonalLicensePlates,
+          assignedStallNumbers: cleanedAssignedStallNumbers.filter(Boolean),
+          personalLicensePlates: cleanedPersonalLicensePlates.filter(Boolean),
           privacyConsent: true,
           privacyPolicyVersion: PRIVACY_POLICY_VERSION,
         }),
@@ -287,11 +368,18 @@ export function ResidentInviteRegistrationForm({
             <Input
               id="resident-registration-strata-lot"
               value={strataLotNumber}
-              onChange={(event) => setStrataLotNumber(event.target.value)}
+              onChange={(event) =>
+                setStrataLotNumber(sanitizeIntegerFieldInput(event.target.value))
+              }
+              onBlur={() => setStrataLotTouched(true)}
               className="h-11 md:h-10"
-              placeholder="Enter your strata lot number"
+              placeholder="123"
+              inputMode="numeric"
+              maxLength={RESIDENT_INTEGER_FIELD_MAX_LENGTH}
+              pattern={`\\d{1,${RESIDENT_INTEGER_FIELD_MAX_LENGTH}}`}
               required
             />
+            {showStrataLotError && <p className="text-sm text-destructive">{strataLotError}</p>}
           </div>
 
           <div className="space-y-3">
@@ -306,7 +394,10 @@ export function ResidentInviteRegistrationForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => addListValue(setAssignedStallNumbers)}
+                onClick={() => {
+                  addListValue(setAssignedStallNumbers);
+                  setAssignedStallTouched((current) => [...current, false]);
+                }}
               >
                 <Plus className="h-4 w-4" />
                 Add Stall
@@ -319,17 +410,38 @@ export function ResidentInviteRegistrationForm({
                   <Input
                     value={stallNumber}
                     onChange={(event) =>
-                      updateListValue(setAssignedStallNumbers, index, event.target.value)
+                      updateListValue(
+                        setAssignedStallNumbers,
+                        index,
+                        sanitizeIntegerFieldInput(event.target.value)
+                      )
+                    }
+                    onBlur={() =>
+                      setAssignedStallTouched((current) =>
+                        current.map((value, currentIndex) =>
+                          currentIndex === index ? true : value
+                        )
+                      )
                     }
                     className="h-11 md:h-10"
-                    placeholder={`Assigned stall #${index + 1}`}
+                    placeholder={`Stall #${index + 1}`}
+                    inputMode="numeric"
+                    maxLength={RESIDENT_INTEGER_FIELD_MAX_LENGTH}
+                    pattern={`\\d{1,${RESIDENT_INTEGER_FIELD_MAX_LENGTH}}`}
                     required
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeListValue(setAssignedStallNumbers, index)}
+                    onClick={() => {
+                      removeListValue(setAssignedStallNumbers, index);
+                      setAssignedStallTouched((current) =>
+                        current.length === 1
+                          ? current
+                          : current.filter((_, currentIndex) => currentIndex !== index)
+                      );
+                    }}
                     disabled={assignedStallNumbers.length === 1}
                     aria-label={`Remove assigned stall ${index + 1}`}
                   >
@@ -337,6 +449,14 @@ export function ResidentInviteRegistrationForm({
                   </Button>
                 </div>
               ))}
+              {assignedStallErrors.map(
+                (stallError, index) =>
+                  showAssignedStallErrors[index] && (
+                    <p key={`stall-error-${index}`} className="text-sm text-destructive">
+                      {stallError}
+                    </p>
+                  )
+              )}
             </div>
           </div>
 
@@ -352,7 +472,10 @@ export function ResidentInviteRegistrationForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => addListValue(setPersonalLicensePlates)}
+                onClick={() => {
+                  addListValue(setPersonalLicensePlates);
+                  setLicensePlateTouched((current) => [...current, false]);
+                }}
                 disabled={!hasVehicle}
               >
                 <Plus className="h-4 w-4" />
@@ -369,6 +492,7 @@ export function ResidentInviteRegistrationForm({
                   setHasVehicle(!noVehicle);
                   if (noVehicle) {
                     setPersonalLicensePlates(['']);
+                    setLicensePlateTouched([false]);
                   }
                 }}
               />
@@ -377,8 +501,7 @@ export function ResidentInviteRegistrationForm({
                   I don&apos;t have a vehicle
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  You can finish registration now and add your vehicle later from the resident
-                  portal.
+                  You can finish registration now without adding a vehicle.
                 </p>
               </div>
             </div>
@@ -392,11 +515,21 @@ export function ResidentInviteRegistrationForm({
                       updateListValue(
                         setPersonalLicensePlates,
                         index,
-                        event.target.value.toUpperCase()
+                        sanitizeStrictLicensePlateInput(event.target.value)
+                      )
+                    }
+                    onBlur={() =>
+                      setLicensePlateTouched((current) =>
+                        current.map((value, currentIndex) =>
+                          currentIndex === index ? true : value
+                        )
                       )
                     }
                     className="h-11 uppercase md:h-10"
                     placeholder={`License plate #${index + 1}`}
+                    maxLength={LICENSE_PLATE_CONFIG.maxLength}
+                    autoCapitalize="characters"
+                    autoCorrect="off"
                     required={hasVehicle}
                     disabled={!hasVehicle}
                   />
@@ -404,7 +537,14 @@ export function ResidentInviteRegistrationForm({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeListValue(setPersonalLicensePlates, index)}
+                    onClick={() => {
+                      removeListValue(setPersonalLicensePlates, index);
+                      setLicensePlateTouched((current) =>
+                        current.length === 1
+                          ? current
+                          : current.filter((_, currentIndex) => currentIndex !== index)
+                      );
+                    }}
                     disabled={!hasVehicle || personalLicensePlates.length === 1}
                     aria-label={`Remove license plate ${index + 1}`}
                   >
@@ -412,6 +552,14 @@ export function ResidentInviteRegistrationForm({
                   </Button>
                 </div>
               ))}
+              {licensePlateErrors.map(
+                (licensePlateError, index) =>
+                  showLicensePlateErrors[index] && (
+                    <p key={`plate-error-${index}`} className="text-sm text-destructive">
+                      {licensePlateError}
+                    </p>
+                  )
+              )}
             </div>
           </div>
 
@@ -422,11 +570,14 @@ export function ResidentInviteRegistrationForm({
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              onBlur={() => setPasswordTouched(true)}
               className="h-11 md:h-10"
               autoComplete="new-password"
               placeholder="Create a password"
               required
             />
+            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_TEXT}</p>
+            {showPasswordError && <p className="text-sm text-destructive">{passwordError}</p>}
           </div>
 
           <div className="space-y-2">
@@ -436,21 +587,56 @@ export function ResidentInviteRegistrationForm({
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
+              onBlur={() => setConfirmPasswordTouched(true)}
               className="h-11 md:h-10"
               autoComplete="new-password"
               placeholder="Confirm your password"
               required
             />
+            {showConfirmPasswordError && (
+              <p className="text-sm text-destructive">{confirmPasswordError}</p>
+            )}
           </div>
 
-          <PrivacyConsentNotice
-            agreed={privacyAgreed}
-            checkboxId="resident-registration-privacy-consent"
-            onAgreedChange={setPrivacyAgreed}
-            context="resident-account"
-          />
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Privacy Policy</Label>
+            <div
+              ref={policyScrollRef}
+              onScroll={handlePolicyScroll}
+              data-testid="resident-registration-privacy-policy"
+              className="h-56 overflow-y-auto rounded-lg border bg-muted/20 p-4"
+            >
+              <PrivacyPolicyContent />
+            </div>
+            {!hasScrolledPolicy && (
+              <p className="text-center text-xs text-muted-foreground">
+                Scroll to the bottom to enable the consent checkbox.
+              </p>
+            )}
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="resident-registration-privacy-consent"
+                checked={privacyAgreed}
+                onCheckedChange={(checked) => setPrivacyAgreed(checked === true)}
+                disabled={!hasScrolledPolicy}
+                className="mt-0.5"
+              />
+              <Label
+                htmlFor="resident-registration-privacy-consent"
+                className={`text-sm leading-snug ${
+                  hasScrolledPolicy
+                    ? 'cursor-pointer text-foreground'
+                    : 'cursor-not-allowed text-muted-foreground/50'
+                }`}
+              >
+                I have read and agree to the Privacy Policy. I consent to the collection, use, and
+                disclosure of my personal information for resident account setup and parking
+                administration.
+              </Label>
+            </div>
+          </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="min-h-[48px] w-full" disabled={!canSubmit}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -464,7 +650,7 @@ export function ResidentInviteRegistrationForm({
       </CardContent>
       <CardFooter className="justify-center">
         <Button asChild variant="ghost">
-          <Link href="/resident/login">Back to Resident Login</Link>
+          <Link href="/?showAuthChooser=1">Back to Resident Login</Link>
         </Button>
       </CardFooter>
     </Card>

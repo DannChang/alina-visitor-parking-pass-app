@@ -13,6 +13,13 @@ function getAuthenticatedDestination(role?: UserRole): string {
   return role === 'RESIDENT' ? '/resident/passes' : '/dashboard';
 }
 
+export function shouldBypassPublicAuthRedirect(
+  pathname: string,
+  searchParams: URLSearchParams
+): boolean {
+  return pathname === '/resident/login' && searchParams.get('showResidentLogin') === '1';
+}
+
 // Route permissions - maps routes to roles that can access them
 // Empty array means all authenticated users can access
 const ROUTE_ACCESS: Record<string, UserRole[]> = {
@@ -139,6 +146,10 @@ export async function middleware(request: NextRequest) {
 
   const isLoggedIn = !!token;
   const userRole = token?.role as UserRole | undefined;
+  const bypassPublicAuthRedirect = shouldBypassPublicAuthRedirect(
+    pathname,
+    request.nextUrl.searchParams
+  );
 
   // If accessing a public route, allow
   if (isPublicRoute || isPublicApi) {
@@ -146,7 +157,7 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/login' && isLoggedIn) {
       return NextResponse.redirect(new URL(getAuthenticatedDestination(userRole), request.url));
     }
-    if (pathname === '/resident/login' && isLoggedIn) {
+    if (pathname === '/resident/login' && isLoggedIn && !bypassPublicAuthRedirect) {
       return NextResponse.redirect(new URL(getAuthenticatedDestination(userRole), request.url));
     }
     return NextResponse.next();

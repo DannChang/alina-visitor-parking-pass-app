@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PASSWORD_REQUIREMENTS_TEXT, getPasswordValidationError } from '@/lib/validation';
 
 interface PasswordResetPreview {
   status: 'valid' | 'expired' | 'invalid';
@@ -34,17 +35,14 @@ interface ResetPasswordFormProps {
 }
 
 function getRequestPath(loginPath?: '/login' | '/resident/login'): string {
-  return loginPath === '/resident/login'
-    ? '/resident/forgot-password'
-    : '/forgot-password';
+  return loginPath === '/resident/login' ? '/resident/forgot-password' : '/forgot-password';
 }
 
 function getBlockedContent(preview: PasswordResetPreview) {
   if (preview.status === 'expired') {
     return {
       title: 'Reset Link Expired',
-      description:
-        'This password reset link has expired. Request a new one to continue.',
+      description: 'This password reset link has expired. Request a new one to continue.',
     };
   }
 
@@ -55,20 +53,26 @@ function getBlockedContent(preview: PasswordResetPreview) {
   };
 }
 
-export function ResetPasswordForm({
-  token,
-  preview,
-}: ResetPasswordFormProps) {
+export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
   const blockedContent = useMemo(() => getBlockedContent(preview), [preview]);
   const requestPath = getRequestPath(preview.loginPath);
   const loginPath = preview.loginPath || '/login';
+  const passwordError = getPasswordValidationError(password);
+  const confirmPasswordError =
+    confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match.' : null;
+  const showPasswordError = (passwordTouched || hasAttemptedSubmit) && Boolean(passwordError);
+  const showConfirmPasswordError =
+    (confirmPasswordTouched || hasAttemptedSubmit) && Boolean(confirmPasswordError);
 
   if (preview.status !== 'valid') {
     return (
@@ -94,10 +98,10 @@ export function ResetPasswordForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setHasAttemptedSubmit(true);
     setError(null);
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -127,11 +131,7 @@ export function ResetPasswordForm({
       router.replace(`${data.loginPath}?reset=success`);
       router.refresh();
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Failed to reset password'
-      );
+      setError(submitError instanceof Error ? submitError.message : 'Failed to reset password');
     } finally {
       setIsSubmitting(false);
     }
@@ -194,11 +194,14 @@ export function ResetPasswordForm({
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              onBlur={() => setPasswordTouched(true)}
               autoComplete="new-password"
               placeholder="Enter a new password"
               className="h-11 md:h-10"
               required
             />
+            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_TEXT}</p>
+            {showPasswordError ? <p className="text-sm text-destructive">{passwordError}</p> : null}
           </div>
 
           <div className="space-y-2">
@@ -208,11 +211,15 @@ export function ResetPasswordForm({
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
+              onBlur={() => setConfirmPasswordTouched(true)}
               autoComplete="new-password"
               placeholder="Confirm your new password"
               className="h-11 md:h-10"
               required
             />
+            {showConfirmPasswordError ? (
+              <p className="text-sm text-destructive">{confirmPasswordError}</p>
+            ) : null}
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

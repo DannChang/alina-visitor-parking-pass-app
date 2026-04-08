@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { consumeResidentInvite, ResidentInviteError } from '@/services/resident-invite-service';
 import { PRIVACY_POLICY_VERSION } from '@/lib/privacy-policy';
+import {
+  assignedStallNumberSchema,
+  residentStrataLotSchema,
+  strictLicensePlateSchema,
+  strongPasswordSchema,
+} from '@/lib/validation';
 
 const consumeSchema = z
   .object({
     token: z.string().min(1),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: strongPasswordSchema,
     hasVehicle: z.boolean(),
-    strataLotNumber: z.string().trim().min(1, 'Strata lot number is required'),
+    strataLotNumber: residentStrataLotSchema,
     assignedStallNumbers: z
-      .array(z.string().trim().min(1, 'Assigned stall number is required'))
+      .array(assignedStallNumberSchema)
       .min(1, 'At least one assigned stall number is required'),
-    personalLicensePlates: z.array(
-      z.string().trim().min(2, 'License plate must be at least 2 characters')
-    ),
+    personalLicensePlates: z.array(strictLicensePlateSchema),
     privacyConsent: z.literal(true, {
       errorMap: () => ({
         message: 'You must accept the privacy policy before activating your account',

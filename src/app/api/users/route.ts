@@ -3,18 +3,19 @@ import { requirePermission } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { strongPasswordSchema } from '@/lib/validation';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   name: z.string().optional(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: strongPasswordSchema,
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY']).default('MANAGER'),
   isActive: z.boolean().default(true),
 });
 
 const updateUserSchema = z.object({
   name: z.string().optional(),
-  password: z.string().min(8).optional(),
+  password: strongPasswordSchema.optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY']).optional(),
   isActive: z.boolean().optional(),
   isSuspended: z.boolean().optional(),
@@ -74,10 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users });
   } catch (error) {
     console.error('Error fetching users:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch users' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
 
@@ -97,17 +95,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'A user with this email already exists' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 });
     }
 
     // Prevent non-super admins from creating super admins
-    if (
-      validatedData.role === 'SUPER_ADMIN' &&
-      authResult.request.role !== 'SUPER_ADMIN'
-    ) {
+    if (validatedData.role === 'SUPER_ADMIN' && authResult.request.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Only super admins can create super admin accounts' },
         { status: 403 }
@@ -148,15 +140,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0]?.message || "Validation error" },
+        { error: error.errors[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }
     console.error('Error creating user:', error);
-    return NextResponse.json(
-      { error: 'Failed to create user' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }
 
@@ -193,10 +182,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Prevent non-super admins from modifying super admin accounts
-    if (
-      existingUser.role === 'SUPER_ADMIN' &&
-      authResult.request.role !== 'SUPER_ADMIN'
-    ) {
+    if (existingUser.role === 'SUPER_ADMIN' && authResult.request.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Only super admins can modify super admin accounts' },
         { status: 403 }
@@ -206,16 +192,10 @@ export async function PATCH(request: NextRequest) {
     // Prevent changing own role or suspending self
     if (id === authResult.request.userId) {
       if (validatedData.role && validatedData.role !== existingUser.role) {
-        return NextResponse.json(
-          { error: 'Cannot change your own role' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 });
       }
       if (validatedData.isSuspended === true) {
-        return NextResponse.json(
-          { error: 'Cannot suspend your own account' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Cannot suspend your own account' }, { status: 400 });
       }
     }
 
@@ -266,15 +246,12 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0]?.message || "Validation error" },
+        { error: error.errors[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }
     console.error('Error updating user:', error);
-    return NextResponse.json(
-      { error: 'Failed to update user' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
 
@@ -294,10 +271,7 @@ export async function DELETE(request: NextRequest) {
 
     // Prevent deleting self
     if (id === authResult.request.userId) {
-      return NextResponse.json(
-        { error: 'Cannot delete your own account' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -316,10 +290,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Prevent non-super admins from deleting super admin accounts
-    if (
-      user.role === 'SUPER_ADMIN' &&
-      authResult.request.role !== 'SUPER_ADMIN'
-    ) {
+    if (user.role === 'SUPER_ADMIN' && authResult.request.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Only super admins can delete super admin accounts' },
         { status: 403 }
@@ -345,9 +316,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting user:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete user' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 }

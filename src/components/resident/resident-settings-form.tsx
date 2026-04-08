@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PASSWORD_REQUIREMENTS_TEXT, getPasswordValidationError } from '@/lib/validation';
 
 export function ResidentSettingsForm() {
   const [name, setName] = useState('');
@@ -19,6 +20,18 @@ export function ResidentSettingsForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [currentPasswordTouched, setCurrentPasswordTouched] = useState(false);
+  const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+
+  const isChangingPassword = Boolean(currentPassword || newPassword);
+  const currentPasswordError =
+    isChangingPassword && !currentPassword.trim() ? 'Current password is required.' : null;
+  const newPasswordError = newPassword ? getPasswordValidationError(newPassword) : null;
+  const showCurrentPasswordError =
+    (currentPasswordTouched || hasAttemptedSubmit) && Boolean(currentPasswordError);
+  const showNewPasswordError =
+    (newPasswordTouched || hasAttemptedSubmit) && Boolean(newPasswordError);
 
   useMountEffect(() => {
     const fetchSettings = async () => {
@@ -41,8 +54,14 @@ export function ResidentSettingsForm() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
+    setHasAttemptedSubmit(true);
     setMessage(null);
+
+    if (currentPasswordError || newPasswordError) {
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
       const body: Record<string, string | undefined> = {
@@ -71,6 +90,9 @@ export function ResidentSettingsForm() {
         setAccessCode('');
         setCurrentPassword('');
         setNewPassword('');
+        setHasAttemptedSubmit(false);
+        setCurrentPasswordTouched(false);
+        setNewPasswordTouched(false);
       } else {
         const data = await res.json();
         setMessage({ type: 'error', text: data.error || 'Failed to save settings' });
@@ -143,11 +165,30 @@ export function ResidentSettingsForm() {
         <CardContent className="space-y-3">
           <div className="space-y-1">
             <Label>Current Password</Label>
-            <Input value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} type="password" className="h-11" />
+            <Input
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              onBlur={() => setCurrentPasswordTouched(true)}
+              type="password"
+              className="h-11"
+            />
+            {showCurrentPasswordError ? (
+              <p className="text-sm text-destructive">{currentPasswordError}</p>
+            ) : null}
           </div>
           <div className="space-y-1">
             <Label>New Password</Label>
-            <Input value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" className="h-11" />
+            <Input
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              onBlur={() => setNewPasswordTouched(true)}
+              type="password"
+              className="h-11"
+            />
+            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_TEXT}</p>
+            {showNewPasswordError ? (
+              <p className="text-sm text-destructive">{newPasswordError}</p>
+            ) : null}
           </div>
         </CardContent>
       </Card>
