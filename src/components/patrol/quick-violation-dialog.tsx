@@ -162,9 +162,7 @@ export function QuickViolationDialog({
       form.reset();
       setAdditionalPhotos([]);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to log violation'
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to log violation');
     } finally {
       setIsSubmitting(false);
     }
@@ -172,7 +170,7 @@ export function QuickViolationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -192,10 +190,7 @@ export function QuickViolationDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Violation Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -221,10 +216,7 @@ export function QuickViolationDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Severity</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select severity" />
@@ -251,10 +243,7 @@ export function QuickViolationDialog({
                 <FormItem>
                   <FormLabel>Location (optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g., Lot A, Row 3, Spot 15"
-                      {...field}
-                    />
+                    <Input placeholder="e.g., Lot A, Row 3, Spot 15" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -283,17 +272,13 @@ export function QuickViolationDialog({
 
             {/* Photos */}
             <div className="space-y-2">
-              <FormLabel>Evidence Photos</FormLabel>
+              <p className="text-sm font-medium">Evidence Photos</p>
               <div className="grid grid-cols-3 gap-2">
                 {/* Scan image */}
                 {scanImage && (
-                  <div className="relative aspect-square rounded-md overflow-hidden border">
-                    <img
-                      src={scanImage}
-                      alt="Scan"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs text-center py-0.5">
+                  <div className="relative aspect-square overflow-hidden rounded-md border">
+                    <img src={scanImage} alt="Scan" className="h-full w-full object-cover" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 py-0.5 text-center text-xs text-white">
                       Scan
                     </div>
                   </div>
@@ -303,17 +288,17 @@ export function QuickViolationDialog({
                 {additionalPhotos.map((photo, index) => (
                   <div
                     key={index}
-                    className="relative aspect-square rounded-md overflow-hidden border"
+                    className="relative aspect-square overflow-hidden rounded-md border"
                   >
                     <img
                       src={photo}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                      className="absolute right-1 top-1 rounded-full bg-red-500 p-1 text-white hover:bg-red-600"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -322,9 +307,9 @@ export function QuickViolationDialog({
 
                 {/* Add photo button */}
                 {additionalPhotos.length < 4 && (
-                  <label className="aspect-square rounded-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 hover:bg-slate-50">
+                  <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50">
                     <Camera className="h-6 w-6 text-slate-400" />
-                    <span className="text-xs text-slate-500 mt-1">Add</span>
+                    <span className="mt-1 text-xs text-slate-500">Add</span>
                     <input
                       type="file"
                       accept="image/*"
