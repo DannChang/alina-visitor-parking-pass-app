@@ -55,23 +55,23 @@ export function validateLicensePlate(plate: string): {
     };
   }
 
-  const trimmed = plate.trim().toUpperCase();
+  const normalized = normalizeLicensePlate(plate);
 
-  if (trimmed.length < LICENSE_PLATE_CONFIG.minLength) {
+  if (normalized.length < LICENSE_PLATE_CONFIG.minLength) {
     return {
       isValid: false,
       error: VALIDATION_MESSAGES.licensePlate.minLength,
     };
   }
 
-  if (trimmed.length > LICENSE_PLATE_CONFIG.maxLength) {
+  if (normalized.length > LICENSE_PLATE_CONFIG.maxLength) {
     return {
       isValid: false,
       error: VALIDATION_MESSAGES.licensePlate.maxLength,
     };
   }
 
-  if (!LICENSE_PLATE_CONFIG.validPattern.test(trimmed)) {
+  if (!LICENSE_PLATE_CONFIG.validPattern.test(normalized)) {
     return {
       isValid: false,
       error: VALIDATION_MESSAGES.licensePlate.invalid,
@@ -86,10 +86,25 @@ export function validateLicensePlate(plate: string): {
  * Removes invalid characters while typing
  */
 export function sanitizeLicensePlateInput(input: string): string {
+  let alphanumericCount = 0;
+
   return input
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-    .slice(0, LICENSE_PLATE_CONFIG.maxLength);
+    .replace(/[^A-Z0-9\s-]/g, '')
+    .split('')
+    .filter((character) => {
+      if (/^[A-Z0-9]$/.test(character)) {
+        if (alphanumericCount >= LICENSE_PLATE_CONFIG.maxLength) {
+          return false;
+        }
+
+        alphanumericCount += 1;
+        return true;
+      }
+
+      return character === ' ' || character === '-';
+    })
+    .join('');
 }
 
 /**

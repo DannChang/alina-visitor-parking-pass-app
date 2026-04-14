@@ -35,9 +35,9 @@ export const PASS_CONFIG = {
 
 export const LICENSE_PLATE_CONFIG = {
   minLength: 2,
-  maxLength: 8,
-  validPattern: /^[A-Z0-9]{2,8}$/,
-  formatPattern: /^([A-Z0-9]{1,4})\s*([A-Z0-9]{0,4})$/,
+  maxLength: 10,
+  validPattern: /^[A-Z0-9]{2,10}$/,
+  formatPattern: /^([A-Z0-9]{1,5})\s*([A-Z0-9]{0,5})$/,
 } as const;
 
 export const VALIDATION_MESSAGES = {
