@@ -1,33 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Tesseract from 'tesseract.js';
 import { requirePermission } from '@/lib/api-auth';
-import { normalizeLicensePlate, validateLicensePlate } from '@/lib/utils/license-plate';
+import { validateLicensePlate } from '@/lib/utils/license-plate';
+import { extractBestLicensePlate, type OCRTextObservation } from '@/lib/utils/ocr-license-plate';
 
-// License plate patterns for extraction
-const PLATE_PATTERNS = [
-  /\b([A-Z]{2,3}[\s-]?[0-9]{3,4})\b/,
-  /\b([0-9]{3,4}[\s-]?[A-Z]{2,3})\b/,
-  /\b([A-Z]{1,3}[0-9]{1,4}[A-Z]{0,3})\b/,
-  /\b([0-9]{1,4}[A-Z]{1,3}[0-9]{0,4})\b/,
-  /\b([A-Z0-9]{5,8})\b/,
-];
-
-function extractLicensePlateFromText(text: string): string | null {
-  const cleaned = text.toUpperCase().replace(/[^A-Z0-9\s-]/g, '').trim();
-
-  for (const pattern of PLATE_PATTERNS) {
-    const match = cleaned.match(pattern);
-    if (match && match[1]) {
-      const candidate = match[1].replace(/[\s-]/g, '');
-      if (candidate.length >= 4 && candidate.length <= 8) {
-        return candidate;
-      }
-    }
-  }
-
-  const alphanumMatch = cleaned.replace(/\s+/g, '').match(/[A-Z0-9]{4,8}/);
-  return alphanumMatch ? alphanumMatch[0] : null;
-}
+const OCR_CHARACTER_WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 // POST /api/ocr/recognize - Process image and extract license plate
 export async function POST(request: NextRequest) {
@@ -37,15 +14,14 @@ export async function POST(request: NextRequest) {
     return authResult.response;
   }
 
+  let worker: Tesseract.Worker | null = null;
+
   try {
     const body = await request.json();
     const { image } = body;
 
     if (!image || typeof image !== 'string') {
-      return NextResponse.json(
-        { error: 'Image data is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Image data is required' }, { status: 400 });
     }
 
     // Validate that it's a valid data URL
@@ -56,27 +32,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Tesseract worker
-    const worker = await Tesseract.createWorker('eng', 1, {
+    worker = await Tesseract.createWorker('eng', 1, {
       logger: () => {}, // Suppress logging
     });
 
-    // Configure for license plate recognition
-    await worker.setParameters({
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-    });
+    const attempts: Array<{ psm: Tesseract.PSM; label: string }> = [
+      { psm: Tesseract.PSM.SINGLE_BLOCK, label: 'server:block' },
+      { psm: Tesseract.PSM.SINGLE_LINE, label: 'server:line' },
+      { psm: Tesseract.PSM.SPARSE_TEXT, label: 'server:sparse' },
+    ];
+    const observations: OCRTextObservation[] = [];
 
-    const result = await worker.recognize(image);
-    await worker.terminate();
+    for (const attempt of attempts) {
+      await worker.setParameters({
+        tessedit_char_whitelist: OCR_CHARACTER_WHITELIST,
+        tessedit_pageseg_mode: attempt.psm,
+      });
 
-    const rawText = result.data.text.trim();
-    const confidence = result.data.confidence / 100;
+      const recognition = await worker.recognize(image);
+      observations.push({
+        text: recognition.data.text.trim(),
+        confidence: recognition.data.confidence / 100,
+        source: attempt.label,
+      });
 
-    // Extract license plate from text
-    const extractedPlate = extractLicensePlateFromText(rawText);
+      const candidate = extractBestLicensePlate(observations);
+      if (candidate && candidate.score >= 9) {
+        break;
+      }
+    }
 
-    if (!extractedPlate) {
+    const rawText = observations
+      .map((observation) => observation.text)
+      .filter(Boolean)
+      .join('\n---\n');
+    const candidate = extractBestLicensePlate(observations);
+
+    if (!candidate) {
       return NextResponse.json({
         success: false,
         licensePlate: null,
@@ -87,15 +79,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const normalizedPlate = normalizeLicensePlate(extractedPlate);
-    const validation = validateLicensePlate(normalizedPlate);
+    const validation = validateLicensePlate(candidate.normalizedPlate);
 
     if (!validation.isValid) {
       return NextResponse.json({
         success: false,
-        licensePlate: extractedPlate,
-        normalizedPlate,
-        confidence,
+        licensePlate: candidate.licensePlate,
+        normalizedPlate: candidate.normalizedPlate,
+        confidence: Math.max(0, ...observations.map((observation) => observation.confidence ?? 0)),
         rawText,
         error: validation.error || 'Invalid license plate format',
       });
@@ -103,16 +94,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      licensePlate: extractedPlate,
-      normalizedPlate,
-      confidence,
+      licensePlate: candidate.licensePlate,
+      normalizedPlate: candidate.normalizedPlate,
+      confidence: Math.max(0, ...observations.map((observation) => observation.confidence ?? 0)),
       rawText,
     });
   } catch (error) {
     console.error('OCR processing error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process image' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to process image' }, { status: 500 });
+  } finally {
+    if (worker) {
+      await worker.terminate();
+    }
   }
 }

@@ -4,7 +4,8 @@
  */
 
 import Tesseract from 'tesseract.js';
-import { normalizeLicensePlate, validateLicensePlate } from '@/lib/utils/license-plate';
+import { validateLicensePlate } from '@/lib/utils/license-plate';
+import { extractBestLicensePlate, type OCRTextObservation } from '@/lib/utils/ocr-license-plate';
 
 export interface OCRResult {
   success: boolean;
@@ -22,70 +23,203 @@ export interface OCROptions {
   timeout?: number;
 }
 
-/**
- * Pre-process OCR text to extract license plate
- * License plates typically follow patterns like ABC123 or ABC-1234
- */
-function extractLicensePlateFromText(text: string): string | null {
-  // Clean up the text
-  const cleaned = text
-    .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, '')
-    .trim();
+interface OCRImageVariant {
+  label: string;
+  image: string | HTMLCanvasElement;
+}
 
-  // Common license plate patterns (US formats)
-  const patterns = [
-    /\b([A-Z]{2,3}[\s-]?[0-9]{3,4})\b/, // ABC 1234, ABC-123
-    /\b([0-9]{3,4}[\s-]?[A-Z]{2,3})\b/, // 1234 ABC, 123-ABC
-    /\b([A-Z]{1,3}[0-9]{1,4}[A-Z]{0,3})\b/, // A123BC, ABC1234
-    /\b([0-9]{1,4}[A-Z]{1,3}[0-9]{0,4})\b/, // 123ABC, 1ABC234
-    /\b([A-Z0-9]{5,8})\b/, // Generic 5-8 character plate
+interface RecognitionAttempt {
+  label: string;
+  image: string | HTMLCanvasElement;
+  pageSegmentationMode: Tesseract.PSM;
+}
+
+const OCR_CHARACTER_WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+function clampChannel(value: number): number {
+  return Math.max(0, Math.min(255, value));
+}
+
+function createCanvas(width: number, height: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width));
+  canvas.height = Math.max(1, Math.round(height));
+  return canvas;
+}
+
+function loadImage(imageData: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Failed to load captured image'));
+    image.src = imageData;
+  });
+}
+
+function createVariantCanvas(
+  image: HTMLImageElement,
+  crop: { x: number; y: number; width: number; height: number },
+  options: {
+    targetWidth: number;
+    grayscale?: boolean;
+    contrast?: number;
+    brightness?: number;
+    threshold?: number;
+  }
+): HTMLCanvasElement {
+  const aspectRatio = crop.width / crop.height;
+  const targetWidth = Math.max(600, Math.round(options.targetWidth));
+  const targetHeight = Math.max(240, Math.round(targetWidth / aspectRatio));
+  const canvas = createCanvas(targetWidth, targetHeight);
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    return canvas;
+  }
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    targetWidth,
+    targetHeight
+  );
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = imageData.data;
+  const contrast = options.contrast ?? 1;
+  const brightness = options.brightness ?? 1;
+  const threshold = options.threshold;
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    let red = pixels[index] ?? 0;
+    let green = pixels[index + 1] ?? 0;
+    let blue = pixels[index + 2] ?? 0;
+
+    if (options.grayscale) {
+      const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+      red = luminance;
+      green = luminance;
+      blue = luminance;
+    }
+
+    red = clampChannel((red - 128) * contrast + 128);
+    green = clampChannel((green - 128) * contrast + 128);
+    blue = clampChannel((blue - 128) * contrast + 128);
+
+    red = clampChannel(red * brightness);
+    green = clampChannel(green * brightness);
+    blue = clampChannel(blue * brightness);
+
+    if (threshold !== undefined) {
+      const binaryValue = (red + green + blue) / 3 >= threshold ? 255 : 0;
+      red = binaryValue;
+      green = binaryValue;
+      blue = binaryValue;
+    }
+
+    pixels[index] = red;
+    pixels[index + 1] = green;
+    pixels[index + 2] = blue;
+  }
+
+  context.putImageData(imageData, 0, 0);
+
+  return canvas;
+}
+
+async function prepareOCRImageVariants(imageData: string): Promise<OCRImageVariant[]> {
+  if (typeof document === 'undefined') {
+    return [{ label: 'original', image: imageData }];
+  }
+
+  const image = await loadImage(imageData);
+  const focusWidth = image.width * 0.6;
+  const focusHeight = focusWidth * 0.45;
+  const focusCrop = {
+    x: (image.width - focusWidth) / 2,
+    y: (image.height - focusHeight) / 2,
+    width: focusWidth,
+    height: focusHeight,
+  };
+  const fullCrop = {
+    x: 0,
+    y: 0,
+    width: image.width,
+    height: image.height,
+  };
+
+  return [
+    {
+      label: 'focused-color',
+      image: createVariantCanvas(image, focusCrop, { targetWidth: 1400 }),
+    },
+    {
+      label: 'focused-contrast',
+      image: createVariantCanvas(image, focusCrop, {
+        targetWidth: 1400,
+        grayscale: true,
+        contrast: 1.8,
+        brightness: 1.08,
+      }),
+    },
+    {
+      label: 'focused-binary',
+      image: createVariantCanvas(image, focusCrop, {
+        targetWidth: 1400,
+        grayscale: true,
+        contrast: 2.4,
+        brightness: 1.15,
+        threshold: 145,
+      }),
+    },
+    {
+      label: 'full-frame-contrast',
+      image: createVariantCanvas(image, fullCrop, {
+        targetWidth: 1280,
+        grayscale: true,
+        contrast: 1.4,
+        brightness: 1.04,
+      }),
+    },
   ];
+}
 
-  for (const pattern of patterns) {
-    const match = cleaned.match(pattern);
-    if (match && match[1]) {
-      const candidate = match[1].replace(/[\s-]/g, '');
-      if (candidate.length >= 4 && candidate.length <= 8) {
-        return candidate;
-      }
+async function runRecognitionAttempts(
+  worker: Tesseract.Worker,
+  attempts: RecognitionAttempt[]
+): Promise<OCRTextObservation[]> {
+  const observations: OCRTextObservation[] = [];
+
+  for (const attempt of attempts) {
+    await worker.setParameters({
+      tessedit_char_whitelist: OCR_CHARACTER_WHITELIST,
+      tessedit_pageseg_mode: attempt.pageSegmentationMode,
+    });
+
+    const recognition = await worker.recognize(attempt.image);
+    const rawText = recognition.data.text.trim();
+    const confidence = recognition.data.confidence / 100;
+
+    observations.push({
+      text: rawText,
+      confidence,
+      source: attempt.label,
+    });
+
+    const candidate = extractBestLicensePlate(observations);
+    if (candidate && candidate.score >= 9) {
+      break;
     }
   }
 
-  // Fallback: try to find any sequence of 4-8 alphanumeric characters
-  const alphanumMatch = cleaned.replace(/\s+/g, '').match(/[A-Z0-9]{4,8}/);
-  if (alphanumMatch) {
-    return alphanumMatch[0];
-  }
-
-  return null;
-}
-
-/**
- * Apply license plate specific corrections to OCR output
- */
-function applyPlateCorrections(text: string): string {
-  let result = text;
-
-  // Split into letter and number sections
-  const parts = result.match(/([A-Z]+)|([0-9]+)/g);
-  if (!parts) return result;
-
-  result = parts
-    .map((part) => {
-      // If the part is likely numbers (in a number position), apply corrections
-      if (/^\d+$/.test(part)) {
-        // Already numbers, keep as-is
-        return part;
-      }
-
-      // Check if this part should be numbers based on position/context
-      // For now, keep letters as letters
-      return part;
-    })
-    .join('');
-
-  return result;
+  return observations;
 }
 
 /**
@@ -94,29 +228,45 @@ function applyPlateCorrections(text: string): string {
  */
 export async function performClientOCR(imageData: string): Promise<OCRResult> {
   const startTime = Date.now();
+  let worker: Tesseract.Worker | null = null;
 
   try {
-    // Create a worker for license plate recognition
-    const worker = await Tesseract.createWorker('eng', 1, {
+    const variants = await prepareOCRImageVariants(imageData);
+    const attempts: RecognitionAttempt[] = [
+      {
+        label: 'focused-contrast:block',
+        image: variants[1]?.image ?? imageData,
+        pageSegmentationMode: Tesseract.PSM.SINGLE_BLOCK,
+      },
+      {
+        label: 'focused-binary:line',
+        image: variants[2]?.image ?? imageData,
+        pageSegmentationMode: Tesseract.PSM.SINGLE_LINE,
+      },
+      {
+        label: 'focused-color:word',
+        image: variants[0]?.image ?? imageData,
+        pageSegmentationMode: Tesseract.PSM.SINGLE_WORD,
+      },
+      {
+        label: 'full-frame:sparse',
+        image: variants[3]?.image ?? imageData,
+        pageSegmentationMode: Tesseract.PSM.SPARSE_TEXT,
+      },
+    ];
+
+    worker = await Tesseract.createWorker('eng', 1, {
       logger: () => {}, // Suppress logging in production
     });
 
-    // Configure for license plate recognition
-    await worker.setParameters({
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-    });
+    const observations = await runRecognitionAttempts(worker, attempts);
+    const rawText = observations
+      .map((observation) => observation.text)
+      .filter(Boolean)
+      .join('\n---\n');
+    const candidate = extractBestLicensePlate(observations);
 
-    const result = await worker.recognize(imageData);
-    await worker.terminate();
-
-    const rawText = result.data.text.trim();
-    const confidence = result.data.confidence;
-
-    // Extract and validate license plate
-    const extractedPlate = extractLicensePlateFromText(rawText);
-
-    if (!extractedPlate) {
+    if (!candidate) {
       return {
         success: false,
         licensePlate: null,
@@ -129,16 +279,14 @@ export async function performClientOCR(imageData: string): Promise<OCRResult> {
       };
     }
 
-    const correctedPlate = applyPlateCorrections(extractedPlate);
-    const normalizedPlate = normalizeLicensePlate(correctedPlate);
-    const validation = validateLicensePlate(normalizedPlate);
+    const validation = validateLicensePlate(candidate.normalizedPlate);
 
     if (!validation.isValid) {
       return {
         success: false,
-        licensePlate: correctedPlate,
-        normalizedPlate,
-        confidence: confidence / 100,
+        licensePlate: candidate.licensePlate,
+        normalizedPlate: candidate.normalizedPlate,
+        confidence: Math.max(0, ...observations.map((observation) => observation.confidence ?? 0)),
         rawText,
         error: validation.error || 'Invalid license plate format',
         processingTime: Date.now() - startTime,
@@ -148,9 +296,9 @@ export async function performClientOCR(imageData: string): Promise<OCRResult> {
 
     return {
       success: true,
-      licensePlate: correctedPlate,
-      normalizedPlate,
-      confidence: confidence / 100,
+      licensePlate: candidate.licensePlate,
+      normalizedPlate: candidate.normalizedPlate,
+      confidence: Math.max(0, ...observations.map((observation) => observation.confidence ?? 0)),
       rawText,
       processingTime: Date.now() - startTime,
       source: 'client',
@@ -166,6 +314,10 @@ export async function performClientOCR(imageData: string): Promise<OCRResult> {
       processingTime: Date.now() - startTime,
       source: 'client',
     };
+  } finally {
+    if (worker) {
+      await worker.terminate();
+    }
   }
 }
 
@@ -229,25 +381,31 @@ export async function performServerOCR(
  * Uses client-side Tesseract.js by default for reliability
  * Server-side available as opt-in for future use
  */
-export async function performOCR(
-  imageData: string,
-  options: OCROptions = {}
-): Promise<OCRResult> {
+export async function performOCR(imageData: string, options: OCROptions = {}): Promise<OCRResult> {
   const { preferServer = false, timeout = 30000 } = options;
+  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-  // Use server-side only if explicitly requested and online
-  if (preferServer) {
-    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    if (isOnline) {
-      try {
-        return await performServerOCR(imageData, timeout);
-      } catch {
-        // Server failed, fall back to client-side processing
-        return performClientOCR(imageData);
+  if (preferServer && isOnline) {
+    try {
+      const serverResult = await performServerOCR(imageData, timeout);
+      if (serverResult.success) {
+        return serverResult;
       }
+    } catch {
+      // Fall through to client-side OCR.
     }
   }
 
-  // Default: use client-side OCR (runs in browser)
-  return performClientOCR(imageData);
+  const clientResult = await performClientOCR(imageData);
+
+  if (clientResult.success || !isOnline) {
+    return clientResult;
+  }
+
+  try {
+    const serverResult = await performServerOCR(imageData, timeout);
+    return serverResult.success ? serverResult : clientResult;
+  } catch {
+    return clientResult;
+  }
 }
