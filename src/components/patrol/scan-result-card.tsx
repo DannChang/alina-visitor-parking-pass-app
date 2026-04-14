@@ -29,6 +29,7 @@ interface ScanResultCardProps {
   result: PatrolLookupResult;
   onIssueViolation: () => void;
   onViewHistory: () => void;
+  onAddVehicle?: () => void;
   className?: string;
 }
 
@@ -113,39 +114,34 @@ export function ScanResultCard({
   result,
   onIssueViolation,
   onViewHistory,
+  onAddVehicle,
   className,
 }: ScanResultCardProps) {
   const config = STATUS_CONFIG[result.status];
   const StatusIcon = config.icon;
 
   const hasAutoViolation = result.autoCreatedViolation?.isNew === true;
-  const canIssueViolation =
-    result.status !== 'VALID' && result.status !== 'EXPIRING_SOON';
+  const canIssueViolation = result.status !== 'VALID' && result.status !== 'EXPIRING_SOON';
+  const canAddVehicle = result.status === 'NOT_FOUND' && Boolean(onAddVehicle);
+  const hasVehicleHistory = Boolean(result.vehicle?.id);
 
   return (
     <Card
-      className={cn(
-        'overflow-hidden border-l-4',
-        config.bgColor,
-        config.borderColor,
-        className
-      )}
+      className={cn('overflow-hidden border-l-4', config.bgColor, config.borderColor, className)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <StatusIcon className={cn('h-8 w-8', config.iconColor)} />
             <div>
-              <CardTitle className={cn('text-lg', config.textColor)}>
-                {config.label}
-              </CardTitle>
+              <CardTitle className={cn('text-lg', config.textColor)}>{config.label}</CardTitle>
               <p className={cn('text-sm', config.textColor, 'opacity-80')}>
                 {result.statusMessage}
               </p>
             </div>
           </div>
           {result.status === 'BLACKLISTED' && (
-            <AlertOctagon className="h-10 w-10 text-red-700 animate-pulse" />
+            <AlertOctagon className="h-10 w-10 animate-pulse text-red-700" />
           )}
         </div>
       </CardHeader>
@@ -154,11 +150,9 @@ export function ScanResultCard({
         {/* Vehicle Info */}
         {result.vehicle && (
           <div className="rounded-lg bg-white/60 p-3">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <Car className="h-4 w-4 text-slate-600" />
-              <span className="font-semibold text-slate-900">
-                {result.vehicle.licensePlate}
-              </span>
+              <span className="font-semibold text-slate-900">{result.vehicle.licensePlate}</span>
               {result.vehicle.riskScore > 50 && (
                 <Badge variant="destructive" className="text-xs">
                   High Risk
@@ -173,7 +167,7 @@ export function ScanResultCard({
               </p>
             )}
             {result.vehicle.violationCount > 0 && (
-              <p className="text-sm text-orange-700 mt-1">
+              <p className="mt-1 text-sm text-orange-700">
                 {result.vehicle.violationCount} previous violation(s)
               </p>
             )}
@@ -182,13 +176,11 @@ export function ScanResultCard({
 
         {/* Auto-Created Violation Banner */}
         {hasAutoViolation && result.autoCreatedViolation && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-red-600 shrink-0" />
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+            <ShieldAlert className="h-5 w-5 shrink-0 text-red-600" />
             <div>
-              <p className="font-medium text-red-800 text-sm">
-                Violation Auto-Logged
-              </p>
-              <p className="text-red-700 text-xs">
+              <p className="text-sm font-medium text-red-800">Violation Auto-Logged</p>
+              <p className="text-xs text-red-700">
                 {String(result.autoCreatedViolation.type).replace(/_/g, ' ')} &mdash;{' '}
                 {String(result.autoCreatedViolation.severity)} severity
               </p>
@@ -199,7 +191,7 @@ export function ScanResultCard({
         {/* Active Pass Info */}
         {result.activePass && (
           <div className="rounded-lg bg-white/60 p-3">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <span className="font-medium text-slate-900">Active Pass</span>
               {result.activePass.isEmergency && (
@@ -224,7 +216,7 @@ export function ScanResultCard({
               </div>
             </div>
             <div className="mt-2 text-sm text-slate-600">
-              <Clock className="h-3 w-3 inline mr-1" />
+              <Clock className="mr-1 inline h-3 w-3" />
               Expires: {format(new Date(result.activePass.endTime), 'h:mm a')}
             </div>
             <div className="mt-1 text-xs text-slate-500">
@@ -235,7 +227,7 @@ export function ScanResultCard({
 
         {/* Blacklist Reason */}
         {result.status === 'BLACKLISTED' && result.vehicle?.blacklistReason && (
-          <div className="rounded-lg bg-red-100 p-3 border border-red-300">
+          <div className="rounded-lg border border-red-300 bg-red-100 p-3">
             <p className="font-semibold text-red-800">Blacklist Reason:</p>
             <p className="text-red-700">{result.vehicle.blacklistReason}</p>
           </div>
@@ -244,7 +236,7 @@ export function ScanResultCard({
         {/* Recent Violations */}
         {result.violations.length > 0 && (
           <div className="rounded-lg bg-white/60 p-3">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-600" />
               <span className="font-medium text-slate-900">
                 Recent Violations ({result.violations.length})
@@ -252,10 +244,7 @@ export function ScanResultCard({
             </div>
             <div className="space-y-1">
               {result.violations.slice(0, 3).map((violation) => (
-                <div
-                  key={violation.id}
-                  className="flex items-center justify-between text-sm"
-                >
+                <div key={violation.id} className="flex items-center justify-between text-sm">
                   <span className="text-slate-700">{violation.type}</span>
                   <span className="text-slate-500">
                     {format(new Date(violation.createdAt), 'MMM d')}
@@ -270,11 +259,17 @@ export function ScanResultCard({
 
         {/* Actions */}
         <div className="flex gap-2">
+          {canAddVehicle && onAddVehicle && (
+            <Button onClick={onAddVehicle} variant="secondary" className="flex-1" size="touch">
+              <Car className="mr-2 h-5 w-5" />
+              Add Vehicle
+            </Button>
+          )}
           {canIssueViolation && (
             <Button
               onClick={onIssueViolation}
               variant={hasAutoViolation ? 'outline' : 'destructive'}
-              className="flex-1"
+              className={cn(canAddVehicle ? '' : 'flex-1')}
               size="touch"
             >
               <AlertTriangle className="mr-2 h-5 w-5" />
@@ -284,8 +279,9 @@ export function ScanResultCard({
           <Button
             onClick={onViewHistory}
             variant="outline"
-            className={cn(canIssueViolation ? '' : 'flex-1')}
+            className={cn(canIssueViolation || canAddVehicle ? '' : 'flex-1')}
             size="touch"
+            disabled={!hasVehicleHistory}
           >
             <History className="mr-2 h-5 w-5" />
             History
@@ -293,7 +289,7 @@ export function ScanResultCard({
         </div>
 
         {/* Lookup timestamp */}
-        <p className="text-xs text-center text-slate-500">
+        <p className="text-center text-xs text-slate-500">
           Looked up at {format(new Date(result.lookupTime), 'h:mm:ss a')}
         </p>
       </CardContent>

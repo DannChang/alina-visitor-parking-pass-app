@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Search,
-  WifiOff,
-  RotateCcw,
-  Keyboard,
-  History,
-} from 'lucide-react';
+import { Search, WifiOff, RotateCcw, Keyboard, History, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +11,7 @@ import { CameraCapture } from './camera-capture';
 import { ScanResultCard } from './scan-result-card';
 import { QuickViolationDialog } from './quick-violation-dialog';
 import { VehicleHistoryDialog } from './vehicle-history-dialog';
+import { PatrolAddVehicleDialog } from './patrol-add-vehicle-dialog';
 import { usePatrolScanner } from '@/hooks/use-patrol-scanner';
 
 export function PatrolScannerPage() {
@@ -30,11 +25,14 @@ export function PatrolScannerPage() {
     scan,
     reset,
     manualLookup,
+    manualAddVehicle,
   } = usePatrolScanner();
 
   const [manualPlate, setManualPlate] = useState('');
   const [showViolationDialog, setShowViolationDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false);
+  const [addVehiclePlate, setAddVehiclePlate] = useState('');
 
   const handleCapture = async (imageData: string) => {
     await scan(imageData);
@@ -47,20 +45,29 @@ export function PatrolScannerPage() {
     }
   };
 
+  const openAddVehicleDialog = (licensePlate?: string) => {
+    const fallbackPlate =
+      licensePlate || lookupResult?.vehicle?.licensePlate || ocrResult?.licensePlate || manualPlate;
+
+    setAddVehiclePlate(fallbackPlate);
+    setShowAddVehicleDialog(true);
+  };
+
   const handleViolationSuccess = () => {
     if (lookupResult?.vehicle?.licensePlate) {
       manualLookup(lookupResult.vehicle.licensePlate);
     }
   };
 
-  const isProcessing = scanState === 'processing' || scanState === 'looking_up';
+  const isProcessing =
+    scanState === 'processing' || scanState === 'looking_up' || scanState === 'adding';
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Patrol Mode</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Patrol Mode</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Scan plates, verify passes, and issue violations.
           </p>
         </div>
@@ -73,7 +80,7 @@ export function PatrolScannerPage() {
       </div>
 
       {isOffline && (
-        <Alert className="bg-yellow-50 border-yellow-200">
+        <Alert className="border-yellow-200 bg-yellow-50">
           <WifiOff className="h-4 w-4" />
           <AlertDescription>
             You&apos;re offline. Using cached data for lookups. Some features may be limited.
@@ -85,26 +92,36 @@ export function PatrolScannerPage() {
 
       {scanState === 'idle' && (
         <Card>
-          <CardContent className="pt-5 pb-4">
+          <CardContent className="pb-4 pt-5">
             <form onSubmit={handleManualSubmit} className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Keyboard className="h-4 w-4" />
                 Manual Plate Lookup
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   placeholder="e.g. ABC 1234"
                   value={manualPlate}
                   onChange={(e) => setManualPlate(e.target.value.toUpperCase())}
-                  className="flex-1 font-mono text-lg tracking-wider h-12"
+                  className="h-12 flex-1 font-mono text-lg tracking-wider"
                 />
                 <Button
                   type="submit"
                   disabled={!manualPlate.trim() || isProcessing}
                   className="h-12 px-5"
                 >
-                  <Search className="h-4 w-4 mr-2" />
+                  <Search className="mr-2 h-4 w-4" />
                   Lookup
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!manualPlate.trim() || isProcessing}
+                  className="h-12 px-5"
+                  onClick={() => openAddVehicleDialog(manualPlate)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
                 </Button>
               </div>
             </form>
@@ -118,7 +135,7 @@ export function PatrolScannerPage() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm text-slate-600">Detected Plate:</span>
-                <span className="ml-2 font-mono font-bold text-lg">
+                <span className="ml-2 font-mono text-lg font-bold">
                   {ocrResult.licensePlate || 'None'}
                 </span>
               </div>
@@ -136,20 +153,32 @@ export function PatrolScannerPage() {
       )}
 
       {scanState === 'processing' && (
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="border-blue-200 bg-blue-50">
           <CardContent className="py-6 text-center">
             <div className="animate-pulse">
-              <span className="text-blue-700 font-medium">Reading license plate...</span>
+              <span className="font-medium text-blue-700">Reading license plate...</span>
             </div>
           </CardContent>
         </Card>
       )}
 
       {scanState === 'looking_up' && (
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="border-blue-200 bg-blue-50">
           <CardContent className="py-6 text-center">
             <div className="animate-pulse">
-              <span className="text-blue-700 font-medium">Looking up vehicle...</span>
+              <span className="font-medium text-blue-700">Looking up vehicle...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {scanState === 'adding' && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="py-6 text-center">
+            <div className="animate-pulse">
+              <span className="font-medium text-blue-700">
+                Adding vehicle and refreshing patrol lookup...
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -160,7 +189,7 @@ export function PatrolScannerPage() {
           <AlertDescription className="flex items-center justify-between">
             <span>{error}</span>
             <Button variant="outline" size="sm" onClick={reset}>
-              <RotateCcw className="h-4 w-4 mr-1" />
+              <RotateCcw className="mr-1 h-4 w-4" />
               Retry
             </Button>
           </AlertDescription>
@@ -172,12 +201,13 @@ export function PatrolScannerPage() {
           result={lookupResult}
           onIssueViolation={() => setShowViolationDialog(true)}
           onViewHistory={() => setShowHistoryDialog(true)}
+          onAddVehicle={() => openAddVehicleDialog()}
         />
       )}
 
       {(scanState === 'complete' || scanState === 'error') && (
         <Button onClick={reset} variant="outline" size="lg" className="w-full">
-          <RotateCcw className="h-5 w-5 mr-2" />
+          <RotateCcw className="mr-2 h-5 w-5" />
           Scan Another Plate
         </Button>
       )}
@@ -185,12 +215,12 @@ export function PatrolScannerPage() {
       {scanState === 'idle' && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4" />
               Quick Tips
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-slate-600 space-y-2">
+          <CardContent className="space-y-2 text-sm text-slate-600">
             <p>• Hold camera steady and align plate within the guide</p>
             <p>• Works best in good lighting conditions</p>
             <p>• Use manual entry if OCR fails to read</p>
@@ -214,6 +244,13 @@ export function PatrolScannerPage() {
         onOpenChange={setShowHistoryDialog}
         vehicleId={lookupResult?.vehicle?.id || null}
         licensePlate={lookupResult?.vehicle?.licensePlate || ocrResult?.licensePlate || ''}
+      />
+
+      <PatrolAddVehicleDialog
+        open={showAddVehicleDialog}
+        onOpenChange={setShowAddVehicleDialog}
+        initialLicensePlate={addVehiclePlate}
+        onSubmit={manualAddVehicle}
       />
     </div>
   );
