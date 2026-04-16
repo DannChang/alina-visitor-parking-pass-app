@@ -3,6 +3,7 @@ import Tesseract from 'tesseract.js';
 import { requirePermission } from '@/lib/api-auth';
 import { validateLicensePlate } from '@/lib/utils/license-plate';
 import { extractBestLicensePlate, type OCRTextObservation } from '@/lib/utils/ocr-license-plate';
+import { isOnlineALPREnabled, recognizeLicensePlateOnline } from '@/services/alpr-service';
 
 const OCR_CHARACTER_WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -30,6 +31,24 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid image format. Expected data URL.' },
         { status: 400 }
       );
+    }
+
+    if (isOnlineALPREnabled()) {
+      try {
+        const onlineResult = await recognizeLicensePlateOnline(image);
+
+        if (onlineResult.success) {
+          return NextResponse.json({
+            success: true,
+            licensePlate: onlineResult.licensePlate,
+            normalizedPlate: onlineResult.normalizedPlate,
+            confidence: onlineResult.confidence,
+            rawText: onlineResult.rawText,
+          });
+        }
+      } catch (error) {
+        console.error('Cloud ALPR processing error, falling back to local OCR:', error);
+      }
     }
 
     worker = await Tesseract.createWorker('eng', 1, {

@@ -158,6 +158,10 @@ ENCRYPTION_KEY="REPLACE_THIS_WITH_GENERATED_KEY"
 
 # Resend API key (already configured)
 RESEND_API_KEY="re_fRRPFaoh_95EXuahtQyyGm3vKnbrsrMFw"
+
+# Optional but strongly recommended for reliable patrol OCR
+PLATE_RECOGNIZER_API_TOKEN="REPLACE_THIS_WITH_YOUR_PLATE_RECOGNIZER_TOKEN"
+PLATE_RECOGNIZER_REGION_HINTS="ca-bc,ca,us,mx"
 ```
 
 ### Step 3: Initialize Database

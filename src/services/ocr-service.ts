@@ -191,6 +191,29 @@ async function prepareOCRImageVariants(imageData: string): Promise<OCRImageVaria
   ];
 }
 
+async function prepareServerOCRImage(imageData: string): Promise<string> {
+  if (typeof document === 'undefined') {
+    return imageData;
+  }
+
+  try {
+    const variants = await prepareOCRImageVariants(imageData);
+    const preferredVariant = variants.find((variant) => variant.label === 'focused-color')?.image;
+
+    if (!preferredVariant) {
+      return imageData;
+    }
+
+    if (typeof preferredVariant === 'string') {
+      return preferredVariant;
+    }
+
+    return preferredVariant.toDataURL('image/jpeg', 0.92);
+  } catch {
+    return imageData;
+  }
+}
+
 async function runRecognitionAttempts(
   worker: Tesseract.Worker,
   attempts: RecognitionAttempt[]
@@ -332,6 +355,7 @@ export async function performServerOCR(
   const startTime = Date.now();
 
   try {
+    const preparedImageData = await prepareServerOCRImage(imageData);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -340,7 +364,7 @@ export async function performServerOCR(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ image: imageData }),
+      body: JSON.stringify({ image: preparedImageData }),
       signal: controller.signal,
     });
 
@@ -382,7 +406,7 @@ export async function performServerOCR(
  * Server-side available as opt-in for future use
  */
 export async function performOCR(imageData: string, options: OCROptions = {}): Promise<OCRResult> {
-  const { preferServer = false, timeout = 30000 } = options;
+  const { preferServer = true, timeout = 30000 } = options;
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
   if (preferServer && isOnline) {
