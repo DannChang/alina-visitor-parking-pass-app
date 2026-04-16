@@ -43,6 +43,7 @@ export interface OnlineALPRResult {
 
 const DEFAULT_PLATE_RECOGNIZER_API_URL = 'https://api.platerecognizer.com/v1/plate-reader/';
 const DEFAULT_REGION_HINTS = ['ca-bc', 'ca', 'us', 'mx'];
+const PLATE_RECOGNIZER_REQUEST_TIMEOUT_MS = 15000;
 
 function getPlateRecognizerApiToken(): string | null {
   return process.env.PLATE_RECOGNIZER_API_TOKEN?.trim() || null;
@@ -162,13 +163,27 @@ export async function recognizeLicensePlateOnline(imageData: string): Promise<On
 
   const apiUrl = process.env.PLATE_RECOGNIZER_API_URL?.trim() || DEFAULT_PLATE_RECOGNIZER_API_URL;
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Token ${apiToken}`,
-    },
-    body: formData,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PLATE_RECOGNIZER_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Token ${apiToken}`,
+      },
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Cloud ALPR request timed out');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const data = (await response.json().catch(() => ({}))) as PlateRecognizerResponse & {
     detail?: string;

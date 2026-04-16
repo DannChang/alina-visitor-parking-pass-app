@@ -191,29 +191,6 @@ async function prepareOCRImageVariants(imageData: string): Promise<OCRImageVaria
   ];
 }
 
-async function prepareServerOCRImage(imageData: string): Promise<string> {
-  if (typeof document === 'undefined') {
-    return imageData;
-  }
-
-  try {
-    const variants = await prepareOCRImageVariants(imageData);
-    const preferredVariant = variants.find((variant) => variant.label === 'focused-color')?.image;
-
-    if (!preferredVariant) {
-      return imageData;
-    }
-
-    if (typeof preferredVariant === 'string') {
-      return preferredVariant;
-    }
-
-    return preferredVariant.toDataURL('image/jpeg', 0.92);
-  } catch {
-    return imageData;
-  }
-}
-
 async function runRecognitionAttempts(
   worker: Tesseract.Worker,
   attempts: RecognitionAttempt[]
@@ -355,16 +332,18 @@ export async function performServerOCR(
   const startTime = Date.now();
 
   try {
-    const preparedImageData = await prepareServerOCRImage(imageData);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+    // Send the original (uncropped) frame so the server-side cloud ALPR can
+    // run its own detector. Client-side preprocessing is reserved for the
+    // local Tesseract fallback in performClientOCR.
     const response = await fetch('/api/ocr/recognize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ image: preparedImageData }),
+      body: JSON.stringify({ image: imageData }),
       signal: controller.signal,
     });
 

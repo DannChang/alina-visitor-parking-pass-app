@@ -25,7 +25,6 @@ import { ScanResultCard } from './scan-result-card';
 import { QuickViolationDialog } from './quick-violation-dialog';
 import { VehicleHistoryDialog } from './vehicle-history-dialog';
 import { PatrolAddVehicleDialog } from './patrol-add-vehicle-dialog';
-import { ScanReviewCard } from './scan-review-card';
 import { usePatrolScanner } from '@/hooks/use-patrol-scanner';
 import { cn } from '@/lib/utils';
 import { NAV_ICONS, type NavItem } from '@/lib/navigation';
@@ -100,10 +99,7 @@ export function PatrolDashboard({ user, initials, navItems, signOutAction }: Pat
   };
 
   const isProcessing =
-    scanState === 'processing' ||
-    scanState === 'reviewing' ||
-    scanState === 'looking_up' ||
-    scanState === 'adding';
+    scanState === 'processing' || scanState === 'looking_up' || scanState === 'adding';
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -318,16 +314,6 @@ export function PatrolDashboard({ user, initials, navItems, signOutAction }: Pat
           </Card>
         )}
 
-        {/* Review/Edit State */}
-        {scanState === 'reviewing' && ocrResult?.normalizedPlate && (
-          <ScanReviewCard
-            key={ocrResult.normalizedPlate}
-            initialPlate={ocrResult.normalizedPlate}
-            onConfirm={confirmPlate}
-            onRescan={reset}
-          />
-        )}
-
         {/* Processing State */}
         {scanState === 'processing' && (
           <Card className="border-blue-200 bg-blue-50">
@@ -378,9 +364,11 @@ export function PatrolDashboard({ user, initials, navItems, signOutAction }: Pat
         {scanState === 'complete' && lookupResult && (
           <ScanResultCard
             result={lookupResult}
+            searchedPlate={ocrResult?.normalizedPlate || ocrResult?.licensePlate || manualPlate}
             onIssueViolation={handleIssueViolation}
             onViewHistory={handleViewHistory}
             onAddVehicle={() => openAddVehicleDialog()}
+            onEditPlate={confirmPlate}
           />
         )}
 

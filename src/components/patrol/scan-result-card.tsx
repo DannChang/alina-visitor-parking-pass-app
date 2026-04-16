@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { format } from 'date-fns';
 import {
   CheckCircle2,
@@ -16,10 +17,13 @@ import {
   Timer,
   Home,
   ShieldAlert,
+  Pencil,
+  Search,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { formatPassContact } from '@/lib/utils/contact';
@@ -27,9 +31,11 @@ import type { PatrolLookupResult, VehicleStatus } from '@/app/api/patrol/lookup/
 
 interface ScanResultCardProps {
   result: PatrolLookupResult;
+  searchedPlate?: string;
   onIssueViolation: () => void;
   onViewHistory: () => void;
   onAddVehicle?: () => void;
+  onEditPlate?: (licensePlate: string) => void | Promise<void>;
   className?: string;
 }
 
@@ -112,18 +118,46 @@ const STATUS_CONFIG: Record<
 
 export function ScanResultCard({
   result,
+  searchedPlate,
   onIssueViolation,
   onViewHistory,
   onAddVehicle,
+  onEditPlate,
   className,
 }: ScanResultCardProps) {
   const config = STATUS_CONFIG[result.status];
   const StatusIcon = config.icon;
 
+  const currentPlate = result.vehicle?.licensePlate ?? searchedPlate ?? '';
+  const [isEditingPlate, setIsEditingPlate] = useState(false);
+  const [editedPlate, setEditedPlate] = useState(currentPlate);
+
   const hasAutoViolation = result.autoCreatedViolation?.isNew === true;
   const canIssueViolation = result.status !== 'VALID' && result.status !== 'EXPIRING_SOON';
   const canAddVehicle = result.status === 'NOT_FOUND' && Boolean(onAddVehicle);
   const hasVehicleHistory = Boolean(result.vehicle?.id);
+
+  const handleStartEditing = () => {
+    setEditedPlate(currentPlate);
+    setIsEditingPlate(true);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditingPlate(false);
+    setEditedPlate(currentPlate);
+  };
+
+  const handleSubmitEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!onEditPlate) return;
+    const trimmed = editedPlate.trim();
+    if (!trimmed || trimmed === currentPlate.trim()) {
+      setIsEditingPlate(false);
+      return;
+    }
+    setIsEditingPlate(false);
+    await onEditPlate(trimmed);
+  };
 
   return (
     <Card
@@ -287,6 +321,38 @@ export function ScanResultCard({
             History
           </Button>
         </div>
+
+        {/* Edit plate / re-lookup */}
+        {onEditPlate && (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white/60 p-3">
+            {!isEditingPlate ? (
+              <button
+                type="button"
+                onClick={handleStartEditing}
+                className="flex w-full items-center justify-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+              >
+                <Pencil className="h-4 w-4" />
+                Wrong plate? Edit and re-lookup
+              </button>
+            ) : (
+              <form onSubmit={handleSubmitEdit} className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={editedPlate}
+                  onChange={(event) => setEditedPlate(event.target.value.toUpperCase())}
+                  className="h-11 flex-1 font-mono text-base tracking-wider"
+                  autoFocus
+                />
+                <Button type="submit" size="sm" disabled={!editedPlate.trim()}>
+                  <Search className="mr-2 h-4 w-4" />
+                  Re-lookup
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={handleCancelEditing}>
+                  Cancel
+                </Button>
+              </form>
+            )}
+          </div>
+        )}
 
         {/* Lookup timestamp */}
         <p className="text-center text-xs text-slate-500">
