@@ -6,7 +6,14 @@ import { cacheLookupResult, getCachedLookup } from '@/services/offline-cache-ser
 import { normalizeLicensePlate, validateLicensePlate } from '@/lib/utils/license-plate';
 import type { PatrolLookupResult } from '@/app/api/patrol/lookup/route';
 
-export type ScanState = 'idle' | 'processing' | 'looking_up' | 'adding' | 'complete' | 'error';
+export type ScanState =
+  | 'idle'
+  | 'processing'
+  | 'reviewing'
+  | 'looking_up'
+  | 'adding'
+  | 'complete'
+  | 'error';
 
 export interface ManualVehicleInput {
   licensePlate: string;
@@ -42,6 +49,7 @@ export interface UseScannerReturn {
   scan: (imageData: string) => Promise<void>;
   reset: () => void;
   manualLookup: (licensePlate: string) => Promise<void>;
+  confirmPlate: (licensePlate: string) => Promise<void>;
   manualAddVehicle: (input: ManualVehicleInput) => Promise<ManualVehicleAddResult>;
 }
 
@@ -115,9 +123,45 @@ export function usePatrolScanner(): UseScannerReturn {
           return;
         }
 
-        // Step 2: Lookup
-        setScanState('looking_up');
-        const lookup = await lookupPlate(ocr.normalizedPlate);
+        // Step 2: Hand off to the user for confirmation/edit before lookup.
+        setScanState('reviewing');
+      } catch (err) {
+        setScanState('error');
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
+    },
+    []
+  );
+
+  const confirmPlate = useCallback(
+    async (licensePlate: string) => {
+      setError(null);
+
+      const normalizedPlate = normalizeLicensePlate(licensePlate);
+      const validation = validateLicensePlate(normalizedPlate);
+
+      if (!validation.isValid) {
+        setScanState('reviewing');
+        setError(validation.error || 'Please enter a valid license plate');
+        return;
+      }
+
+      // Reflect any user edits in the OCR result so downstream consumers
+      // (violation dialog, history, add-vehicle prefill) see the corrected plate.
+      setOcrResult((previous) =>
+        previous
+          ? {
+              ...previous,
+              licensePlate: normalizedPlate,
+              normalizedPlate,
+            }
+          : previous
+      );
+
+      setScanState('looking_up');
+
+      try {
+        const lookup = await lookupPlate(normalizedPlate);
 
         if (lookup) {
           setLookupResult(lookup);
@@ -251,6 +295,7 @@ export function usePatrolScanner(): UseScannerReturn {
     scan,
     reset,
     manualLookup,
+    confirmPlate,
     manualAddVehicle,
   };
 }
