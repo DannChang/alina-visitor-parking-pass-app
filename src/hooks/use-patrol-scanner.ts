@@ -6,14 +6,7 @@ import { cacheLookupResult, getCachedLookup } from '@/services/offline-cache-ser
 import { normalizeLicensePlate, validateLicensePlate } from '@/lib/utils/license-plate';
 import type { PatrolLookupResult } from '@/app/api/patrol/lookup/route';
 
-export type ScanState =
-  | 'idle'
-  | 'processing'
-  | 'reviewing'
-  | 'looking_up'
-  | 'adding'
-  | 'complete'
-  | 'error';
+export type ScanState = 'idle' | 'processing' | 'looking_up' | 'adding' | 'complete' | 'error';
 
 export interface ManualVehicleInput {
   licensePlate: string;
@@ -123,16 +116,27 @@ export function usePatrolScanner(): UseScannerReturn {
           return;
         }
 
-        // Step 2: Hand off to the user for confirmation/edit before lookup.
-        setScanState('reviewing');
+        // Step 2: Lookup
+        setScanState('looking_up');
+        const lookup = await lookupPlate(ocr.normalizedPlate);
+
+        if (lookup) {
+          setLookupResult(lookup);
+          setScanState('complete');
+        } else {
+          setScanState('error');
+          setError('Lookup returned no results');
+        }
       } catch (err) {
         setScanState('error');
         setError(err instanceof Error ? err.message : 'An error occurred');
       }
     },
-    []
+    [lookupPlate]
   );
 
+  // Re-runs the lookup with a user-corrected plate while preserving the
+  // captured image so the violation dialog can still attach the original photo.
   const confirmPlate = useCallback(
     async (licensePlate: string) => {
       setError(null);
@@ -141,13 +145,11 @@ export function usePatrolScanner(): UseScannerReturn {
       const validation = validateLicensePlate(normalizedPlate);
 
       if (!validation.isValid) {
-        setScanState('reviewing');
+        setScanState('error');
         setError(validation.error || 'Please enter a valid license plate');
         return;
       }
 
-      // Reflect any user edits in the OCR result so downstream consumers
-      // (violation dialog, history, add-vehicle prefill) see the corrected plate.
       setOcrResult((previous) =>
         previous
           ? {
@@ -158,6 +160,7 @@ export function usePatrolScanner(): UseScannerReturn {
           : previous
       );
 
+      setLookupResult(null);
       setScanState('looking_up');
 
       try {
