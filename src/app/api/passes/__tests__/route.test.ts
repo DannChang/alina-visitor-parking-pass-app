@@ -40,6 +40,9 @@ vi.mock('@/lib/prisma', () => ({
     qRCodeScan: {
       create: vi.fn(),
     },
+    auditLog: {
+      create: vi.fn(),
+    },
   },
 }));
 
@@ -78,6 +81,7 @@ const mockPrisma = prisma as unknown as {
   };
   parkingZone: { findFirst: ReturnType<typeof vi.fn> };
   qRCodeScan: { create: ReturnType<typeof vi.fn> };
+  auditLog: { create: ReturnType<typeof vi.fn> };
 };
 
 const mockAuth = auth as ReturnType<typeof vi.fn>;
@@ -86,6 +90,7 @@ const mockValidatePassRequest = validatePassRequest as ReturnType<typeof vi.fn>;
 describe('Passes API Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue(null);
   });
 
   // ============================================
@@ -138,6 +143,66 @@ describe('Passes API Routes', () => {
       expect(response.status).toBe(201);
       expect(data.pass).toBeDefined();
       expect(data.confirmationCode).toBeDefined();
+      expect(mockValidatePassRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ignoreActivePassLimit: false,
+        })
+      );
+    });
+
+    it('should allow staff-created passes to override the active pass limit', async () => {
+      mockAuth.mockResolvedValue(createMockManagerSession());
+      mockPrisma.building.findUnique.mockResolvedValue(mockBuilding);
+      mockPrisma.unit.findFirst.mockResolvedValue(mockUnit);
+      mockValidatePassRequest.mockResolvedValue({
+        isValid: true,
+        errors: [],
+        warnings: [
+          {
+            code: 'ACTIVE_PASS_LIMIT_OVERRIDDEN',
+            message: 'Staff override applied',
+          },
+        ],
+      });
+      mockPrisma.vehicle.findUnique.mockResolvedValue(null);
+      mockPrisma.vehicle.create.mockResolvedValue(mockVehicle);
+      mockPrisma.parkingPass.create.mockResolvedValue({
+        ...createMockPass({ registeredVia: 'STAFF_PORTAL' }),
+        vehicle: mockVehicle,
+        unit: { ...mockUnit, building: mockBuilding },
+        parkingZone: null,
+      });
+      mockPrisma.auditLog.create.mockResolvedValue({});
+
+      const request = createMockPostRequest('http://localhost:3000/api/passes', validPassData);
+
+      const response = await POST(request);
+
+      expect(response.status).toBe(201);
+      expect(mockValidatePassRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ignoreActivePassLimit: true,
+        })
+      );
+      expect(mockPrisma.parkingPass.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            registeredVia: 'STAFF_PORTAL',
+          }),
+        })
+      );
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: 'CREATE',
+            entityType: 'ParkingPass',
+            userId: 'manager-1',
+            details: expect.objectContaining({
+              activePassLimitOverride: true,
+            }),
+          }),
+        })
+      );
     });
 
     it('should return 400 for missing required fields', async () => {

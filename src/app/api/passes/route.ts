@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { hasPermission } from '@/lib/authorization';
 import { normalizeLicensePlate } from '@/lib/utils/license-plate';
 import { calculateEndTime } from '@/lib/utils/date-time';
 import { validatePassRequest } from '@/services/validation-service';
@@ -144,9 +145,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/passes - Create a new pass (public endpoint for visitor registration)
+// POST /api/passes - Create a new pass (public visitor registration or staff-assisted creation)
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    const userRole = session?.user?.role;
+    const isStaffCreate =
+      userRole !== undefined && userRole !== 'RESIDENT' && hasPermission(userRole, 'passes:create');
+    const staffUserId = isStaffCreate ? (session?.user.id ?? null) : null;
+
     const body = await request.json();
     const parsed = createPassSchema.safeParse(body);
 
@@ -204,6 +211,7 @@ export async function POST(request: NextRequest) {
       buildingId: building.id,
       timezone: building.timezone,
       durationHours: data.duration,
+      ignoreActivePassLimit: isStaffCreate,
     });
 
     if (!validationResult.isValid) {
@@ -271,7 +279,7 @@ export async function POST(request: NextRequest) {
         passType: data.passType ?? PassType.VISITOR,
         visitorPhone: data.visitorPhone,
         visitorEmail: data.visitorEmail,
-        registeredVia: 'WEB_FORM',
+        registeredVia: isStaffCreate ? 'STAFF_PORTAL' : 'WEB_FORM',
         ipAddress,
         userAgent,
       },
@@ -302,6 +310,29 @@ export async function POST(request: NextRequest) {
           passId: pass.id,
           ipAddress,
           userAgent,
+        },
+      });
+    }
+
+    if (staffUserId) {
+      await prisma.auditLog.create({
+        data: {
+          action: 'CREATE',
+          entityType: 'ParkingPass',
+          entityId: pass.id,
+          userId: staffUserId,
+          ipAddress,
+          userAgent,
+          details: {
+            registeredVia: 'STAFF_PORTAL',
+            activePassLimitOverride: validationResult.warnings.some(
+              (warning) => warning.code === 'ACTIVE_PASS_LIMIT_OVERRIDDEN'
+            ),
+            buildingId: building.id,
+            unitId: unit.id,
+            vehicleId: vehicle.id,
+            duration: data.duration,
+          },
         },
       });
     }

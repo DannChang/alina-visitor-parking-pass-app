@@ -44,6 +44,7 @@ interface PassRequestData {
   durationHours: number;
   timezone?: string;
   isEmergency?: boolean;
+  ignoreActivePassLimit?: boolean;
 }
 
 /**
@@ -91,11 +92,20 @@ export async function validatePassRequest(data: PassRequestData): Promise<Valida
     }
 
     // 2. MAXIMUM VEHICLES PER UNIT
-    if (activePassesForUnit >= rules.maxVehiclesPerUnit) {
+    if (!data.ignoreActivePassLimit && activePassesForUnit >= rules.maxVehiclesPerUnit) {
       errors.push({
         code: ERROR_CODES.MAX_VEHICLES_EXCEEDED,
         message: `Maximum ${rules.maxVehiclesPerUnit} vehicle${rules.maxVehiclesPerUnit !== 1 ? 's' : ''} allowed per unit at one time. Currently ${activePassesForUnit} registered.`,
         field: 'unitNumber',
+        metadata: {
+          maxAllowed: rules.maxVehiclesPerUnit,
+          currentCount: activePassesForUnit,
+        },
+      });
+    } else if (data.ignoreActivePassLimit && activePassesForUnit >= rules.maxVehiclesPerUnit) {
+      warnings.push({
+        code: 'ACTIVE_PASS_LIMIT_OVERRIDDEN',
+        message: `Staff override: this unit already has ${activePassesForUnit} active pass${activePassesForUnit !== 1 ? 'es' : ''}; standard limit is ${rules.maxVehiclesPerUnit}.`,
         metadata: {
           maxAllowed: rules.maxVehiclesPerUnit,
           currentCount: activePassesForUnit,
@@ -278,6 +288,7 @@ export async function validatePassRequest(data: PassRequestData): Promise<Valida
 
     // Check approaching unit vehicle limit
     if (
+      !data.ignoreActivePassLimit &&
       activePassesForUnit >= rules.maxVehiclesPerUnit - 1 &&
       activePassesForUnit < rules.maxVehiclesPerUnit
     ) {
