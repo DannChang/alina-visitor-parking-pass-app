@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { CreatePassDialog } from '@/components/dashboard/create-pass-dialog';
 import { handleClickableRowKeyDown } from '@/components/dashboard/clickable-row';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import { PassDetailsSheet } from '@/components/dashboard/pass-details-sheet';
 import { useTranslations } from 'next-intl';
 
@@ -64,6 +65,7 @@ interface Pass {
 }
 
 const PASSES_CREATE_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'RESIDENT'];
+const DEFAULT_PAGE_SIZE = 10;
 
 function getStatusVariant(status: string, endTime: Date) {
   if (status === 'CANCELLED' || status === 'SUSPENDED') return 'destructive' as const;
@@ -92,6 +94,12 @@ export default function PassesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [passes, setPasses] = useState<Pass[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
@@ -111,10 +119,13 @@ export default function PassesPage() {
     }
   }, [sessionStatus, router]);
 
-  const fetchPasses = useCallback(async (search: string, status: string) => {
+  const fetchPasses = useCallback(async (search: string, status: string, page: number) => {
     setIsLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({
+        limit: String(pagination.limit),
+        page: String(page),
+      });
       if (search) {
         params.set('search', search);
       }
@@ -125,23 +136,24 @@ export default function PassesPage() {
       if (res.ok) {
         const data = await res.json();
         setPasses(data.passes);
+        setPagination(data.pagination);
       }
     } catch {
       // Silently fail
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [pagination.limit]);
 
   // Fetch passes when search changes
   useFetchOnChange(() => {
     if (sessionStatus === 'authenticated') {
-      fetchPasses(debouncedSearch, statusFilter);
+      fetchPasses(debouncedSearch, statusFilter, pagination.page);
     }
-  }, [debouncedSearch, sessionStatus, fetchPasses, statusFilter]);
+  }, [debouncedSearch, sessionStatus, fetchPasses, statusFilter, pagination.page]);
 
   const handlePassCreated = () => {
-    fetchPasses(debouncedSearch, statusFilter);
+    fetchPasses(debouncedSearch, statusFilter, pagination.page);
   };
 
   if (sessionStatus === 'loading') {
@@ -167,10 +179,19 @@ export default function PassesPage() {
               placeholder={t('searchPlaceholder')}
               className="pl-9 h-11 md:h-10 text-base md:text-sm"
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={(e) => {
+                setPagination((current) => ({ ...current, page: 1 }));
+                setSearchValue(e.target.value);
+              }}
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setPagination((current) => ({ ...current, page: 1 }));
+              setStatusFilter(value);
+            }}
+          >
             <SelectTrigger className="h-11 w-[180px] md:h-10">
               <SelectValue placeholder={t('status')} />
             </SelectTrigger>
@@ -287,6 +308,12 @@ export default function PassesPage() {
               </TableBody>
             </Table>
           )}
+          <ListPagination
+            pagination={pagination}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+            isLoading={isLoading}
+          />
         </CardContent>
       </Card>
 

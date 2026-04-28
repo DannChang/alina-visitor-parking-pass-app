@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const buildingId = searchParams.get('buildingId');
     const statusValue = searchParams.get('status');
+    const parsedPage = parseInt(searchParams.get('page') || '1');
+    const parsedLimit = parseInt(searchParams.get('limit') || '10');
+    const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+    const limit = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 10;
     const parsedStatus = statusValue ? statusSchema.safeParse(statusValue) : null;
 
     if (statusValue && !parsedStatus?.success) {
@@ -40,6 +44,8 @@ export async function GET(request: NextRequest) {
       search,
       buildingId,
       status: parsedStatus?.success ? parsedStatus.data : null,
+      page,
+      limit,
     });
 
     return NextResponse.json(result);

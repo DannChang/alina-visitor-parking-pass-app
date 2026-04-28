@@ -92,6 +92,12 @@ export interface ResidentInviteListResult {
   invites: ResidentInviteSummary[];
   buildings: ResidentInviteBuildingOption[];
   units: ResidentInviteUnitOption[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface ResidentInviteMutationResult {
@@ -437,8 +443,14 @@ export async function listResidentInvites(params: {
   search?: string | null;
   buildingId?: string | null;
   status?: ResidentInviteStatus | null;
+  page?: number;
+  limit?: number;
 }): Promise<ResidentInviteListResult> {
   const { userId, role, search, buildingId, status } = params;
+  const page = Number.isFinite(params.page) ? Math.max(1, params.page ?? 1) : 1;
+  const limit = Number.isFinite(params.limit)
+    ? Math.min(100, Math.max(1, params.limit ?? 10))
+    : 10;
 
   const accessibleBuildingIds = await getAccessibleBuildingIds(prisma, userId, role);
   if (buildingId) {
@@ -545,9 +557,11 @@ export async function listResidentInvites(params: {
         }),
   ]);
 
-  const invites = rawInvites
+  const filteredInvites = rawInvites
     .map((invite) => formatResidentInvite(invite))
     .filter((invite) => (status ? invite.status === status : true));
+  const total = filteredInvites.length;
+  const invites = filteredInvites.slice((page - 1) * limit, page * limit);
 
   const units: ResidentInviteUnitOption[] = rawUnits.map((unit) => {
     const hasPrimaryResident = unit.residents.length > 0;
@@ -568,6 +582,12 @@ export async function listResidentInvites(params: {
     invites,
     buildings: activeBuildings,
     units,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 }
 

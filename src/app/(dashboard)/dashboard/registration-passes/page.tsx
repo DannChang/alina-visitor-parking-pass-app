@@ -45,6 +45,7 @@ import {
   handleClickableRowKeyDown,
   stopClickableRowPropagation,
 } from '@/components/dashboard/clickable-row';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import { ResidentInviteDetailsSheet } from '@/components/dashboard/resident-invite-details-sheet';
 import type {
   ResidentInviteBuildingOption,
@@ -58,7 +59,10 @@ interface ResidentInviteResponse {
   invites: ResidentInviteSummary[];
   buildings: ResidentInviteBuildingOption[];
   units: ResidentInviteUnitOption[];
+  pagination: ListPaginationState;
 }
+
+const DEFAULT_PAGE_SIZE = 10;
 
 function getStatusVariant(status: ResidentInviteStatus) {
   switch (status) {
@@ -86,6 +90,12 @@ function LoadingState() {
 
 export default function RegistrationPassesPage() {
   const [invites, setInvites] = useState<ResidentInviteSummary[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [buildings, setBuildings] = useState<ResidentInviteBuildingOption[]>([]);
   const [units, setUnits] = useState<ResidentInviteUnitOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,6 +125,8 @@ export default function RegistrationPassesPage() {
       if (buildingFilter !== 'all') {
         params.set('buildingId', buildingFilter);
       }
+      params.set('page', String(pagination.page));
+      params.set('limit', String(pagination.limit));
 
       const response = await fetch(`/api/resident-invites?${params.toString()}`);
       const data: ResidentInviteResponse & { error?: string } = await response.json();
@@ -126,6 +138,7 @@ export default function RegistrationPassesPage() {
       setInvites(data.invites ?? []);
       setBuildings(data.buildings ?? []);
       setUnits(data.units ?? []);
+      setPagination(data.pagination);
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -135,7 +148,7 @@ export default function RegistrationPassesPage() {
     } finally {
       setLoading(false);
     }
-  }, [buildingFilter, debouncedSearch, statusFilter]);
+  }, [buildingFilter, debouncedSearch, pagination.page, pagination.limit, statusFilter]);
 
   useFetchOnChange(() => {
     fetchInvites();
@@ -293,13 +306,22 @@ export default function RegistrationPassesPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setPagination((current) => ({ ...current, page: 1 }));
+              setSearch(event.target.value);
+            }}
             placeholder="Search by resident, email, unit, or building..."
             className="h-11 pl-9 md:h-10"
           />
         </div>
 
-        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | ResidentInviteStatus)}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => {
+            setPagination((current) => ({ ...current, page: 1 }));
+            setStatusFilter(value as 'all' | ResidentInviteStatus);
+          }}
+        >
           <SelectTrigger className="h-11 w-full md:h-10 md:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -312,7 +334,13 @@ export default function RegistrationPassesPage() {
           </SelectContent>
         </Select>
 
-        <Select value={buildingFilter} onValueChange={setBuildingFilter}>
+        <Select
+          value={buildingFilter}
+          onValueChange={(value) => {
+            setPagination((current) => ({ ...current, page: 1 }));
+            setBuildingFilter(value);
+          }}
+        >
           <SelectTrigger className="h-11 w-full md:h-10 md:w-[220px]">
             <SelectValue placeholder="Building" />
           </SelectTrigger>
@@ -331,7 +359,7 @@ export default function RegistrationPassesPage() {
         <CardHeader className="px-4 md:px-6">
           <CardTitle className="text-lg md:text-xl">Resident Onboarding</CardTitle>
           <CardDescription>
-            {invites.length} registration pass{invites.length === 1 ? '' : 'es'} found
+            {pagination.total} registration pass{pagination.total === 1 ? '' : 'es'} found
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
@@ -478,6 +506,12 @@ export default function RegistrationPassesPage() {
               </TableBody>
             </Table>
           )}
+          <ListPagination
+            pagination={pagination}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+            isLoading={loading}
+          />
         </CardContent>
       </Card>
 

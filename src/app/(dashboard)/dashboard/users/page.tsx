@@ -39,7 +39,10 @@ import {
   handleClickableRowKeyDown,
   stopClickableRowPropagation,
 } from '@/components/dashboard/clickable-row';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import { useTranslations } from 'next-intl';
+
+const DEFAULT_PAGE_SIZE = 10;
 
 interface User {
   id: string;
@@ -55,7 +58,6 @@ interface User {
     managedBuildings: number;
   };
 }
-
 
 function UsersLoading() {
   return (
@@ -77,6 +79,12 @@ export default function UsersPage() {
     SECURITY: { label: t('security'), color: 'outline' },
   };
   const [users, setUsers] = useState<User[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -91,22 +99,27 @@ export default function UsersPage() {
   });
 
   const fetchUsers = useCallback(async () => {
+    setLoading(true);
+
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (roleFilter !== 'all') params.append('role', roleFilter);
+      params.set('page', String(pagination.page));
+      params.set('limit', String(pagination.limit));
 
       const response = await fetch(`/api/users?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       setUsers(data.users || []);
+      setPagination(data.pagination);
     } catch (error) {
       toast.error(t('noUsersFound'));
       console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter]);
+  }, [search, pagination.page, pagination.limit, roleFilter, t]);
 
   useFetchOnChange(() => {
     fetchUsers();
@@ -226,11 +239,20 @@ export default function UsersPage() {
           <Input
             placeholder={t('searchPlaceholder')}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setPagination((current) => ({ ...current, page: 1 }));
+              setSearch(e.target.value);
+            }}
             className="pl-9 h-11 md:h-10 text-base md:text-sm"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <Select
+          value={roleFilter}
+          onValueChange={(value) => {
+            setPagination((current) => ({ ...current, page: 1 }));
+            setRoleFilter(value);
+          }}
+        >
           <SelectTrigger className="w-full md:w-[180px] h-11 md:h-10">
             <SelectValue placeholder={t('allRoles')} />
           </SelectTrigger>
@@ -247,7 +269,7 @@ export default function UsersPage() {
       <Card>
         <CardHeader className="px-4 md:px-6">
           <CardTitle className="text-lg md:text-xl">{t('title')}</CardTitle>
-          <CardDescription>{t('usersFound', { count: users.length })}</CardDescription>
+          <CardDescription>{t('usersFound', { count: pagination.total })}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {loading ? (
@@ -373,6 +395,12 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           )}
+          <ListPagination
+            pagination={pagination}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+            isLoading={loading}
+          />
         </CardContent>
       </Card>
 

@@ -17,8 +17,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { handleClickableRowKeyDown } from '@/components/dashboard/clickable-row';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import { VehicleHistoryDialog } from '@/components/patrol/vehicle-history-dialog';
 import { useTranslations } from 'next-intl';
+
+const DEFAULT_PAGE_SIZE = 10;
 
 interface Vehicle {
   id: string;
@@ -50,16 +53,25 @@ function VehiclesLoading() {
 export function VehiclesClientPage() {
   const t = useTranslations('dashboard.vehicles');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 350);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
-  const fetchVehicles = useCallback(async (searchValue: string) => {
+  const fetchVehicles = useCallback(async (searchValue: string, page: number) => {
     setLoading(true);
 
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({
+        limit: String(pagination.limit),
+        page: String(page),
+      });
       if (searchValue.trim()) {
         params.set('search', searchValue.trim());
       }
@@ -72,16 +84,17 @@ export function VehiclesClientPage() {
       }
 
       setVehicles(data.vehicles || []);
+      setPagination(data.pagination);
     } catch {
       setVehicles([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.limit]);
 
   useFetchOnChange(() => {
-    fetchVehicles(debouncedSearch);
-  }, [fetchVehicles, debouncedSearch]);
+    fetchVehicles(debouncedSearch, pagination.page);
+  }, [fetchVehicles, debouncedSearch, pagination.page]);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -94,7 +107,10 @@ export function VehiclesClientPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(event) => setSearch(event.target.value.toUpperCase())}
+            onChange={(event) => {
+              setPagination((current) => ({ ...current, page: 1 }));
+              setSearch(event.target.value.toUpperCase());
+            }}
             placeholder={t('searchPlaceholder')}
             className="h-11 pl-9 md:h-10"
           />
@@ -176,6 +192,12 @@ export function VehiclesClientPage() {
               </TableBody>
             </Table>
           )}
+          <ListPagination
+            pagination={pagination}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+            isLoading={loading}
+          />
         </CardContent>
       </Card>
 

@@ -16,13 +16,14 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import { LogEntryForm } from './log-entry-form';
 import { LogEntryList, type PatrolLogEntry } from './log-entry-list';
 import { VehicleHistoryDialog } from './vehicle-history-dialog';
 import { LogEntryDetailsSheet } from './log-entry-details-sheet';
 import { useTranslations } from 'next-intl';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 10;
 
 export function PatrolLogbook() {
   const t = useTranslations('patrol');
@@ -37,10 +38,13 @@ export function PatrolLogbook() {
   ] as const;
 
   const [entries, setEntries] = useState<PatrolLogEntry[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<PatrolLogEntry | null>(null);
@@ -53,7 +57,7 @@ export function PatrolLogbook() {
   const buildQueryParams = useCallback(
     (page = 1) => {
       const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
+      params.set('limit', String(pagination.limit));
       params.set('page', String(page));
 
       if (filterType !== 'ALL') {
@@ -68,14 +72,14 @@ export function PatrolLogbook() {
 
       return params.toString();
     },
-    [filterType, filterDateFrom, filterDateTo]
+    [filterType, filterDateFrom, filterDateTo, pagination.limit]
   );
 
   const fetchEntries = useCallback(async () => {
     setIsLoading(true);
 
     try {
-      const queryString = buildQueryParams();
+      const queryString = buildQueryParams(pagination.page);
       const response = await fetch(`/api/patrol/log?${queryString}`);
 
       if (!response.ok) {
@@ -84,39 +88,13 @@ export function PatrolLogbook() {
 
       const data = await response.json();
       setEntries(data.entries ?? []);
-      setCurrentPage(data.pagination?.page ?? 1);
-      setHasMore((data.pagination?.page ?? 1) < (data.pagination?.totalPages ?? 1));
+      setPagination(data.pagination);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load log entries');
     } finally {
       setIsLoading(false);
     }
-  }, [buildQueryParams]);
-
-  const loadMore = async () => {
-    if (entries.length === 0 || isLoadingMore) return;
-
-    setIsLoadingMore(true);
-
-    try {
-      const nextPage = currentPage + 1;
-      const queryString = buildQueryParams(nextPage);
-      const response = await fetch(`/api/patrol/log?${queryString}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch more entries');
-      }
-
-      const data = await response.json();
-      setEntries((prev) => [...prev, ...(data.entries ?? [])]);
-      setCurrentPage(data.pagination?.page ?? nextPage);
-      setHasMore((data.pagination?.page ?? nextPage) < (data.pagination?.totalPages ?? nextPage));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load more entries');
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
+  }, [buildQueryParams, pagination.page]);
 
   const handleRefresh = () => {
     fetchEntries();
@@ -131,6 +109,7 @@ export function PatrolLogbook() {
   };
 
   const handleClearFilters = () => {
+    setPagination((current) => ({ ...current, page: 1 }));
     setFilterType('ALL');
     setFilterDateFrom('');
     setFilterDateTo('');
@@ -197,7 +176,13 @@ export function PatrolLogbook() {
                 <Label htmlFor="filterType" className="text-xs">
                   {t('entryTypeLabel')}
                 </Label>
-                <Select value={filterType} onValueChange={setFilterType}>
+                <Select
+                  value={filterType}
+                  onValueChange={(value) => {
+                    setPagination((current) => ({ ...current, page: 1 }));
+                    setFilterType(value);
+                  }}
+                >
                   <SelectTrigger id="filterType" className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -221,7 +206,10 @@ export function PatrolLogbook() {
                   type="date"
                   className="h-9"
                   value={filterDateFrom}
-                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                  onChange={(e) => {
+                    setPagination((current) => ({ ...current, page: 1 }));
+                    setFilterDateFrom(e.target.value);
+                  }}
                 />
               </div>
 
@@ -235,7 +223,10 @@ export function PatrolLogbook() {
                   type="date"
                   className="h-9"
                   value={filterDateTo}
-                  onChange={(e) => setFilterDateTo(e.target.value)}
+                  onChange={(e) => {
+                    setPagination((current) => ({ ...current, page: 1 }));
+                    setFilterDateTo(e.target.value);
+                  }}
                 />
               </div>
             </div>
@@ -256,9 +247,13 @@ export function PatrolLogbook() {
       <LogEntryList
         entries={entries}
         onEntrySelect={setSelectedEntry}
-        onLoadMore={loadMore}
-        hasMore={hasMore}
-        isLoading={isLoading || isLoadingMore}
+        isLoading={isLoading}
+      />
+      <ListPagination
+        pagination={pagination}
+        onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+        onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+        isLoading={isLoading}
       />
 
       {/* Add Entry Dialog */}
