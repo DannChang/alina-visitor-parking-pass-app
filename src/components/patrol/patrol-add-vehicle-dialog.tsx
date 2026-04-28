@@ -28,6 +28,7 @@ interface FormState {
   model: string;
   color: string;
   state: string;
+  stallNumber: string;
   year: string;
 }
 
@@ -38,6 +39,7 @@ function createInitialState(licensePlate: string): FormState {
     model: '',
     color: '',
     state: '',
+    stallNumber: '',
     year: '',
   };
 }
@@ -77,6 +79,7 @@ export function PatrolAddVehicleDialog({
         model: form.model.trim() || undefined,
         color: form.color.trim() || undefined,
         state: form.state.trim() || undefined,
+        stallNumber: form.stallNumber.trim() || undefined,
         year: form.year.trim() ? Number(form.year.trim()) : undefined,
       });
 
@@ -151,6 +154,18 @@ export function PatrolAddVehicleDialog({
                 placeholder="Camry"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="patrol-add-stall-number" className="text-sm font-medium">
+              Stall Number
+            </label>
+            <Input
+              id="patrol-add-stall-number"
+              value={form.stallNumber}
+              onChange={(event) => updateField('stallNumber', event.target.value)}
+              placeholder="e.g. 42"
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-3">

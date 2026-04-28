@@ -40,6 +40,7 @@ export function PatrolLogbook() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<PatrolLogEntry | null>(null);
@@ -50,21 +51,19 @@ export function PatrolLogbook() {
   const [filterDateTo, setFilterDateTo] = useState('');
 
   const buildQueryParams = useCallback(
-    (cursor?: string) => {
+    (page = 1) => {
       const params = new URLSearchParams();
       params.set('limit', String(PAGE_SIZE));
+      params.set('page', String(page));
 
       if (filterType !== 'ALL') {
         params.set('entryType', filterType);
       }
       if (filterDateFrom) {
-        params.set('from', filterDateFrom);
+        params.set('startDate', filterDateFrom);
       }
       if (filterDateTo) {
-        params.set('to', filterDateTo);
-      }
-      if (cursor) {
-        params.set('cursor', cursor);
+        params.set('endDate', filterDateTo);
       }
 
       return params.toString();
@@ -85,11 +84,10 @@ export function PatrolLogbook() {
 
       const data = await response.json();
       setEntries(data.entries ?? []);
-      setHasMore(data.hasMore ?? false);
+      setCurrentPage(data.pagination?.page ?? 1);
+      setHasMore((data.pagination?.page ?? 1) < (data.pagination?.totalPages ?? 1));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to load log entries'
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to load log entries');
     } finally {
       setIsLoading(false);
     }
@@ -101,8 +99,8 @@ export function PatrolLogbook() {
     setIsLoadingMore(true);
 
     try {
-      const lastEntry = entries[entries.length - 1];
-      const queryString = buildQueryParams(lastEntry?.id);
+      const nextPage = currentPage + 1;
+      const queryString = buildQueryParams(nextPage);
       const response = await fetch(`/api/patrol/log?${queryString}`);
 
       if (!response.ok) {
@@ -111,11 +109,10 @@ export function PatrolLogbook() {
 
       const data = await response.json();
       setEntries((prev) => [...prev, ...(data.entries ?? [])]);
-      setHasMore(data.hasMore ?? false);
+      setCurrentPage(data.pagination?.page ?? nextPage);
+      setHasMore((data.pagination?.page ?? nextPage) < (data.pagination?.totalPages ?? nextPage));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to load more entries'
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to load more entries');
     } finally {
       setIsLoadingMore(false);
     }
@@ -144,8 +141,7 @@ export function PatrolLogbook() {
     fetchEntries();
   }, [fetchEntries]);
 
-  const hasActiveFilters =
-    filterType !== 'ALL' || filterDateFrom !== '' || filterDateTo !== '';
+  const hasActiveFilters = filterType !== 'ALL' || filterDateFrom !== '' || filterDateTo !== '';
 
   return (
     <div className="space-y-4">
@@ -153,17 +149,12 @@ export function PatrolLogbook() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-900">{t('logbookTitle')}</h2>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             {tc('refresh')}
           </Button>
           <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             {t('addEntry')}
           </Button>
         </div>
@@ -174,20 +165,20 @@ export function PatrolLogbook() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle
-              className="text-sm font-medium flex items-center gap-2 cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 text-sm font-medium"
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="h-4 w-4" />
               {t('filters')}
               {hasActiveFilters && (
-                <span className="text-xs text-primary font-normal">{t('filtersActive')}</span>
+                <span className="text-xs font-normal text-primary">{t('filtersActive')}</span>
               )}
             </CardTitle>
             {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs h-7"
+                className="h-7 text-xs"
                 onClick={handleClearFilters}
               >
                 {t('clearFilters')}
@@ -197,10 +188,10 @@ export function PatrolLogbook() {
         </CardHeader>
 
         {showFilters && (
-          <CardContent className="pt-0 space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <Separator />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {/* Entry Type Filter */}
               <div className="space-y-2">
                 <Label htmlFor="filterType" className="text-xs">
@@ -271,11 +262,7 @@ export function PatrolLogbook() {
       />
 
       {/* Add Entry Dialog */}
-      <LogEntryForm
-        open={showForm}
-        onOpenChange={setShowForm}
-        onSuccess={handleFormSuccess}
-      />
+      <LogEntryForm open={showForm} onOpenChange={setShowForm} onSuccess={handleFormSuccess} />
       <VehicleHistoryDialog
         open={!!selectedEntry?.vehicleId}
         onOpenChange={(open) => {

@@ -12,6 +12,9 @@ vi.mock('@/lib/prisma', () => ({
     auditLog: {
       create: vi.fn(),
     },
+    patrolLogEntry: {
+      create: vi.fn(),
+    },
   },
 }));
 
@@ -30,6 +33,9 @@ const mockPrisma = prisma as unknown as {
     update: ReturnType<typeof vi.fn>;
   };
   auditLog: {
+    create: ReturnType<typeof vi.fn>;
+  };
+  patrolLogEntry: {
     create: ReturnType<typeof vi.fn>;
   };
 };
@@ -52,14 +58,17 @@ describe('POST /api/patrol/vehicles', () => {
         licensePlate: 'ABC 1234',
         normalizedPlate: 'ABC1234',
         state: 'BC',
+        stallNumber: '42',
       })
     );
     mockPrisma.auditLog.create.mockResolvedValue({});
+    mockPrisma.patrolLogEntry.create.mockResolvedValue({});
 
     const response = await POST(
       createMockPostRequest('http://localhost:3000/api/patrol/vehicles', {
         licensePlate: 'abc 1234',
         state: 'BC',
+        stallNumber: '42',
       })
     );
 
@@ -77,6 +86,15 @@ describe('POST /api/patrol/vehicles', () => {
         licensePlate: 'ABC 1234',
         normalizedPlate: 'ABC1234',
         state: 'BC',
+        stallNumber: '42',
+      }),
+    });
+    expect(mockPrisma.patrolLogEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        licensePlate: 'ABC 1234',
+        normalizedPlate: 'ABC1234',
+        location: 'Stall 42',
+        notes: 'Vehicle added from patrol mode.',
       }),
     });
   });
@@ -89,6 +107,7 @@ describe('POST /api/patrol/vehicles', () => {
         normalizedPlate: 'XYZ123',
       })
     );
+    mockPrisma.patrolLogEntry.create.mockResolvedValue({});
 
     const response = await POST(
       createMockPostRequest('http://localhost:3000/api/patrol/vehicles', {
@@ -106,6 +125,13 @@ describe('POST /api/patrol/vehicles', () => {
       },
     });
     expect(mockPrisma.vehicle.create).not.toHaveBeenCalled();
+    expect(mockPrisma.patrolLogEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        licensePlate: 'XYZ123',
+        normalizedPlate: 'XYZ123',
+        notes: 'Existing vehicle selected from patrol mode.',
+      }),
+    });
   });
 
   it('restores a soft-deleted vehicle record', async () => {
@@ -126,6 +152,7 @@ describe('POST /api/patrol/vehicles', () => {
       })
     );
     mockPrisma.auditLog.create.mockResolvedValue({});
+    mockPrisma.patrolLogEntry.create.mockResolvedValue({});
 
     const response = await POST(
       createMockPostRequest('http://localhost:3000/api/patrol/vehicles', {
@@ -147,6 +174,13 @@ describe('POST /api/patrol/vehicles', () => {
       data: expect.objectContaining({
         deletedAt: null,
         normalizedPlate: 'OLD123',
+      }),
+    });
+    expect(mockPrisma.patrolLogEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        licensePlate: 'OLD123',
+        normalizedPlate: 'OLD123',
+        notes: 'Archived vehicle restored from patrol mode.',
       }),
     });
   });

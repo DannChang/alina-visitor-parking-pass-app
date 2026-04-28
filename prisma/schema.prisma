@@ -252,6 +252,7 @@ model Vehicle {
   year          Int?
   color         String?
   state         String?  // License plate state/province
+  stallNumber   String?
 
   // Resident vehicle tracking
   isResidentVehicle Boolean  @default(false)

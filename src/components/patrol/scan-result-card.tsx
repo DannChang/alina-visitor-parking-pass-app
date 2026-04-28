@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   Pencil,
   Search,
+  MapPin,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -198,6 +199,12 @@ export function ScanResultCard({
                 {[result.vehicle.color, result.vehicle.make, result.vehicle.model]
                   .filter(Boolean)
                   .join(' ')}
+              </p>
+            )}
+            {result.vehicle.stallNumber && (
+              <p className="mt-1 flex items-center gap-1 text-sm text-slate-600">
+                <MapPin className="h-3.5 w-3.5 text-slate-500" />
+                Stall {result.vehicle.stallNumber}
               </p>
             )}
             {result.vehicle.violationCount > 0 && (
