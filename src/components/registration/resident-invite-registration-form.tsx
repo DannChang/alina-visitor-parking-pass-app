@@ -37,8 +37,8 @@ import { LICENSE_PLATE_CONFIG } from '@/lib/constants';
 interface ResidentInvitePreview {
   id: string;
   status: ResidentInviteStatus;
-  recipientName: string;
-  recipientEmail: string;
+  recipientName: string | null;
+  recipientEmail: string | null;
   recipientPhone: string | null;
   expiresAt: string;
   createdAt: string;
@@ -97,6 +97,8 @@ export function ResidentInviteRegistrationForm({
   invite,
 }: ResidentInviteRegistrationFormProps) {
   const router = useRouter();
+  const [recipientName, setRecipientName] = useState(invite?.recipientName ?? '');
+  const [recipientEmail, setRecipientEmail] = useState(invite?.recipientEmail ?? '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [strataLotNumber, setStrataLotNumber] = useState('');
@@ -112,11 +114,16 @@ export function ResidentInviteRegistrationForm({
   const [strataLotTouched, setStrataLotTouched] = useState(false);
   const [assignedStallTouched, setAssignedStallTouched] = useState<boolean[]>([false]);
   const [licensePlateTouched, setLicensePlateTouched] = useState<boolean[]>([false]);
+  const [recipientNameTouched, setRecipientNameTouched] = useState(false);
+  const [recipientEmailTouched, setRecipientEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const policyScrollRef = useRef<HTMLDivElement>(null);
 
   const blockedContent = useMemo(() => getBlockedMessage(invite), [invite]);
+  const requiresRecipientDetails = !invite?.recipientEmail || !invite?.recipientName;
+  const cleanedRecipientName = recipientName.trim();
+  const cleanedRecipientEmail = recipientEmail.trim().toLowerCase();
 
   const cleanedStrataLotNumber = strataLotNumber.trim();
   const cleanedAssignedStallNumbers = assignedStallNumbers.map((stallNumber) => stallNumber.trim());
@@ -146,15 +153,26 @@ export function ResidentInviteRegistrationForm({
     : [];
   const hasLicensePlateErrors = licensePlateErrors.some(Boolean);
   const passwordError = getPasswordValidationError(password);
+  const recipientNameError =
+    requiresRecipientDetails && !cleanedRecipientName ? 'Resident name is required.' : null;
+  const recipientEmailError =
+    requiresRecipientDetails && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanedRecipientEmail)
+      ? 'A valid email is required.'
+      : null;
   const confirmPasswordError =
     confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match.' : null;
   const showStrataLotError = Boolean(strataLotError && (hasAttemptedSubmit || strataLotTouched));
-  const showAssignedStallErrors = assignedStallErrors.map(
-    (stallError, index) => Boolean(stallError && (hasAttemptedSubmit || assignedStallTouched[index]))
+  const showRecipientNameError = Boolean(
+    recipientNameError && (hasAttemptedSubmit || recipientNameTouched)
   );
-  const showLicensePlateErrors = licensePlateErrors.map(
-    (licensePlateError, index) =>
-      Boolean(licensePlateError && (hasAttemptedSubmit || licensePlateTouched[index]))
+  const showRecipientEmailError = Boolean(
+    recipientEmailError && (hasAttemptedSubmit || recipientEmailTouched)
+  );
+  const showAssignedStallErrors = assignedStallErrors.map((stallError, index) =>
+    Boolean(stallError && (hasAttemptedSubmit || assignedStallTouched[index]))
+  );
+  const showLicensePlateErrors = licensePlateErrors.map((licensePlateError, index) =>
+    Boolean(licensePlateError && (hasAttemptedSubmit || licensePlateTouched[index]))
   );
   const showPasswordError = Boolean(passwordError && (hasAttemptedSubmit || passwordTouched));
   const showConfirmPasswordError = Boolean(
@@ -163,6 +181,8 @@ export function ResidentInviteRegistrationForm({
 
   const canSubmit =
     !isSubmitting &&
+    !recipientNameError &&
+    !recipientEmailError &&
     !strataLotError &&
     cleanedAssignedStallNumbers.length > 0 &&
     !hasAssignedStallErrors &&
@@ -229,6 +249,16 @@ export function ResidentInviteRegistrationForm({
     setError(null);
     setHasAttemptedSubmit(true);
 
+    if (recipientNameError) {
+      setError(recipientNameError);
+      return;
+    }
+
+    if (recipientEmailError) {
+      setError(recipientEmailError);
+      return;
+    }
+
     if (strataLotError) {
       setError(strataLotError);
       return;
@@ -276,6 +306,8 @@ export function ResidentInviteRegistrationForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
+          recipientName: requiresRecipientDetails ? cleanedRecipientName : undefined,
+          recipientEmail: requiresRecipientDetails ? cleanedRecipientEmail : undefined,
           password,
           hasVehicle,
           strataLotNumber: cleanedStrataLotNumber,
@@ -354,8 +386,14 @@ export function ResidentInviteRegistrationForm({
         ) : null}
 
         <div className="rounded-lg bg-muted/40 p-4 text-sm">
-          <p className="font-medium">{invite.recipientName}</p>
-          <p className="text-muted-foreground">{invite.recipientEmail}</p>
+          <p className="font-medium">{invite.recipientName ?? 'Unit registration link'}</p>
+          {invite.recipientEmail ? (
+            <p className="text-muted-foreground">{invite.recipientEmail}</p>
+          ) : (
+            <p className="text-muted-foreground">
+              Enter your name and email to activate this unit.
+            </p>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">
             This one-time link expires{' '}
             {formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}.
@@ -363,6 +401,42 @@ export function ResidentInviteRegistrationForm({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {requiresRecipientDetails ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="resident-registration-name">Full Name</Label>
+                <Input
+                  id="resident-registration-name"
+                  value={recipientName}
+                  onChange={(event) => setRecipientName(event.target.value)}
+                  onBlur={() => setRecipientNameTouched(true)}
+                  className="h-11 md:h-10"
+                  autoComplete="name"
+                  required
+                />
+                {showRecipientNameError && (
+                  <p className="text-sm text-destructive">{recipientNameError}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resident-registration-email">Email</Label>
+                <Input
+                  id="resident-registration-email"
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(event) => setRecipientEmail(event.target.value)}
+                  onBlur={() => setRecipientEmailTouched(true)}
+                  className="h-11 md:h-10"
+                  autoComplete="email"
+                  required
+                />
+                {showRecipientEmailError && (
+                  <p className="text-sm text-destructive">{recipientEmailError}</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="resident-registration-strata-lot">Strata Lot #</Label>
             <Input

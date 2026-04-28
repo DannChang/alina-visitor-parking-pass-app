@@ -65,9 +65,7 @@ export function RevokeResidentInviteDialog({
       onOpenChange(false);
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Failed to revoke registration pass'
+        submitError instanceof Error ? submitError.message : 'Failed to revoke registration pass'
       );
     } finally {
       setIsSubmitting(false);
@@ -81,7 +79,9 @@ export function RevokeResidentInviteDialog({
           <DialogTitle>Revoke Registration Pass</DialogTitle>
           <DialogDescription>
             {invite
-              ? `Revoke the registration link for ${invite.recipientName} in unit ${invite.unit.unitNumber}.`
+              ? `Revoke the registration link for ${
+                  invite.recipientName ?? `unit ${invite.unit.unitNumber}`
+                }.`
               : 'Revoke this registration pass.'}
           </DialogDescription>
         </DialogHeader>

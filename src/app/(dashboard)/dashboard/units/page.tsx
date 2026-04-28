@@ -2,7 +2,20 @@
 
 import { useState, useCallback } from 'react';
 import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
-import { Building2, Home, Phone, Mail, Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import {
+  Building2,
+  CheckCircle2,
+  Copy,
+  Edit2,
+  Home,
+  Loader2,
+  Mail,
+  Phone,
+  Plus,
+  QrCode,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,6 +75,25 @@ interface Unit {
     id: string;
     name: string;
   };
+  residents: {
+    id: string;
+    name: string;
+    email: string | null;
+    createdAt: string;
+  }[];
+  residentInvites: {
+    id: string;
+    recipientName: string | null;
+    recipientEmail: string | null;
+    expiresAt: string;
+    consumedAt: string | null;
+    revokedAt: string | null;
+    resident: {
+      id: string;
+      name: string;
+      email: string | null;
+    } | null;
+  }[];
   _count: {
     parkingPasses: number;
     residents: number;
@@ -94,6 +126,7 @@ export default function UnitsPage() {
   const [selectedBuilding, setSelectedBuilding] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [generatingLinkUnitId, setGeneratingLinkUnitId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     unitNumber: '',
     floor: '',
@@ -173,9 +206,7 @@ export default function UnitsPage() {
         floor: formData.floor ? parseInt(formData.floor) : null,
       };
 
-      const url = editingUnit
-        ? `/api/units/manage?id=${editingUnit.id}`
-        : '/api/units/manage';
+      const url = editingUnit ? `/api/units/manage?id=${editingUnit.id}` : '/api/units/manage';
 
       const response = await fetch(url, {
         method: editingUnit ? 'PATCH' : 'POST',
@@ -216,21 +247,108 @@ export default function UnitsPage() {
     }
   };
 
+  const handleGenerateRegistrationLink = async (unit: Unit) => {
+    setGeneratingLinkUnitId(unit.id);
+
+    try {
+      const response = await fetch(`/api/units/${unit.id}/registration-link`, {
+        method: 'POST',
+      });
+      const data: {
+        registrationUrl?: string;
+        invite?: Unit['residentInvites'][number];
+        error?: string;
+      } = await response.json();
+
+      if (!response.ok || !data.registrationUrl) {
+        throw new Error(data.error || 'Failed to create registration link');
+      }
+
+      try {
+        await navigator.clipboard.writeText(data.registrationUrl);
+        toast.success('Registration link created and copied to clipboard');
+      } catch {
+        toast.success('Registration link created');
+        toast.error('Unable to copy the registration link');
+      }
+
+      if (data.invite) {
+        setEditingUnit((current) =>
+          current?.id === unit.id
+            ? { ...current, residentInvites: [data.invite as Unit['residentInvites'][number]] }
+            : current
+        );
+      }
+      await fetchUnits();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create registration link');
+    } finally {
+      setGeneratingLinkUnitId(null);
+    }
+  };
+
+  const getRegistrationState = (unit: Unit) => {
+    const primaryResident = unit.residents[0] ?? null;
+    const latestInvite = unit.residentInvites[0] ?? null;
+
+    if (primaryResident) {
+      return {
+        label: 'Account activated',
+        description: `${primaryResident.name}${
+          primaryResident.email ? ` (${primaryResident.email})` : ''
+        }`,
+        variant: 'default' as const,
+        icon: CheckCircle2,
+      };
+    }
+
+    if (latestInvite?.consumedAt) {
+      const resident = latestInvite.resident;
+      return {
+        label: 'Account activated',
+        description: resident
+          ? `${resident.name}${resident.email ? ` (${resident.email})` : ''}`
+          : 'Registration completed',
+        variant: 'default' as const,
+        icon: CheckCircle2,
+      };
+    }
+
+    if (latestInvite) {
+      return {
+        label: 'Registration link pending',
+        description: `Expires ${new Date(latestInvite.expiresAt).toLocaleDateString()}`,
+        variant: 'outline' as const,
+        icon: QrCode,
+      };
+    }
+
+    return {
+      label: 'No registration link',
+      description: 'Generate a link from the actions column.',
+      variant: 'secondary' as const,
+      icon: QrCode,
+    };
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground md:text-base">{t('description')}</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto min-h-[44px] md:min-h-0">
+        <Button
+          onClick={() => handleOpenDialog()}
+          className="min-h-[44px] w-full md:min-h-0 md:w-auto"
+        >
           <Plus className="mr-2 h-4 w-4" />
           {t('addUnit')}
         </Button>
       </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-        <div className="relative w-full md:flex-1 md:max-w-sm">
+        <div className="relative w-full md:max-w-sm md:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
@@ -239,7 +357,7 @@ export default function UnitsPage() {
               setPagination((current) => ({ ...current, page: 1 }));
               setSearch(e.target.value);
             }}
-            className="pl-9 h-11 md:h-10 text-base md:text-sm"
+            className="h-11 pl-9 text-base md:h-10 md:text-sm"
           />
         </div>
         <Select
@@ -249,7 +367,7 @@ export default function UnitsPage() {
             setSelectedBuilding(value);
           }}
         >
-          <SelectTrigger className="w-full md:w-[200px] h-11 md:h-10">
+          <SelectTrigger className="h-11 w-full md:h-10 md:w-[200px]">
             <SelectValue placeholder={t('filterBuilding')} />
           </SelectTrigger>
           <SelectContent>
@@ -296,7 +414,7 @@ export default function UnitsPage() {
                     <TableRow
                       key={unit.id}
                       tabIndex={0}
-                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       onClick={() => handleOpenDialog(unit)}
                       onKeyDown={(event) =>
                         handleClickableRowKeyDown(event, () => handleOpenDialog(unit))
@@ -339,12 +457,14 @@ export default function UnitsPage() {
                             </div>
                           )}
                           {!unit.primaryEmail && !unit.primaryPhone && (
-                            <span className="text-muted-foreground text-xs">{t('noContact')}</span>
+                            <span className="text-xs text-muted-foreground">{t('noContact')}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{t('passesCount', { count: unit._count.parkingPasses })}</Badge>
+                        <Badge variant="outline">
+                          {t('passesCount', { count: unit._count.parkingPasses })}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
@@ -354,10 +474,31 @@ export default function UnitsPage() {
                           <Badge variant={unit.isOccupied ? 'outline' : 'secondary'}>
                             {unit.isOccupied ? t('occupied') : t('vacant')}
                           </Badge>
+                          {unit.residents.length > 0 ? (
+                            <Badge variant="default">Account activated</Badge>
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Generate registration link"
+                            aria-label={`Generate registration link for unit ${unit.unitNumber}`}
+                            disabled={generatingLinkUnitId === unit.id || unit.residents.length > 0}
+                            onClick={(event) => {
+                              stopClickableRowPropagation(event);
+                              void handleGenerateRegistrationLink(unit);
+                            }}
+                            onKeyDown={stopClickableRowPropagation}
+                          >
+                            {generatingLinkUnitId === unit.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <QrCode className="h-4 w-4" />
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -432,7 +573,7 @@ export default function UnitsPage() {
                     id="unitNumber"
                     value={formData.unitNumber}
                     onChange={(e) => setFormData({ ...formData, unitNumber: e.target.value })}
-                    className="h-11 md:h-10 text-base md:text-sm"
+                    className="h-11 text-base md:h-10 md:text-sm"
                     required
                   />
                 </div>
@@ -443,7 +584,7 @@ export default function UnitsPage() {
                     type="number"
                     value={formData.floor}
                     onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                    className="h-11 md:h-10 text-base md:text-sm"
+                    className="h-11 text-base md:h-10 md:text-sm"
                   />
                 </div>
               </div>
@@ -453,7 +594,7 @@ export default function UnitsPage() {
                   id="section"
                   value={formData.section}
                   onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   placeholder={t('sectionPlaceholder')}
                 />
               </div>
@@ -464,7 +605,7 @@ export default function UnitsPage() {
                   type="email"
                   value={formData.primaryEmail}
                   onChange={(e) => setFormData({ ...formData, primaryEmail: e.target.value })}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -474,7 +615,7 @@ export default function UnitsPage() {
                   type="tel"
                   value={formData.primaryPhone}
                   onChange={(e) => setFormData({ ...formData, primaryPhone: e.target.value })}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                 />
               </div>
               <div className="flex items-center justify-between py-2">
@@ -503,9 +644,57 @@ export default function UnitsPage() {
                   </Label>
                 </div>
               </div>
+              {editingUnit ? (
+                <div className="rounded-lg border bg-muted/20 p-4">
+                  {(() => {
+                    const registrationState = getRegistrationState(editingUnit);
+                    const StateIcon = registrationState.icon;
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2">
+                            <StateIcon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Resident registration</p>
+                              <p className="text-sm text-muted-foreground">
+                                {registrationState.description}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant={registrationState.variant}>
+                            {registrationState.label}
+                          </Badge>
+                        </div>
+                        {editingUnit.residents.length === 0 ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            disabled={generatingLinkUnitId === editingUnit.id}
+                            onClick={() => void handleGenerateRegistrationLink(editingUnit)}
+                          >
+                            {generatingLinkUnitId === editingUnit.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Copy className="mr-2 h-4 w-4" />
+                            )}
+                            Generate and copy registration link
+                          </Button>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : null}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="min-h-[44px] md:min-h-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="min-h-[44px] md:min-h-0"
+              >
                 {tc('cancel')}
               </Button>
               <Button type="submit" className="min-h-[44px] md:min-h-0">
