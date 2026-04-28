@@ -17,8 +17,8 @@ export type ResidentInviteStatus = 'PENDING' | 'EXPIRED' | 'REVOKED' | 'CONSUMED
 
 export interface ResidentInviteSummary {
   id: string;
-  recipientName: string;
-  recipientEmail: string;
+  recipientName: string | null;
+  recipientEmail: string | null;
   recipientPhone: string | null;
   status: ResidentInviteStatus;
   createdAt: string;
@@ -71,8 +71,8 @@ export interface ResidentInviteUnitOption {
 export interface ResidentInvitePreview {
   id: string;
   status: ResidentInviteStatus;
-  recipientName: string;
-  recipientEmail: string;
+  recipientName: string | null;
+  recipientEmail: string | null;
   recipientPhone: string | null;
   expiresAt: string;
   createdAt: string;
@@ -116,6 +116,12 @@ interface CreateResidentInviteInput {
   recipientPhone?: string | undefined;
 }
 
+interface CreateUnitRegistrationLinkInput {
+  issuerId: string;
+  issuerRole: UserRole;
+  unitId: string;
+}
+
 interface RevokeResidentInviteInput {
   issuerId: string;
   issuerRole: UserRole;
@@ -131,6 +137,8 @@ interface ReissueResidentInviteInput {
 
 interface ConsumeResidentInviteInput {
   token: string;
+  recipientName?: string | undefined;
+  recipientEmail?: string | undefined;
   password: string;
   hasVehicle: boolean;
   strataLotNumber: string;
@@ -268,10 +276,11 @@ async function assertInviteEligibility(
   client: ScopedClient,
   buildingId: string,
   unitId: string,
-  recipientEmail: string,
+  recipientEmail?: string | null,
   ignoreInviteId?: string
 ) {
   const now = new Date();
+  const emailFilter = recipientEmail ? normalizeEmail(recipientEmail) : null;
 
   const [building, unit, activePrimaryResident, existingUser, existingResident, existingInvite] =
     await Promise.all([
@@ -309,27 +318,31 @@ async function assertInviteEligibility(
         },
         select: { id: true },
       }),
-      client.user.findFirst({
-        where: {
-          email: recipientEmail,
-          deletedAt: null,
-        },
-        select: { id: true },
-      }),
-      client.resident.findFirst({
-        where: {
-          email: recipientEmail,
-          deletedAt: null,
-        },
-        select: { id: true },
-      }),
+      emailFilter
+        ? client.user.findFirst({
+            where: {
+              email: emailFilter,
+              deletedAt: null,
+            },
+            select: { id: true },
+          })
+        : Promise.resolve(null),
+      emailFilter
+        ? client.resident.findFirst({
+            where: {
+              email: emailFilter,
+              deletedAt: null,
+            },
+            select: { id: true },
+          })
+        : Promise.resolve(null),
       client.residentInvite.findFirst({
         where: {
           ...(ignoreInviteId ? { id: { not: ignoreInviteId } } : {}),
           consumedAt: null,
           revokedAt: null,
           expiresAt: { gt: now },
-          OR: [{ unitId }, { recipientEmail }],
+          OR: emailFilter ? [{ unitId }, { recipientEmail: emailFilter }] : [{ unitId }],
         },
         select: {
           id: true,
@@ -384,8 +397,8 @@ async function assertInviteEligibility(
 
 function formatResidentInvite(invite: {
   id: string;
-  recipientName: string;
-  recipientEmail: string;
+  recipientName: string | null;
+  recipientEmail: string | null;
   recipientPhone: string | null;
   createdAt: Date;
   expiresAt: Date;
@@ -448,9 +461,7 @@ export async function listResidentInvites(params: {
 }): Promise<ResidentInviteListResult> {
   const { userId, role, search, buildingId, status } = params;
   const page = Number.isFinite(params.page) ? Math.max(1, params.page ?? 1) : 1;
-  const limit = Number.isFinite(params.limit)
-    ? Math.min(100, Math.max(1, params.limit ?? 10))
-    : 10;
+  const limit = Number.isFinite(params.limit) ? Math.min(100, Math.max(1, params.limit ?? 10)) : 10;
 
   const accessibleBuildingIds = await getAccessibleBuildingIds(prisma, userId, role);
   if (buildingId) {
@@ -690,6 +701,95 @@ export async function createResidentInvite(
     }),
     registrationUrl,
     emailSent,
+  };
+}
+
+export async function createUnitRegistrationLink(
+  input: CreateUnitRegistrationLinkInput
+): Promise<ResidentInviteMutationResult> {
+  const token = createResidentInviteToken();
+  const tokenHash = hashResidentInviteToken(token);
+
+  const invite = await prisma.$transaction(async (tx) => {
+    const unit = await tx.unit.findFirst({
+      where: {
+        id: input.unitId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        buildingId: true,
+      },
+    });
+
+    if (!unit) {
+      throw new ResidentInviteError('Unit not found', 404, 'UNIT_NOT_FOUND');
+    }
+
+    await requireInviteScope(tx, input.issuerId, input.issuerRole, unit.buildingId);
+    const { building } = await assertInviteEligibility(tx, unit.buildingId, unit.id, null);
+
+    const createdInvite = await tx.residentInvite.create({
+      data: {
+        issuerId: input.issuerId,
+        buildingId: building.id,
+        unitId: unit.id,
+        recipientName: null,
+        recipientEmail: null,
+        recipientPhone: null,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+      },
+      include: {
+        building: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        unit: {
+          select: {
+            id: true,
+            unitNumber: true,
+          },
+        },
+        issuer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        action: 'ISSUE_RESIDENT_INVITE',
+        entityType: 'ResidentInvite',
+        entityId: createdInvite.id,
+        userId: input.issuerId,
+        details: {
+          buildingId: building.id,
+          unitId: unit.id,
+          delivery: 'MANUAL_LINK',
+        },
+      },
+    });
+
+    return createdInvite;
+  });
+
+  return {
+    invite: formatResidentInvite({
+      ...invite,
+      resident: null,
+      user: null,
+    }),
+    registrationUrl: buildRegistrationUrl(token),
+    emailSent: false,
   };
 }
 
@@ -934,15 +1034,18 @@ export async function reissueResidentInvite(
   });
 
   const registrationUrl = buildRegistrationUrl(token);
-  const emailSent = await sendResidentInviteEmail({
-    inviteId: invite.id,
-    recipientEmail: invite.recipientEmail,
-    recipientName: invite.recipientName,
-    buildingName: invite.building.name,
-    unitNumber: invite.unit.unitNumber,
-    registrationUrl,
-    expiresAt: invite.expiresAt,
-  });
+  const emailSent =
+    invite.recipientEmail && invite.recipientName
+      ? await sendResidentInviteEmail({
+          inviteId: invite.id,
+          recipientEmail: invite.recipientEmail,
+          recipientName: invite.recipientName,
+          buildingName: invite.building.name,
+          unitNumber: invite.unit.unitNumber,
+          registrationUrl,
+          expiresAt: invite.expiresAt,
+        })
+      : false;
 
   let sentAt = invite.sentAt;
   if (emailSent) {
@@ -1018,6 +1121,8 @@ export async function consumeResidentInvite(input: ConsumeResidentInviteInput): 
   buildingSlug: string;
   unitNumber: string;
 }> {
+  const inputRecipientName = input.recipientName?.trim() || null;
+  const inputRecipientEmail = input.recipientEmail ? normalizeEmail(input.recipientEmail) : null;
   const strataLotNumber = input.strataLotNumber.trim();
   const assignedStallNumbers = input.assignedStallNumbers
     .map((stallNumber) => stallNumber.trim())
@@ -1074,6 +1179,10 @@ export async function consumeResidentInvite(input: ConsumeResidentInviteInput): 
   const passwordError = getPasswordValidationError(input.password);
   if (passwordError) {
     throw new ResidentInviteError(passwordError.replace(/\.$/, ''), 400, 'PASSWORD_INVALID');
+  }
+
+  if (input.recipientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputRecipientEmail ?? '')) {
+    throw new ResidentInviteError('A valid email is required', 400, 'EMAIL_INVALID');
   }
 
   const uniqueAssignedStallNumbers = Array.from(new Set(assignedStallNumbers));
@@ -1184,11 +1293,22 @@ export async function consumeResidentInvite(input: ConsumeResidentInviteInput): 
         );
       }
 
+      const recipientName = currentInvite.recipientName ?? inputRecipientName;
+      const recipientEmail = currentInvite.recipientEmail ?? inputRecipientEmail;
+
+      if (!recipientName) {
+        throw new ResidentInviteError('Resident name is required', 400, 'RECIPIENT_NAME_REQUIRED');
+      }
+
+      if (!recipientEmail) {
+        throw new ResidentInviteError('A valid email is required', 400, 'RECIPIENT_EMAIL_REQUIRED');
+      }
+
       await assertInviteEligibility(
         tx,
         currentInvite.buildingId,
         currentInvite.unitId,
-        currentInvite.recipientEmail,
+        recipientEmail,
         currentInvite.id
       );
 
@@ -1218,8 +1338,8 @@ export async function consumeResidentInvite(input: ConsumeResidentInviteInput): 
 
       const user = await tx.user.create({
         data: {
-          email: currentInvite.recipientEmail,
-          name: currentInvite.recipientName,
+          email: recipientEmail,
+          name: recipientName,
           passwordHash: null,
           role: 'RESIDENT',
           emailVerified: new Date(),
@@ -1229,8 +1349,8 @@ export async function consumeResidentInvite(input: ConsumeResidentInviteInput): 
 
       const resident = await tx.resident.create({
         data: {
-          name: currentInvite.recipientName,
-          email: currentInvite.recipientEmail,
+          name: recipientName,
+          email: recipientEmail,
           phone: currentInvite.recipientPhone,
           strataLotNumber,
           assignedStallNumbers: uniqueAssignedStallNumbers,
@@ -1273,6 +1393,8 @@ export async function consumeResidentInvite(input: ConsumeResidentInviteInput): 
       await tx.residentInvite.update({
         where: { id: currentInvite.id },
         data: {
+          recipientName,
+          recipientEmail,
           consumedAt: new Date(),
           consumedIp: input.ipAddress ?? null,
           consumedUserAgent: input.userAgent ?? null,

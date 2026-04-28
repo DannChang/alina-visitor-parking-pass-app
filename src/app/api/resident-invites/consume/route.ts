@@ -12,6 +12,8 @@ import {
 const consumeSchema = z
   .object({
     token: z.string().min(1),
+    recipientName: z.string().trim().min(1, 'Resident name is required').max(100).optional(),
+    recipientEmail: z.string().trim().email('A valid email is required').optional(),
     password: strongPasswordSchema,
     hasVehicle: z.boolean(),
     strataLotNumber: residentStrataLotSchema,
@@ -62,6 +64,8 @@ export async function POST(request: NextRequest) {
 
     const result = await consumeResidentInvite({
       token: data.token,
+      recipientName: data.recipientName,
+      recipientEmail: data.recipientEmail,
       password: data.password,
       hasVehicle: data.hasVehicle,
       strataLotNumber: data.strataLotNumber,

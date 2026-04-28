@@ -1,8 +1,4 @@
-export type ResidentInviteStatus =
-  | 'PENDING'
-  | 'EXPIRED'
-  | 'REVOKED'
-  | 'CONSUMED';
+export type ResidentInviteStatus = 'PENDING' | 'EXPIRED' | 'REVOKED' | 'CONSUMED';
 
 export interface ResidentInviteBuildingOption {
   id: string;
@@ -22,8 +18,8 @@ export interface ResidentInviteUnitOption {
 
 export interface ResidentInviteSummary {
   id: string;
-  recipientName: string;
-  recipientEmail: string;
+  recipientName: string | null;
+  recipientEmail: string | null;
   recipientPhone: string | null;
   status: ResidentInviteStatus;
   createdAt: string;

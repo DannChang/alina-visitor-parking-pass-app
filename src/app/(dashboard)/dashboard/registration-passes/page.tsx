@@ -4,15 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { formatDistanceToNow } from 'date-fns';
-import {
-  Copy,
-  Loader2,
-  Mail,
-  Plus,
-  RefreshCcw,
-  Search,
-  ShieldX,
-} from 'lucide-react';
+import { Copy, Loader2, Mail, Plus, RefreshCcw, Search, ShieldX } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,12 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  CreateResidentInviteDialog,
-} from '@/components/dashboard/create-resident-invite-dialog';
-import {
-  RevokeResidentInviteDialog,
-} from '@/components/dashboard/revoke-resident-invite-dialog';
+import { CreateResidentInviteDialog } from '@/components/dashboard/create-resident-invite-dialog';
+import { RevokeResidentInviteDialog } from '@/components/dashboard/revoke-resident-invite-dialog';
 import {
   handleClickableRowKeyDown,
   stopClickableRowPropagation,
@@ -141,9 +129,7 @@ export default function RegistrationPassesPage() {
       setPagination(data.pagination);
     } catch (fetchError) {
       setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : 'Failed to load registration passes'
+        fetchError instanceof Error ? fetchError.message : 'Failed to load registration passes'
       );
     } finally {
       setLoading(false);
@@ -154,10 +140,7 @@ export default function RegistrationPassesPage() {
     fetchInvites();
   }, [fetchInvites]);
 
-  const availableUnits = useMemo(
-    () => units.filter((unit) => unit.isAvailableForInvite),
-    [units]
-  );
+  const availableUnits = useMemo(() => units.filter((unit) => unit.isAvailableForInvite), [units]);
 
   async function handleCopyLink() {
     if (!latestInvite) {
@@ -174,7 +157,9 @@ export default function RegistrationPassesPage() {
 
   async function handleReissue(invite: ResidentInviteSummary) {
     const confirmed = window.confirm(
-      `Generate a fresh registration link for ${invite.recipientName}?`
+      `Generate a fresh registration link for ${
+        invite.recipientName ?? `unit ${invite.unit.unitNumber}`
+      }?`
     );
 
     if (!confirmed) {
@@ -202,9 +187,7 @@ export default function RegistrationPassesPage() {
       await fetchInvites();
     } catch (reissueError) {
       toast.error(
-        reissueError instanceof Error
-          ? reissueError.message
-          : 'Failed to reissue registration pass'
+        reissueError instanceof Error ? reissueError.message : 'Failed to reissue registration pass'
       );
     } finally {
       setReissuingInviteId(null);
@@ -222,9 +205,7 @@ export default function RegistrationPassesPage() {
   }
 
   function handleRevoked(invite: ResidentInviteSummary) {
-    setInvites((current) =>
-      current.map((entry) => (entry.id === invite.id ? invite : entry))
-    );
+    setInvites((current) => current.map((entry) => (entry.id === invite.id ? invite : entry)));
     toast.success('Registration pass revoked');
     void fetchInvites();
   }
@@ -233,10 +214,8 @@ export default function RegistrationPassesPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Registration Passes
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Registration Passes</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Issue, revoke, and reissue one-time resident onboarding links.
           </p>
         </div>
@@ -259,7 +238,7 @@ export default function RegistrationPassesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg border bg-muted/30 p-3 font-mono text-sm break-all">
+            <div className="break-all rounded-lg border bg-muted/30 p-3 font-mono text-sm">
               {latestInvite.registrationUrl}
             </div>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -268,8 +247,11 @@ export default function RegistrationPassesPage() {
                   <span>Email delivery succeeded for {latestInvite.invite.recipientEmail}.</span>
                 ) : (
                   <span>
-                    Email delivery failed. Share the link manually with{' '}
-                    {latestInvite.invite.recipientEmail}.
+                    Share this registration link manually
+                    {latestInvite.invite.recipientEmail
+                      ? ` with ${latestInvite.invite.recipientEmail}`
+                      : ''}
+                    .
                   </span>
                 )}
               </div>
@@ -295,8 +277,7 @@ export default function RegistrationPassesPage() {
         <Alert>
           <Mail className="h-4 w-4" />
           <AlertDescription>
-            Every accessible unit already has a primary resident or a pending registration
-            pass.
+            Every accessible unit already has a primary resident or a pending registration pass.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -393,7 +374,7 @@ export default function RegistrationPassesPage() {
                     <TableRow
                       key={invite.id}
                       tabIndex={0}
-                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       onClick={() => setSelectedInvite(invite)}
                       onKeyDown={(event) =>
                         handleClickableRowKeyDown(event, () => setSelectedInvite(invite))
@@ -401,14 +382,14 @@ export default function RegistrationPassesPage() {
                     >
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="font-medium">{invite.recipientName}</p>
+                          <p className="font-medium">
+                            {invite.recipientName ?? 'Unit registration link'}
+                          </p>
                           <p className="text-xs text-muted-foreground">
-                            {invite.recipientEmail}
+                            {invite.recipientEmail ?? 'Email collected at activation'}
                           </p>
                           {invite.recipientPhone ? (
-                            <p className="text-xs text-muted-foreground">
-                              {invite.recipientPhone}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{invite.recipientPhone}</p>
                           ) : null}
                         </div>
                       </TableCell>
@@ -429,18 +410,19 @@ export default function RegistrationPassesPage() {
                             </p>
                           ) : null}
                           {invite.status === 'REVOKED' && invite.revokeReason ? (
-                            <p className="text-xs text-muted-foreground">
-                              {invite.revokeReason}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{invite.revokeReason}</p>
                           ) : null}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1 text-sm">
-                          <p>{formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}</p>
+                          <p>
+                            {formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}
+                          </p>
                           {invite.sentAt ? (
                             <p className="text-xs text-muted-foreground">
-                              Sent {formatDistanceToNow(new Date(invite.sentAt), { addSuffix: true })}
+                              Sent{' '}
+                              {formatDistanceToNow(new Date(invite.sentAt), { addSuffix: true })}
                             </p>
                           ) : (
                             <p className="text-xs text-muted-foreground">Not emailed</p>
@@ -452,9 +434,7 @@ export default function RegistrationPassesPage() {
                           <p className="text-sm font-medium">
                             {invite.issuer.name || 'Unknown issuer'}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {invite.issuer.email}
-                          </p>
+                          <p className="text-xs text-muted-foreground">{invite.issuer.email}</p>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

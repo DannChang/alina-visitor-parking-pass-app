@@ -558,8 +558,8 @@ model ResidentInvite {
   unitId         String
   unit           Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
-  recipientName  String
-  recipientEmail String
+  recipientName  String?
+  recipientEmail String?
   recipientPhone String?
 
   tokenHash      String   @unique

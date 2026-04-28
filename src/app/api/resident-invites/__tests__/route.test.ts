@@ -80,6 +80,8 @@ describe('Resident invite API routes', () => {
       search: 'alina',
       buildingId: 'building-1',
       status: 'PENDING',
+      page: 1,
+      limit: 10,
     });
   });
 
@@ -206,6 +208,8 @@ describe('Resident invite API routes', () => {
     expect(data.buildingSlug).toBe('alina-visitor-parking');
     expect(mockConsumeResidentInvite).toHaveBeenCalledWith({
       token: 'token-1',
+      recipientName: undefined,
+      recipientEmail: undefined,
       password: 'Resident@123!',
       hasVehicle: true,
       strataLotNumber: '123',
@@ -238,6 +242,44 @@ describe('Resident invite API routes', () => {
     expect(response.status).toBe(200);
     expect(mockConsumeResidentInvite).toHaveBeenCalledWith({
       token: 'token-2',
+      recipientName: undefined,
+      recipientEmail: undefined,
+      password: 'Resident@123!',
+      hasVehicle: false,
+      strataLotNumber: '123',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: [],
+      ipAddress: null,
+      userAgent: null,
+    });
+  });
+
+  it('consumes a unit registration link with resident-entered contact details', async () => {
+    mockConsumeResidentInvite.mockResolvedValue({
+      buildingSlug: 'alina-visitor-parking',
+      unitNumber: '101',
+    });
+
+    const request = createMockPostRequest('http://localhost:3000/api/resident-invites/consume', {
+      token: 'token-5',
+      recipientName: 'Manual Resident',
+      recipientEmail: 'manual@example.com',
+      password: 'Resident@123!',
+      hasVehicle: false,
+      strataLotNumber: '123',
+      assignedStallNumbers: ['12'],
+      personalLicensePlates: [],
+      privacyConsent: true,
+      privacyPolicyVersion: '2026-04-02',
+    });
+
+    const response = await consumePOST(request);
+
+    expect(response.status).toBe(200);
+    expect(mockConsumeResidentInvite).toHaveBeenCalledWith({
+      token: 'token-5',
+      recipientName: 'Manual Resident',
+      recipientEmail: 'manual@example.com',
       password: 'Resident@123!',
       hasVehicle: false,
       strataLotNumber: '123',

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
     const limit = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 10;
     const skip = (page - 1) * limit;
+    const now = new Date();
 
     const where: Record<string, unknown> = {
       deletedAt: null,
@@ -63,11 +64,51 @@ export async function GET(request: NextRequest) {
               residents: true,
             },
           },
+          residents: {
+            where: {
+              isPrimary: true,
+              isActive: true,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              createdAt: true,
+            },
+            take: 1,
+          },
+          residentInvites: {
+            where: {
+              revokedAt: null,
+              OR: [
+                { consumedAt: { not: null } },
+                {
+                  consumedAt: null,
+                  expiresAt: { gt: now },
+                },
+              ],
+            },
+            select: {
+              id: true,
+              recipientName: true,
+              recipientEmail: true,
+              expiresAt: true,
+              consumedAt: true,
+              revokedAt: true,
+              resident: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
         },
-        orderBy: [
-          { building: { name: 'asc' } },
-          { unitNumber: 'asc' },
-        ],
+        orderBy: [{ building: { name: 'asc' } }, { unitNumber: 'asc' }],
         skip,
         take: limit,
       }),
@@ -91,10 +132,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching units:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch units' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch units' }, { status: 500 });
   }
 }
 
@@ -164,15 +202,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0]?.message || "Validation error" },
+        { error: error.errors[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }
     console.error('Error creating unit:', error);
-    return NextResponse.json(
-      { error: 'Failed to create unit' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create unit' }, { status: 500 });
   }
 }
 
@@ -229,8 +264,10 @@ export async function PATCH(request: NextRequest) {
     if (validatedData.unitNumber !== undefined) updateData.unitNumber = validatedData.unitNumber;
     if (validatedData.floor !== undefined) updateData.floor = validatedData.floor;
     if (validatedData.section !== undefined) updateData.section = validatedData.section;
-    if (validatedData.primaryPhone !== undefined) updateData.primaryPhone = validatedData.primaryPhone;
-    if (validatedData.primaryEmail !== undefined) updateData.primaryEmail = validatedData.primaryEmail || null;
+    if (validatedData.primaryPhone !== undefined)
+      updateData.primaryPhone = validatedData.primaryPhone;
+    if (validatedData.primaryEmail !== undefined)
+      updateData.primaryEmail = validatedData.primaryEmail || null;
     if (validatedData.buildingId !== undefined) updateData.buildingId = validatedData.buildingId;
     if (validatedData.isOccupied !== undefined) updateData.isOccupied = validatedData.isOccupied;
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
@@ -262,15 +299,12 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0]?.message || "Validation error" },
+        { error: error.errors[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }
     console.error('Error updating unit:', error);
-    return NextResponse.json(
-      { error: 'Failed to update unit' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to update unit' }, { status: 500 });
   }
 }
 
@@ -318,9 +352,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting unit:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete unit' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to delete unit' }, { status: 500 });
   }
 }

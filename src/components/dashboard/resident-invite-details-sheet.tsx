@@ -27,7 +27,9 @@ export function ResidentInviteDetailsSheet({
         <SheetHeader>
           <SheetTitle>Registration Pass Details</SheetTitle>
           <SheetDescription>
-            {invite ? `Onboarding link for ${invite.recipientName}` : 'Registration pass'}
+            {invite
+              ? `Onboarding link for ${invite.recipientName ?? `unit ${invite.unit.unitNumber}`}`
+              : 'Registration pass'}
           </SheetDescription>
         </SheetHeader>
 
@@ -36,8 +38,12 @@ export function ResidentInviteDetailsSheet({
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-lg font-semibold">{invite.recipientName}</p>
-                  <p className="text-sm text-muted-foreground">{invite.recipientEmail}</p>
+                  <p className="text-lg font-semibold">
+                    {invite.recipientName ?? 'Unit registration link'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {invite.recipientEmail ?? 'Resident will enter email during activation'}
+                  </p>
                 </div>
                 <Badge>{invite.status}</Badge>
               </div>
