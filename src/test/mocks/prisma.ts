@@ -50,6 +50,7 @@ export function createMockVehicle(overrides?: Partial<Vehicle>): Vehicle {
     year: 2024,
     color: 'Silver',
     state: 'NY',
+    stallNumber: null,
     isBlacklisted: false,
     blacklistReason: null,
     blacklistedAt: null,

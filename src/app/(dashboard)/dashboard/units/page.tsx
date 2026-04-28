@@ -38,7 +38,10 @@ import {
   handleClickableRowKeyDown,
   stopClickableRowPropagation,
 } from '@/components/dashboard/clickable-row';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import { useTranslations } from 'next-intl';
+
+const DEFAULT_PAGE_SIZE = 10;
 
 interface Building {
   id: string;
@@ -79,6 +82,12 @@ export default function UnitsPage() {
   const t = useTranslations('dashboard.unitsPage');
   const tc = useTranslations('common');
   const [units, setUnits] = useState<Unit[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -97,6 +106,8 @@ export default function UnitsPage() {
   });
 
   const fetchUnits = useCallback(async () => {
+    setLoading(true);
+
     try {
       const params = new URLSearchParams();
       if (selectedBuilding !== 'all') {
@@ -105,18 +116,21 @@ export default function UnitsPage() {
       if (search) {
         params.append('search', search);
       }
+      params.set('page', String(pagination.page));
+      params.set('limit', String(pagination.limit));
       const response = await fetch(`/api/units/manage?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch units');
       const data = await response.json();
       setUnits(data.units || []);
       setBuildings(data.buildings || []);
+      setPagination(data.pagination);
     } catch (error) {
       toast.error(t('failedToLoad'));
       console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [selectedBuilding, search]);
+  }, [selectedBuilding, search, pagination.page, pagination.limit, t]);
 
   useFetchOnChange(() => {
     fetchUnits();
@@ -202,15 +216,6 @@ export default function UnitsPage() {
     }
   };
 
-  const filteredUnits = units.filter((unit) => {
-    const matchesSearch = search
-      ? unit.unitNumber.toLowerCase().includes(search.toLowerCase()) ||
-        unit.section?.toLowerCase().includes(search.toLowerCase()) ||
-        unit.primaryEmail?.toLowerCase().includes(search.toLowerCase())
-      : true;
-    return matchesSearch;
-  });
-
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -230,11 +235,20 @@ export default function UnitsPage() {
           <Input
             placeholder={t('searchPlaceholder')}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setPagination((current) => ({ ...current, page: 1 }));
+              setSearch(e.target.value);
+            }}
             className="pl-9 h-11 md:h-10 text-base md:text-sm"
           />
         </div>
-        <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
+        <Select
+          value={selectedBuilding}
+          onValueChange={(value) => {
+            setPagination((current) => ({ ...current, page: 1 }));
+            setSelectedBuilding(value);
+          }}
+        >
           <SelectTrigger className="w-full md:w-[200px] h-11 md:h-10">
             <SelectValue placeholder={t('filterBuilding')} />
           </SelectTrigger>
@@ -252,7 +266,7 @@ export default function UnitsPage() {
       <Card>
         <CardHeader className="px-4 md:px-6">
           <CardTitle className="text-lg md:text-xl">{t('unit')}</CardTitle>
-          <CardDescription>{t('unitsFound', { count: filteredUnits.length })}</CardDescription>
+          <CardDescription>{t('unitsFound', { count: pagination.total })}</CardDescription>
         </CardHeader>
         <CardContent className="px-0 md:px-6">
           {loading ? (
@@ -271,14 +285,14 @@ export default function UnitsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUnits.length === 0 ? (
+                {units.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground">
                       {t('noUnitsFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUnits.map((unit) => (
+                  units.map((unit) => (
                     <TableRow
                       key={unit.id}
                       tabIndex={0}
@@ -374,6 +388,12 @@ export default function UnitsPage() {
               </TableBody>
             </Table>
           )}
+          <ListPagination
+            pagination={pagination}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+            isLoading={loading}
+          />
         </CardContent>
       </Card>
 

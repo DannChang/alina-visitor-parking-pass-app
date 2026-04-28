@@ -8,12 +8,7 @@ import { Loader2, Building, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const DURATION_OPTIONS = [2, 4, 8, 12, 24];
@@ -28,6 +23,25 @@ interface CreatePassDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+}
+
+function formatApiError(data: { error?: string; errors?: unknown[] }): string {
+  if (!Array.isArray(data.errors) || data.errors.length === 0) {
+    return data.error || 'Failed to create pass';
+  }
+
+  const messages = data.errors
+    .map((item) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object' && 'message' in item) {
+        const message = (item as { message?: unknown }).message;
+        return typeof message === 'string' ? message : null;
+      }
+      return null;
+    })
+    .filter((message): message is string => Boolean(message));
+
+  return messages.length > 0 ? messages.join('. ') : data.error || 'Failed to create pass';
 }
 
 export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDialogProps) {
@@ -53,8 +67,8 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
   // Resident: derive building/unit from session
   const sessionRecord = session as unknown as Record<string, string> | null;
-  const sessionBuildingSlug = isResident ? sessionRecord?.buildingSlug ?? '' : '';
-  const sessionUnitNumber = isResident ? sessionRecord?.unitNumber ?? '' : '';
+  const sessionBuildingSlug = isResident ? (sessionRecord?.buildingSlug ?? '') : '';
+  const sessionUnitNumber = isResident ? (sessionRecord?.unitNumber ?? '') : '';
 
   // Sync session values into state when they become available
   if (isResident && sessionBuildingSlug && !buildingSlug) {
@@ -74,7 +88,9 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
     }
     const fetchBuildings = async () => {
       try {
-        const res = await fetch(`/api/buildings/search?q=${encodeURIComponent(debouncedBuildingSearch)}`);
+        const res = await fetch(
+          `/api/buildings/search?q=${encodeURIComponent(debouncedBuildingSearch)}`
+        );
         if (res.ok) {
           const data = await res.json();
           setBuildings(data.buildings);
@@ -127,7 +143,11 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
     }
 
     if (!buildingSlug || !unitNumber.trim()) {
-      setError(isResident ? 'Unable to load your unit info. Please refresh and try again.' : 'Building and unit number are required');
+      setError(
+        isResident
+          ? 'Unable to load your unit info. Please refresh and try again.'
+          : 'Building and unit number are required'
+      );
       return;
     }
 
@@ -160,10 +180,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
       if (!res.ok) {
         const data = await res.json();
-        const errorMessage = data.errors?.length
-          ? data.errors.join('. ')
-          : data.error || 'Failed to create pass';
-        setError(errorMessage);
+        setError(formatApiError(data));
         return;
       }
 
@@ -195,7 +212,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
             <>
               <div className="space-y-2">
                 <Label>
-                  <Building className="h-3 w-3 inline mr-1" />
+                  <Building className="mr-1 inline h-3 w-3" />
                   Building *
                 </Label>
                 <Input
@@ -208,7 +225,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
                   className="h-11 text-base"
                 />
                 {buildings.length > 0 && !buildingSlug && (
-                  <div className="space-y-1 max-h-32 overflow-y-auto border rounded-md p-1">
+                  <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border p-1">
                     {buildings.map((b) => (
                       <button
                         key={b.id}
@@ -218,7 +235,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
                           setBuildingSearch(b.name);
                           setBuildings([]);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent rounded"
+                        className="w-full rounded px-3 py-2 text-left text-sm hover:bg-accent"
                       >
                         {b.name}
                       </button>
@@ -229,7 +246,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
 
               <div className="space-y-2">
                 <Label>
-                  <Home className="h-3 w-3 inline mr-1" />
+                  <Home className="mr-1 inline h-3 w-3" />
                   Unit Number *
                 </Label>
                 <Input
@@ -248,7 +265,7 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
               value={licensePlate}
               onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
               placeholder="ABC1234"
-              className="h-11 uppercase font-mono"
+              className="h-11 font-mono uppercase"
             />
           </div>
 
@@ -323,9 +340,11 @@ export function CreatePassDialog({ open, onOpenChange, onSuccess }: CreatePassDi
             </div>
           </div>
 
-          <Button type="submit" className="w-full min-h-[48px]" disabled={isSubmitting}>
+          <Button type="submit" className="min-h-[48px] w-full" disabled={isSubmitting}>
             {isSubmitting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</>
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+              </>
             ) : (
               'Create Pass'
             )}

@@ -25,6 +25,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const buildingId = searchParams.get('buildingId');
     const search = searchParams.get('search');
+    const parsedPage = parseInt(searchParams.get('page') || '1');
+    const parsedLimit = parseInt(searchParams.get('limit') || '10');
+    const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+    const limit = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 10;
+    const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {
       deletedAt: null,
@@ -42,7 +47,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [units, buildings] = await Promise.all([
+    const [units, total, buildings] = await Promise.all([
       prisma.unit.findMany({
         where,
         include: {
@@ -63,7 +68,10 @@ export async function GET(request: NextRequest) {
           { building: { name: 'asc' } },
           { unitNumber: 'asc' },
         ],
+        skip,
+        take: limit,
       }),
+      prisma.unit.count({ where }),
       prisma.building.findMany({
         where: { deletedAt: null, isActive: true },
         select: { id: true, name: true, slug: true },
@@ -71,7 +79,16 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({ units, buildings });
+    return NextResponse.json({
+      units,
+      buildings,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching units:', error);
     return NextResponse.json(

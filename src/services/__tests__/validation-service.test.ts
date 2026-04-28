@@ -117,6 +117,28 @@ describe('Validation Service', () => {
         });
       });
 
+      it('should allow staff override when unit has max active passes', async () => {
+        setupDefaultMocks();
+        mockPrisma.parkingPass.count.mockResolvedValue(3); // At limit
+
+        const result = await validatePassRequest({
+          ...defaultRequest,
+          ignoreActivePassLimit: true,
+        });
+
+        expect(result.isValid).toBe(true);
+        expect(result.errors.filter((e) => e.code === 'ERR_4001')).toHaveLength(0);
+        expect(result.warnings).toContainEqual(
+          expect.objectContaining({
+            code: 'ACTIVE_PASS_LIMIT_OVERRIDDEN',
+            metadata: {
+              maxAllowed: 3,
+              currentCount: 3,
+            },
+          })
+        );
+      });
+
       it('should allow when under vehicle limit', async () => {
         setupDefaultMocks();
         mockPrisma.parkingPass.count.mockResolvedValue(2);

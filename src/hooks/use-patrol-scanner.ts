@@ -14,6 +14,7 @@ export interface ManualVehicleInput {
   model?: string | undefined;
   color?: string | undefined;
   state?: string | undefined;
+  stallNumber?: string | undefined;
   year?: number | undefined;
 }
 
@@ -28,6 +29,7 @@ export interface ManualVehicleAddResult {
     model: string | null;
     color: string | null;
     state: string | null;
+    stallNumber: string | null;
     year: number | null;
   };
 }

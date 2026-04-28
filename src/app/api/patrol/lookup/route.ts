@@ -49,6 +49,7 @@ export interface VehicleInfo {
   make: string | null;
   model: string | null;
   color: string | null;
+  stallNumber: string | null;
   isBlacklisted: boolean;
   blacklistReason: string | null;
   violationCount: number;
@@ -72,6 +73,40 @@ export interface PatrolLookupResult {
   violations: ViolationInfo[];
   autoCreatedViolation?: AutoCreatedViolation;
   lookupTime: string;
+}
+
+async function createLookupPatrolLog({
+  licensePlate,
+  normalizedPlate,
+  status,
+  statusMessage,
+  userId,
+  vehicleId,
+  stallNumber,
+  buildingId,
+}: {
+  licensePlate: string;
+  normalizedPlate: string;
+  status: VehicleStatus;
+  statusMessage: string;
+  userId: string;
+  vehicleId?: string | null;
+  stallNumber?: string | null;
+  buildingId?: string | null;
+}) {
+  await prisma.patrolLogEntry.create({
+    data: {
+      licensePlate,
+      normalizedPlate,
+      entryType: 'SPOT_CHECK',
+      location: stallNumber ? `Stall ${stallNumber}` : null,
+      notes: `Patrol lookup: ${status.replace(/_/g, ' ')}. ${statusMessage}`,
+      photoUrls: [],
+      vehicleId: vehicleId ?? null,
+      buildingId: buildingId ?? null,
+      patrollerId: userId,
+    },
+  });
 }
 
 // POST /api/patrol/lookup - Look up a license plate for patrol mode
@@ -140,6 +175,13 @@ export async function POST(request: NextRequest) {
         violations: [],
         lookupTime: now.toISOString(),
       };
+      await createLookupPatrolLog({
+        licensePlate: parsed.data.licensePlate.trim().toUpperCase(),
+        normalizedPlate,
+        status: result.status,
+        statusMessage: result.statusMessage,
+        userId: authResult.request.userId,
+      });
       return NextResponse.json(result);
     }
 
@@ -154,6 +196,7 @@ export async function POST(request: NextRequest) {
           make: vehicle.make,
           model: vehicle.model,
           color: vehicle.color,
+          stallNumber: vehicle.stallNumber,
           isBlacklisted: vehicle.isBlacklisted,
           blacklistReason: vehicle.blacklistReason,
           violationCount: vehicle.violationCount,
@@ -183,6 +226,16 @@ export async function POST(request: NextRequest) {
         })),
         lookupTime: now.toISOString(),
       };
+      await createLookupPatrolLog({
+        licensePlate: vehicle.licensePlate,
+        normalizedPlate,
+        status: result.status,
+        statusMessage: result.statusMessage,
+        userId: authResult.request.userId,
+        vehicleId: vehicle.id,
+        stallNumber: vehicle.stallNumber,
+        buildingId: vehicle.parkingPasses[0]?.unit.building.id ?? null,
+      });
       return NextResponse.json(result);
     }
 
@@ -197,6 +250,7 @@ export async function POST(request: NextRequest) {
           make: vehicle.make,
           model: vehicle.model,
           color: vehicle.color,
+          stallNumber: vehicle.stallNumber,
           isBlacklisted: vehicle.isBlacklisted,
           blacklistReason: vehicle.blacklistReason,
           violationCount: vehicle.violationCount,
@@ -226,6 +280,16 @@ export async function POST(request: NextRequest) {
         })),
         lookupTime: now.toISOString(),
       };
+      await createLookupPatrolLog({
+        licensePlate: vehicle.licensePlate,
+        normalizedPlate,
+        status: result.status,
+        statusMessage: result.statusMessage,
+        userId: authResult.request.userId,
+        vehicleId: vehicle.id,
+        stallNumber: vehicle.stallNumber,
+        buildingId: vehicle.parkingPasses[0]?.unit.building.id ?? null,
+      });
       return NextResponse.json(result);
     }
 
@@ -254,9 +318,7 @@ export async function POST(request: NextRequest) {
     if (activePass) {
       if (activePass.endTime <= thirtyMinutesFromNow) {
         status = 'EXPIRING_SOON';
-        const minutesLeft = Math.round(
-          (activePass.endTime.getTime() - now.getTime()) / 60000
-        );
+        const minutesLeft = Math.round((activePass.endTime.getTime() - now.getTime()) / 60000);
         statusMessage = `Pass expires in ${minutesLeft} minutes`;
       } else {
         status = 'VALID';
@@ -264,9 +326,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       if (recentExpired) {
-        const minutesAgo = Math.round(
-          (now.getTime() - recentExpired.endTime.getTime()) / 60000
-        );
+        const minutesAgo = Math.round((now.getTime() - recentExpired.endTime.getTime()) / 60000);
 
         // Check grace period
         if (minutesAgo <= gracePeriodMinutes) {
@@ -298,8 +358,8 @@ export async function POST(request: NextRequest) {
           ? {
               endTime: recentExpired.endTime,
               startTime: recentExpired.startTime,
-            duration: recentExpired.duration,
-          }
+              duration: recentExpired.duration,
+            }
           : null,
         buildingRules: parkingRules
           ? {
@@ -325,13 +385,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for overstay on active passes
-    if (
-      !autoCreatedViolation?.isNew &&
-      activePass &&
-      parkingRules
-    ) {
-      const hoursParked =
-        (now.getTime() - activePass.startTime.getTime()) / (1000 * 60 * 60);
+    if (!autoCreatedViolation?.isNew && activePass && parkingRules) {
+      const hoursParked = (now.getTime() - activePass.startTime.getTime()) / (1000 * 60 * 60);
       if (hoursParked > (parkingRules.maxConsecutiveHours ?? 24)) {
         const detection = await detectAndCreateViolation({
           vehicleId: vehicle.id,
@@ -394,6 +449,7 @@ export async function POST(request: NextRequest) {
         make: vehicle.make,
         model: vehicle.model,
         color: vehicle.color,
+        stallNumber: vehicle.stallNumber,
         isBlacklisted: vehicle.isBlacklisted,
         blacklistReason: vehicle.blacklistReason,
         violationCount: vehicle.violationCount,
@@ -448,12 +504,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await createLookupPatrolLog({
+      licensePlate: vehicle.licensePlate,
+      normalizedPlate,
+      status,
+      statusMessage,
+      userId: authResult.request.userId,
+      vehicleId: vehicle.id,
+      stallNumber: vehicle.stallNumber,
+      buildingId: passForRules?.unit.building.id ?? null,
+    });
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('Patrol lookup error:', error);
-    return NextResponse.json(
-      { error: 'Failed to look up vehicle' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to look up vehicle' }, { status: 500 });
   }
 }

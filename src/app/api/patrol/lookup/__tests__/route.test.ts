@@ -9,6 +9,9 @@ vi.mock('@/lib/prisma', () => ({
     auditLog: {
       create: vi.fn(),
     },
+    patrolLogEntry: {
+      create: vi.fn(),
+    },
   },
 }));
 
@@ -28,6 +31,7 @@ import { detectAndCreateViolation } from '@/services/violation-detection-service
 const mockPrisma = prisma as unknown as {
   vehicle: { findUnique: ReturnType<typeof vi.fn> };
   auditLog: { create: ReturnType<typeof vi.fn> };
+  patrolLogEntry: { create: ReturnType<typeof vi.fn> };
 };
 
 const mockRequirePermission = requirePermission as ReturnType<typeof vi.fn>;
@@ -44,6 +48,7 @@ describe('POST /api/patrol/lookup', () => {
 
   it('does not auto-create a violation when the plate is not found', async () => {
     mockPrisma.vehicle.findUnique.mockResolvedValue(null);
+    mockPrisma.patrolLogEntry.create.mockResolvedValue({});
 
     const response = await POST(
       createMockPostRequest('http://localhost:3000/api/patrol/lookup', {
@@ -58,6 +63,13 @@ describe('POST /api/patrol/lookup', () => {
       violations: [],
     });
     expect(mockDetectAndCreateViolation).not.toHaveBeenCalled();
+    expect(mockPrisma.patrolLogEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        licensePlate: 'ABC123',
+        normalizedPlate: 'ABC123',
+        notes: expect.stringContaining('Patrol lookup: NOT FOUND.'),
+      }),
+    });
   });
 
   it('prepends an auto-created violation to the lookup response', async () => {
@@ -72,6 +84,7 @@ describe('POST /api/patrol/lookup', () => {
       make: 'Toyota',
       model: 'Camry',
       color: 'Silver',
+      stallNumber: '42',
       isBlacklisted: false,
       blacklistReason: null,
       isResidentVehicle: false,
@@ -91,6 +104,7 @@ describe('POST /api/patrol/lookup', () => {
       },
     });
     mockPrisma.auditLog.create.mockResolvedValue({});
+    mockPrisma.patrolLogEntry.create.mockResolvedValue({});
 
     const response = await POST(
       createMockPostRequest('http://localhost:3000/api/patrol/lookup', {
@@ -116,6 +130,14 @@ describe('POST /api/patrol/lookup', () => {
           location: null,
         },
       ],
+    });
+    expect(mockPrisma.patrolLogEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        licensePlate: 'ABC123',
+        normalizedPlate: 'ABC123',
+        location: 'Stall 42',
+        notes: expect.stringContaining('Patrol lookup: UNREGISTERED.'),
+      }),
     });
 
     vi.useRealTimers();

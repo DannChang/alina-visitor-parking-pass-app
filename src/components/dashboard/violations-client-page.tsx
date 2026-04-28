@@ -18,11 +18,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { handleClickableRowKeyDown } from '@/components/dashboard/clickable-row';
+import { ListPagination, type ListPaginationState } from '@/components/dashboard/list-pagination';
 import {
   ViolationDetailsSheet,
   type ViolationDetails,
 } from '@/components/dashboard/violation-details-sheet';
 import { useTranslations } from 'next-intl';
+
+const DEFAULT_PAGE_SIZE = 10;
 
 function getSeverityVariant(severity: string) {
   switch (severity) {
@@ -57,16 +60,25 @@ export function ViolationsClientPage({
   const t = useTranslations('dashboard.violationsPage');
   const tc = useTranslations('common');
   const [violations, setViolations] = useState<ViolationDetails[]>([]);
+  const [pagination, setPagination] = useState<ListPaginationState>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const debouncedSearch = useDebouncedValue(searchValue, 350);
   const [selectedViolation, setSelectedViolation] = useState<ViolationDetails | null>(null);
 
-  const fetchViolations = useCallback(async (search: string) => {
+  const fetchViolations = useCallback(async (search: string, page: number) => {
     setIsLoading(true);
 
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({
+        limit: String(pagination.limit),
+        page: String(page),
+      });
       if (initialDateFilter) {
         params.set('date', initialDateFilter);
       }
@@ -82,16 +94,17 @@ export function ViolationsClientPage({
       }
 
       setViolations(data.violations || []);
+      setPagination(data.pagination);
     } catch {
       setViolations([]);
     } finally {
       setIsLoading(false);
     }
-  }, [initialDateFilter]);
+  }, [initialDateFilter, pagination.limit]);
 
   useFetchOnChange(() => {
-    fetchViolations(debouncedSearch);
-  }, [fetchViolations, debouncedSearch]);
+    fetchViolations(debouncedSearch, pagination.page);
+  }, [fetchViolations, debouncedSearch, pagination.page]);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -106,7 +119,10 @@ export function ViolationsClientPage({
             placeholder={t('searchPlaceholder')}
             className="pl-9 h-11 md:h-10 text-base md:text-sm"
             value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
+            onChange={(event) => {
+              setPagination((current) => ({ ...current, page: 1 }));
+              setSearchValue(event.target.value);
+            }}
           />
         </div>
       </div>
@@ -215,6 +231,12 @@ export function ViolationsClientPage({
               </TableBody>
             </Table>
           )}
+          <ListPagination
+            pagination={pagination}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onLimitChange={(limit) => setPagination((current) => ({ ...current, page: 1, limit }))}
+            isLoading={isLoading}
+          />
         </CardContent>
       </Card>
 
