@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslations } from 'next-intl';
+import { LanguageSwitcherDock } from '@/components/language-switcher-dock';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -84,6 +85,7 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-12">
+      <LanguageSwitcherDock />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -98,9 +100,7 @@ function LoginForm() {
             {resetSuccess ? (
               <Alert>
                 <Mail className="h-4 w-4" />
-                <AlertDescription>
-                  {t('passwordChanged')}
-                </AlertDescription>
+                <AlertDescription>{t('passwordChanged')}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -118,12 +118,10 @@ function LoginForm() {
                 placeholder={t('emailPlaceholder')}
                 autoComplete="email"
                 disabled={isLoading}
-                className="h-11 md:h-10 text-base md:text-sm"
+                className="h-11 text-base md:h-10 md:text-sm"
                 {...register('email')}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{t('invalidEmail')}</p>
-              )}
+              {errors.email && <p className="text-sm text-destructive">{t('invalidEmail')}</p>}
             </div>
 
             <div className="space-y-2">
@@ -142,7 +140,7 @@ function LoginForm() {
                 placeholder={t('passwordPlaceholder')}
                 autoComplete="current-password"
                 disabled={isLoading}
-                className="h-11 md:h-10 text-base md:text-sm"
+                className="h-11 text-base md:h-10 md:text-sm"
                 {...register('password')}
               />
               {errors.password && (
@@ -152,7 +150,7 @@ function LoginForm() {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full min-h-[48px] text-base" disabled={isLoading}>
+            <Button type="submit" className="min-h-[48px] w-full text-base" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -180,11 +178,14 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+          <LanguageSwitcherDock />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

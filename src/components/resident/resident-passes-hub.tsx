@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import type { TimeBankPeriod } from '@prisma/client';
 import { useMountEffect } from '@/hooks/use-mount-effect';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   AlertCircle,
   Building2,
@@ -28,7 +28,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatTimeBankPeriod, formatTimeBankWindowLabel } from '@/lib/parking-rules';
 import { cn } from '@/lib/utils';
 import { formatPassContact, toTelephoneHref } from '@/lib/utils/contact';
 import { CreatePassDialog } from './create-pass-dialog';
@@ -79,12 +78,21 @@ interface ResidentPassUsage {
 
 const ACTIVE_STATUSES = new Set(['ACTIVE', 'EXTENDED']);
 
-function formatStatusLabel(status: string) {
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+function formatStatusLabel(status: string, t: ReturnType<typeof useTranslations<'resident'>>) {
+  switch (status) {
+    case 'ACTIVE':
+      return t('statusActive');
+    case 'EXTENDED':
+      return t('statusExtended');
+    case 'EXPIRED':
+      return t('statusExpired');
+    case 'CANCELLED':
+      return t('statusCancelled');
+    case 'SUSPENDED':
+      return t('statusSuspended');
+    default:
+      return status;
+  }
 }
 
 function isActivePass(pass: ResidentPass) {
@@ -116,8 +124,38 @@ function getStatusClasses(status: string) {
   }
 }
 
-function formatDateTime(value: string) {
-  return format(new Date(value), 'MMM d, yyyy · h:mm a');
+function formatDateTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function formatShortDateTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function formatRelativeTime(value: string, locale: string) {
+  const deltaSeconds = Math.round((new Date(value).getTime() - Date.now()) / 1000);
+  const absSeconds = Math.abs(deltaSeconds);
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+  if (absSeconds < 60) {
+    return formatter.format(deltaSeconds, 'second');
+  }
+  if (absSeconds < 3600) {
+    return formatter.format(Math.round(deltaSeconds / 60), 'minute');
+  }
+  if (absSeconds < 86400) {
+    return formatter.format(Math.round(deltaSeconds / 3600), 'hour');
+  }
+
+  return formatter.format(Math.round(deltaSeconds / 86400), 'day');
 }
 
 function formatVehicleDetails(pass: ResidentPass) {
@@ -125,6 +163,7 @@ function formatVehicleDetails(pass: ResidentPass) {
 }
 
 function PassCountdownPill({ endTime }: { endTime: string }) {
+  const t = useTranslations('resident');
   const { hours, minutes, seconds, isExpired, isExpiringSoon } = useCountdown(endTime);
 
   const toneClass = isExpired
@@ -141,7 +180,7 @@ function PassCountdownPill({ endTime }: { endTime: string }) {
     >
       <div className="flex items-center gap-2 text-sm font-medium">
         <Clock3 className="h-4 w-4" />
-        {isExpired ? 'Expired' : 'Expires in'}
+        {isExpired ? t('statusExpired') : t('expiresIn')}
       </div>
       <div className="font-mono text-lg font-semibold tabular-nums">
         {isExpired ? '00:00:00' : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`}
@@ -178,6 +217,8 @@ function PassListSkeleton() {
 }
 
 export function ResidentPassesHub() {
+  const t = useTranslations('resident');
+  const locale = useLocale();
   const [passes, setPasses] = useState<ResidentPass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -204,7 +245,7 @@ export function ResidentPassesHub() {
       const res = await fetch('/api/resident/passes?limit=100');
 
       if (!res.ok) {
-        throw new Error('Failed to load parking passes');
+        throw new Error(t('couldNotLoadPasses'));
       }
 
       const data = await res.json();
@@ -217,7 +258,7 @@ export function ResidentPassesHub() {
       }
       setLoadError(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load parking passes';
+      const message = error instanceof Error ? error.message : t('couldNotLoadPasses');
 
       setLoadError(message);
       toast.error(message);
@@ -225,7 +266,7 @@ export function ResidentPassesHub() {
       setIsLoading(false);
       setHasLoadedOnce(true);
     }
-  }, []);
+  }, [t]);
 
   useMountEffect(() => {
     fetchPasses();
@@ -245,8 +286,20 @@ export function ResidentPassesHub() {
   const selectedPass = selectedPassId
     ? (sortedPasses.find((pass) => pass.id === selectedPassId) ?? null)
     : null;
-  const timeBankPeriodLabel = formatTimeBankPeriod(limits.timeBankPeriod);
-  const timeBankWindowLabel = formatTimeBankWindowLabel(limits.timeBankPeriod);
+  const timeBankPeriodLabel = t(
+    limits.timeBankPeriod === 'DAILY'
+      ? 'periodDaily'
+      : limits.timeBankPeriod === 'WEEKLY'
+        ? 'periodWeekly'
+        : 'periodMonthly'
+  );
+  const timeBankWindowLabel = t(
+    limits.timeBankPeriod === 'DAILY'
+      ? 'windowDay'
+      : limits.timeBankPeriod === 'WEEKLY'
+        ? 'windowWeek'
+        : 'windowMonth'
+  );
 
   return (
     <>
@@ -256,21 +309,20 @@ export function ResidentPassesHub() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-300">
-                  Parking Passes
+                  {t('parkingPassesTitle')}
                 </p>
                 <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                  Resident pass hub
+                  {t('passHubTitle')}
                 </h1>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Manage visitor access without the dashboard table. Active passes stay live here,
-                  and every pass opens into a full detail view.
+                  {t('passHubDescription')}
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <div className="rounded-3xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
-                    Active Now
+                    {t('activeNow')}
                   </p>
                   <p className="mt-2 text-3xl font-semibold">
                     {usage.activePassCount}/{usage.activePassLimit}
@@ -278,7 +330,7 @@ export function ResidentPassesHub() {
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
-                    {timeBankPeriodLabel} bank
+                    {t('timeBank', { period: timeBankPeriodLabel })}
                   </p>
                   <p className="mt-2 text-3xl font-semibold">
                     {usage.monthlyHoursRemaining}/{limits.monthlyHourBank}h
@@ -292,7 +344,7 @@ export function ResidentPassesHub() {
                   className="rounded-3xl bg-white px-6 text-slate-950 hover:bg-slate-100"
                 >
                   <Plus className="h-4 w-4" />
-                  New Pass
+                  {t('newPass')}
                 </Button>
               </div>
             </div>
@@ -302,16 +354,18 @@ export function ResidentPassesHub() {
         <section className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-slate-950">Your passes</h2>
+              <h2 className="text-xl font-semibold text-slate-950">{t('yourPasses')}</h2>
               <p className="text-sm text-slate-600">
-                Tap any pass to view visitor details, timing, and the confirmation code. Your unit
-                has {usage.monthlyHoursRemaining} hours left this {timeBankWindowLabel}.
+                {t('passesSummary', {
+                  hours: usage.monthlyHoursRemaining,
+                  period: timeBankWindowLabel,
+                })}
               </p>
             </div>
             {isLoading && hasLoadedOnce && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Refreshing passes
+                {t('refreshingPasses')}
               </div>
             )}
           </div>
@@ -325,11 +379,13 @@ export function ResidentPassesHub() {
                   <AlertCircle className="h-7 w-7" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-slate-950">Could not load passes</h3>
+                  <h3 className="text-lg font-semibold text-slate-950">
+                    {t('couldNotLoadPasses')}
+                  </h3>
                   <p className="text-sm text-slate-600">{loadError}</p>
                 </div>
                 <Button type="button" onClick={fetchPasses} className="rounded-full px-6">
-                  Try again
+                  {t('tryAgain')}
                 </Button>
               </CardContent>
             </Card>
@@ -340,11 +396,8 @@ export function ResidentPassesHub() {
                   <Car className="h-8 w-8" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-semibold text-slate-950">No passes yet</h3>
-                  <p className="max-w-md text-sm text-slate-600">
-                    Create a pass when a visitor arrives. Active passes will stay pinned at the top
-                    with a live countdown.
-                  </p>
+                  <h3 className="text-xl font-semibold text-slate-950">{t('noPassesYet')}</h3>
+                  <p className="max-w-md text-sm text-slate-600">{t('noPassesDescription')}</p>
                 </div>
                 <Button
                   type="button"
@@ -353,7 +406,7 @@ export function ResidentPassesHub() {
                   className="rounded-full px-6"
                 >
                   <Plus className="h-4 w-4" />
-                  Create your first pass
+                  {t('createFirstPass')}
                 </Button>
               </CardContent>
             </Card>
@@ -375,7 +428,7 @@ export function ResidentPassesHub() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                            {active ? 'Live pass' : 'Pass record'}
+                            {active ? t('livePass') : t('passRecord')}
                           </p>
                           <div className="mt-2 flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
@@ -399,7 +452,7 @@ export function ResidentPassesHub() {
                             getStatusClasses(displayStatus)
                           )}
                         >
-                          {formatStatusLabel(displayStatus)}
+                          {formatStatusLabel(displayStatus, t)}
                         </Badge>
                       </div>
 
@@ -408,26 +461,26 @@ export function ResidentPassesHub() {
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-2xl bg-slate-50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            Starts
+                            {t('starts')}
                           </p>
                           <p className="mt-2 text-sm font-medium text-slate-900">
-                            {format(new Date(pass.startTime), 'MMM d · h:mm a')}
+                            {formatShortDateTime(pass.startTime, locale)}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-slate-50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            Ends
+                            {t('ends')}
                           </p>
                           <p className="mt-2 text-sm font-medium text-slate-900">
-                            {format(new Date(pass.endTime), 'MMM d · h:mm a')}
+                            {formatShortDateTime(pass.endTime, locale)}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-slate-50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            Duration
+                            {t('duration')}
                           </p>
                           <p className="mt-2 text-sm font-medium text-slate-900">
-                            {pass.duration} hour{pass.duration === 1 ? '' : 's'}
+                            {t('durationHours', { count: pass.duration })}
                           </p>
                         </div>
                       </div>
@@ -435,20 +488,20 @@ export function ResidentPassesHub() {
                       <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-1 text-sm">
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-900">
-                            {vehicleDetails || 'Vehicle details can be viewed inside'}
+                            {vehicleDetails || t('vehicleDetailsInside')}
                           </p>
                           <p className="truncate text-slate-500">
                             {displayStatus === 'EXPIRED'
-                              ? `Expired ${formatDistanceToNowStrict(new Date(pass.endTime), {
-                                  addSuffix: true,
-                                })}`
-                              : `Created ${formatDistanceToNowStrict(new Date(pass.createdAt), {
-                                  addSuffix: true,
-                                })}`}
+                              ? t('expiredRelative', {
+                                  time: formatRelativeTime(pass.endTime, locale),
+                                })
+                              : t('createdRelative', {
+                                  time: formatRelativeTime(pass.createdAt, locale),
+                                })}
                           </p>
                         </div>
                         <span className="flex items-center gap-1 font-medium text-slate-950">
-                          Details
+                          {t('details')}
                           <ChevronRight className="h-4 w-4" />
                         </span>
                       </div>
@@ -494,7 +547,7 @@ export function ResidentPassesHub() {
                   getStatusClasses(getDisplayStatus(selectedPass))
                 )}
               >
-                {formatStatusLabel(getDisplayStatus(selectedPass))}
+                {formatStatusLabel(getDisplayStatus(selectedPass), t)}
               </Badge>
 
               <DialogHeader className="mt-5 text-left">
@@ -517,14 +570,14 @@ export function ResidentPassesHub() {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Phone className="h-4 w-4 text-slate-500" />
-                      Contact
+                      {t('contactInfo')}
                     </CardTitle>
-                    <CardDescription>Primary contact details for this pass</CardDescription>
+                    <CardDescription>{t('contactDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Phone
+                        {t('phone')}
                       </p>
                       {selectedPass.visitorPhone ? (
                         <a
@@ -534,12 +587,12 @@ export function ResidentPassesHub() {
                           {selectedPass.visitorPhone}
                         </a>
                       ) : (
-                        <p className="mt-1 font-medium text-slate-950">Not provided</p>
+                        <p className="mt-1 font-medium text-slate-950">{t('notProvided')}</p>
                       )}
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Email
+                        {t('email')}
                       </p>
                       {selectedPass.visitorEmail ? (
                         <a
@@ -549,7 +602,7 @@ export function ResidentPassesHub() {
                           {selectedPass.visitorEmail}
                         </a>
                       ) : (
-                        <p className="mt-1 font-medium text-slate-950">Not provided</p>
+                        <p className="mt-1 font-medium text-slate-950">{t('notProvided')}</p>
                       )}
                     </div>
                   </CardContent>
@@ -559,14 +612,14 @@ export function ResidentPassesHub() {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Building2 className="h-4 w-4 text-slate-500" />
-                      Location
+                      {t('location')}
                     </CardTitle>
-                    <CardDescription>Building and unit tied to this record</CardDescription>
+                    <CardDescription>{t('locationDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Building
+                        {t('building')}
                       </p>
                       <p className="mt-1 font-medium text-slate-950">
                         {selectedPass.unit.building.name}
@@ -574,7 +627,7 @@ export function ResidentPassesHub() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Unit
+                        {t('unitNumber')}
                       </p>
                       <p className="mt-1 font-medium text-slate-950">
                         {selectedPass.unit.unitNumber}
@@ -588,26 +641,25 @@ export function ResidentPassesHub() {
                 <div className="rounded-3xl bg-slate-50 p-5">
                   <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                     <Clock3 className="h-4 w-4" />
-                    Timing
+                    {t('timing')}
                   </p>
                   <div className="mt-4 space-y-4 text-sm">
                     <div>
-                      <p className="text-slate-500">Starts</p>
+                      <p className="text-slate-500">{t('starts')}</p>
                       <p className="mt-1 font-medium text-slate-950">
-                        {formatDateTime(selectedPass.startTime)}
+                        {formatDateTime(selectedPass.startTime, locale)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-500">Expires</p>
+                      <p className="text-slate-500">{t('expires')}</p>
                       <p className="mt-1 font-medium text-slate-950">
-                        {formatDateTime(selectedPass.endTime)}
+                        {formatDateTime(selectedPass.endTime, locale)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-500">Duration</p>
+                      <p className="text-slate-500">{t('duration')}</p>
                       <p className="mt-1 font-medium text-slate-950">
-                        {selectedPass.duration} hour
-                        {selectedPass.duration === 1 ? '' : 's'}
+                        {t('durationHours', { count: selectedPass.duration })}
                       </p>
                     </div>
                   </div>
@@ -616,23 +668,23 @@ export function ResidentPassesHub() {
                 <div className="rounded-3xl bg-slate-950 p-5 text-white">
                   <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">
                     <Ticket className="h-4 w-4" />
-                    Pass Reference
+                    {t('passReference')}
                   </p>
                   <div className="mt-4 space-y-4 text-sm">
                     <div>
-                      <p className="text-slate-400">Confirmation code</p>
+                      <p className="text-slate-400">{t('confirmationCode')}</p>
                       <p className="mt-1 font-mono text-2xl font-semibold tracking-[0.24em]">
                         {selectedPass.confirmationCode.slice(0, 8).toUpperCase()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Vehicle</p>
+                      <p className="text-slate-400">{t('vehicle')}</p>
                       <p className="mt-1 font-medium text-white">
-                        {formatVehicleDetails(selectedPass) || 'No extra vehicle details'}
+                        {formatVehicleDetails(selectedPass) || t('noVehicleDetails')}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Plate</p>
+                      <p className="text-slate-400">{t('plate')}</p>
                       <p className="mt-1 font-mono font-medium text-white">
                         {selectedPass.vehicle.licensePlate}
                       </p>
@@ -643,7 +695,7 @@ export function ResidentPassesHub() {
 
               {selectedPass.deletionReason && (
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                  <p className="font-medium text-slate-900">Cancellation note</p>
+                  <p className="font-medium text-slate-900">{t('cancellationNote')}</p>
                   <p className="mt-1">{selectedPass.deletionReason}</p>
                 </div>
               )}
@@ -655,7 +707,7 @@ export function ResidentPassesHub() {
                   className="rounded-full border-slate-300"
                   onClick={() => setSelectedPassId(null)}
                 >
-                  Close
+                  {t('close')}
                 </Button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Car, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ interface StepVehicleInfoProps {
 }
 
 export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleInfoProps) {
+  const t = useTranslations('registration');
   const [plate, setPlate] = useState(data.licensePlate ?? '');
   const [make, setMake] = useState(data.vehicleMake ?? '');
   const [model, setModel] = useState(data.vehicleModel ?? '');
@@ -26,11 +28,11 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
   const handleContinue = () => {
     const cleaned = plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (cleaned.length < 2 || cleaned.length > 10) {
-      setError('Please enter a valid license plate (2-10 characters)');
+      setError(t('invalidLicensePlate'));
       return;
     }
     if (!year.trim()) {
-      setError('Please enter the vehicle year');
+      setError(t('vehicleYearRequired'));
       return;
     }
     setError(null);
@@ -50,12 +52,12 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Car className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>Vehicle Information</CardTitle>
-        <CardDescription>Enter your license plate number</CardDescription>
+        <CardTitle>{t('vehicleInfoTitle')}</CardTitle>
+        <CardDescription>{t('vehicleInfoDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="licensePlate">License Plate *</Label>
+          <Label htmlFor="licensePlate">{t('licensePlate')} *</Label>
           <Input
             id="licensePlate"
             placeholder="ABC1234"
@@ -64,7 +66,7 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
               setPlate(e.target.value.toUpperCase());
               setError(null);
             }}
-            className="uppercase h-12 text-base text-center font-mono text-lg tracking-wider"
+            className="h-12 text-center font-mono text-base text-lg uppercase tracking-wider"
             autoFocus
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -72,7 +74,9 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
 
         <div className="grid grid-cols-4 gap-2">
           <div className="space-y-1">
-            <Label htmlFor="make" className="text-xs">Make</Label>
+            <Label htmlFor="make" className="text-xs">
+              {t('make')}
+            </Label>
             <Input
               id="make"
               placeholder="Toyota"
@@ -82,7 +86,9 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="model" className="text-xs">Model</Label>
+            <Label htmlFor="model" className="text-xs">
+              {t('model')}
+            </Label>
             <Input
               id="model"
               placeholder="Camry"
@@ -92,7 +98,9 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="color" className="text-xs">Color</Label>
+            <Label htmlFor="color" className="text-xs">
+              {t('color')}
+            </Label>
             <Input
               id="color"
               placeholder="Blue"
@@ -102,7 +110,9 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="year" className="text-xs">Year</Label>
+            <Label htmlFor="year" className="text-xs">
+              {t('year')}
+            </Label>
             <Input
               id="year"
               placeholder="2024"
@@ -116,11 +126,11 @@ export function StepVehicleInfo({ data, onUpdate, onNext, onBack }: StepVehicleI
 
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onBack} className="min-h-[48px]">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('back')}
           </Button>
-          <Button onClick={handleContinue} className="flex-1 min-h-[48px]">
-            Continue
+          <Button onClick={handleContinue} className="min-h-[48px] flex-1">
+            {t('continue')}
           </Button>
         </div>
       </CardContent>

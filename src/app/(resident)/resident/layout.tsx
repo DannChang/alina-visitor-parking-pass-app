@@ -1,10 +1,16 @@
 import { redirect } from 'next/navigation';
 import { Car, LogOut } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { auth, signOut } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 export default async function ResidentPortalLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const [session, tResident, tCommon] = await Promise.all([
+    auth(),
+    getTranslations('resident'),
+    getTranslations('common'),
+  ]);
 
   if (!session?.user) {
     redirect('/resident/login');
@@ -31,23 +37,26 @@ export default async function ResidentPortalLayout({ children }: { children: Rea
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Resident Portal
+                {tResident('portalTitle')}
               </p>
               <p className="truncate text-lg font-semibold text-slate-950">Alina Parking</p>
             </div>
           </div>
 
-          <form action={handleSignOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              className="rounded-full border border-slate-200 bg-white px-4 text-slate-700 shadow-sm hover:bg-slate-100"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
-          </form>
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher excludedLocales={['fa']} />
+            <form action={handleSignOut}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                className="rounded-full border border-slate-200 bg-white px-4 text-slate-700 shadow-sm hover:bg-slate-100"
+              >
+                <LogOut className="h-4 w-4" />
+                {tCommon('signOut')}
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Home, Loader2, Mail, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { APP_CONFIG } from '@/lib/constants';
 
 export function ResidentForgotPasswordForm() {
+  const t = useTranslations('resident');
   const [unitNumber, setUnitNumber] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export function ResidentForgotPasswordForm() {
     setError(null);
 
     if (!unitNumber.trim() || !email.trim()) {
-      setError('Unit number and primary resident email are required.');
+      setError(t('resetRequiredFields'));
       return;
     }
 
@@ -48,16 +50,12 @@ export function ResidentForgotPasswordForm() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to request password reset');
+        throw new Error(data.error || t('resetRequestFailed'));
       }
 
       setSubmitted(true);
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Failed to request password reset'
-      );
+      setError(submitError instanceof Error ? submitError.message : t('resetRequestFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -69,10 +67,11 @@ export function ResidentForgotPasswordForm() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <ShieldCheck className="h-8 w-8 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Reset Resident Password</CardTitle>
+        <CardTitle className="text-2xl font-bold">{t('resetResidentPassword')}</CardTitle>
         <CardDescription>
-          Enter your unit and primary resident email to receive a one-time reset
-          link for {APP_CONFIG.resident.defaultBuildingName}.
+          {t('resetResidentPasswordDescription', {
+            building: APP_CONFIG.resident.defaultBuildingName,
+          })}
         </CardDescription>
       </CardHeader>
 
@@ -81,11 +80,8 @@ export function ResidentForgotPasswordForm() {
           {submitted ? (
             <Alert>
               <Mail className="h-4 w-4" />
-              <AlertTitle>Check your email</AlertTitle>
-              <AlertDescription>
-                If the information matches an active primary resident account, a reset
-                link has been sent.
-              </AlertDescription>
+              <AlertTitle>{t('checkEmail')}</AlertTitle>
+              <AlertDescription>{t('residentResetSent')}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -96,17 +92,20 @@ export function ResidentForgotPasswordForm() {
           ) : null}
 
           <div className="rounded-lg bg-muted/40 p-3 text-center text-sm text-muted-foreground">
-            Building: <span className="font-medium text-foreground">{APP_CONFIG.resident.defaultBuildingName}</span>
+            {t('building')}:{' '}
+            <span className="font-medium text-foreground">
+              {APP_CONFIG.resident.defaultBuildingName}
+            </span>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="resident-forgot-password-unit">
               <Home className="mr-1 inline h-3 w-3" />
-              Unit Number
+              {t('unitNumber')}
             </Label>
             <Input
               id="resident-forgot-password-unit"
-              placeholder="e.g. 101"
+              placeholder={t('unitNumberPlaceholder')}
               value={unitNumber}
               onChange={(event) => setUnitNumber(event.target.value)}
               className="h-11 text-base"
@@ -118,12 +117,12 @@ export function ResidentForgotPasswordForm() {
           <div className="space-y-2">
             <Label htmlFor="resident-forgot-password-email">
               <Mail className="mr-1 inline h-3 w-3" />
-              Primary Resident Email
+              {t('primaryResidentEmail')}
             </Label>
             <Input
               id="resident-forgot-password-email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('emailPlaceholder')}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
@@ -139,15 +138,15 @@ export function ResidentForgotPasswordForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending reset link...
+                {t('sendingResetLink')}
               </>
             ) : (
-              'Send Reset Link'
+              t('sendResetLink')
             )}
           </Button>
 
           <Button asChild variant="ghost" className="w-full">
-            <Link href="/resident/login?showResidentLogin=1">Back to Resident Login</Link>
+            <Link href="/resident/login?showResidentLogin=1">{t('backToResidentLogin')}</Link>
           </Button>
         </CardFooter>
       </form>

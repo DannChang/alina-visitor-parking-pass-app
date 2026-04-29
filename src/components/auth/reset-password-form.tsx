@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -38,22 +39,8 @@ function getRequestPath(loginPath?: '/login' | '/resident/login'): string {
   return loginPath === '/resident/login' ? '/resident/forgot-password' : '/forgot-password';
 }
 
-function getBlockedContent(preview: PasswordResetPreview) {
-  if (preview.status === 'expired') {
-    return {
-      title: 'Reset Link Expired',
-      description: 'This password reset link has expired. Request a new one to continue.',
-    };
-  }
-
-  return {
-    title: 'Reset Link Invalid',
-    description:
-      'This password reset link is invalid or has already been used. Request a new link to continue.',
-  };
-}
-
 export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
+  const t = useTranslations('auth');
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -64,12 +51,24 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
-  const blockedContent = useMemo(() => getBlockedContent(preview), [preview]);
+  const blockedContent = useMemo(() => {
+    if (preview.status === 'expired') {
+      return {
+        title: t('resetLinkExpired'),
+        description: t('resetLinkExpiredDesc'),
+      };
+    }
+
+    return {
+      title: t('resetLinkInvalid'),
+      description: t('resetLinkInvalidDesc'),
+    };
+  }, [preview.status, t]);
   const requestPath = getRequestPath(preview.loginPath);
   const loginPath = preview.loginPath || '/login';
   const passwordError = getPasswordValidationError(password);
   const confirmPasswordError =
-    confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match.' : null;
+    confirmPassword.length > 0 && password !== confirmPassword ? t('passwordsDoNotMatch') : null;
   const showPasswordError = (passwordTouched || hasAttemptedSubmit) && Boolean(passwordError);
   const showConfirmPasswordError =
     (confirmPasswordTouched || hasAttemptedSubmit) && Boolean(confirmPasswordError);
@@ -86,10 +85,10 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
         </CardHeader>
         <CardFooter className="flex flex-col gap-3">
           <Button asChild className="w-full">
-            <Link href={requestPath}>Request a New Link</Link>
+            <Link href={requestPath}>{t('requestNewLink')}</Link>
           </Button>
           <Button asChild variant="outline" className="w-full">
-            <Link href={loginPath}>Back to Login</Link>
+            <Link href={loginPath}>{t('backToLogin')}</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -106,7 +105,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('passwordsDoNotMatch'));
       return;
     }
 
@@ -124,14 +123,14 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        throw new Error(data.error || t('failedResetPassword'));
       }
 
       setIsComplete(true);
       router.replace(`${data.loginPath}?reset=success`);
       router.refresh();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Failed to reset password');
+      setError(submitError instanceof Error ? submitError.message : t('failedResetPassword'));
     } finally {
       setIsSubmitting(false);
     }
@@ -144,8 +143,8 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
             <CheckCircle2 className="h-7 w-7 text-success" />
           </div>
-          <CardTitle>Password Updated</CardTitle>
-          <CardDescription>Redirecting you back to login.</CardDescription>
+          <CardTitle>{t('passwordUpdatedTitle')}</CardTitle>
+          <CardDescription>{t('redirectingToLogin')}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -157,11 +156,14 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
           <ShieldCheck className="h-7 w-7 text-primary" />
         </div>
-        <CardTitle>Set a New Password</CardTitle>
+        <CardTitle>{t('setNewPassword')}</CardTitle>
         <CardDescription>
           {preview.accountType === 'resident' && preview.buildingName && preview.unitNumber
-            ? `Update the resident password for ${preview.buildingName}, unit ${preview.unitNumber}.`
-            : 'Choose a new password for your account.'}
+            ? t('updateResidentPasswordDesc', {
+                building: preview.buildingName,
+                unit: preview.unitNumber,
+              })
+            : t('chooseNewPasswordDesc')}
         </CardDescription>
       </CardHeader>
 
@@ -169,7 +171,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
         {error ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Password reset error</AlertTitle>
+            <AlertTitle>{t('passwordResetError')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
@@ -181,14 +183,14 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
           ) : null}
           {preview.expiresAt ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              This link expires on {new Date(preview.expiresAt).toLocaleString()}.
+              {t('expiresOn', { date: new Date(preview.expiresAt).toLocaleString() })}
             </p>
           ) : null}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="reset-password">New Password</Label>
+            <Label htmlFor="reset-password">{t('newPassword')}</Label>
             <Input
               id="reset-password"
               type="password"
@@ -196,7 +198,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
               onChange={(event) => setPassword(event.target.value)}
               onBlur={() => setPasswordTouched(true)}
               autoComplete="new-password"
-              placeholder="Enter a new password"
+              placeholder={t('enterNewPassword')}
               className="h-11 md:h-10"
               required
             />
@@ -205,7 +207,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reset-password-confirm">Confirm New Password</Label>
+            <Label htmlFor="reset-password-confirm">{t('confirmNewPassword')}</Label>
             <Input
               id="reset-password-confirm"
               type="password"
@@ -213,7 +215,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
               onChange={(event) => setConfirmPassword(event.target.value)}
               onBlur={() => setConfirmPasswordTouched(true)}
               autoComplete="new-password"
-              placeholder="Confirm your new password"
+              placeholder={t('confirmYourNewPassword')}
               className="h-11 md:h-10"
               required
             />
@@ -226,10 +228,10 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating password...
+                {t('updatingPassword')}
               </>
             ) : (
-              'Update Password'
+              t('updatePassword')
             )}
           </Button>
         </form>
@@ -237,7 +239,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
 
       <CardFooter className="justify-center">
         <Button asChild variant="ghost">
-          <Link href={loginPath}>Back to Login</Link>
+          <Link href={loginPath}>{t('backToLogin')}</Link>
         </Button>
       </CardFooter>
     </Card>

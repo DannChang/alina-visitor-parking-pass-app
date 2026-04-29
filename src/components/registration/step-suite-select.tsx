@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useFetchOnChange } from '@/hooks/use-fetch-on-change';
 import { Home, Loader2, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ interface StepSuiteSelectProps {
 }
 
 export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSelectProps) {
+  const t = useTranslations('registration');
   const [units, setUnits] = useState<UnitResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,11 +37,11 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
     const fetchUnits = async () => {
       try {
         const res = await fetch(`/api/units?buildingSlug=${data.buildingSlug}`);
-        if (!res.ok) throw new Error('Failed to load units');
+        if (!res.ok) throw new Error(t('failedToLoadUnits'));
         const result = await res.json();
         setUnits(result.units);
       } catch {
-        setError('Failed to load units. Please try again.');
+        setError(t('failedToLoadUnits'));
       } finally {
         setIsLoading(false);
       }
@@ -64,8 +66,8 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-2 text-muted-foreground">Loading units...</p>
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="mt-2 text-muted-foreground">{t('loadingUnits')}</p>
         </CardContent>
       </Card>
     );
@@ -77,22 +79,22 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Home className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>Select Unit</CardTitle>
+        <CardTitle>{t('selectUnitTitle')}</CardTitle>
         <CardDescription>
-          Which unit are you visiting at {data.buildingName}?
+          {t('selectUnitDesc', { building: data.buildingName ?? '' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error ? (
           <p className="text-center text-sm text-destructive">{error}</p>
         ) : (
-          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+          <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto">
             {units.map((unit) => (
               <button
                 key={unit.id}
                 onClick={() => handleSelect(unit)}
                 className={cn(
-                  'rounded-lg border p-3 text-center transition-colors min-h-[48px] touch-manipulation',
+                  'min-h-[48px] touch-manipulation rounded-lg border p-3 text-center transition-colors',
                   selectedUnit === unit.id
                     ? 'border-primary bg-primary/10 font-semibold'
                     : 'hover:bg-accent'
@@ -101,7 +103,7 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
                 <span className="text-sm">{unit.unitNumber}</span>
                 {unit.floor && (
                   <span className="block text-xs text-muted-foreground">
-                    Floor {unit.floor}
+                    {t('floor', { floor: unit.floor })}
                   </span>
                 )}
               </button>
@@ -111,15 +113,11 @@ export function StepSuiteSelect({ data, onUpdate, onNext, onBack }: StepSuiteSel
 
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onBack} className="min-h-[48px]">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('back')}
           </Button>
-          <Button
-            onClick={handleContinue}
-            disabled={!selectedUnit}
-            className="flex-1 min-h-[48px]"
-          >
-            Continue
+          <Button onClick={handleContinue} disabled={!selectedUnit} className="min-h-[48px] flex-1">
+            {t('continue')}
           </Button>
         </div>
       </CardContent>

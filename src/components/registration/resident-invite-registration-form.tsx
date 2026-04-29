@@ -5,6 +5,7 @@ import { useMemo, useRef, useState, useCallback } from 'react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle, CheckCircle2, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,36 +60,34 @@ interface ResidentInviteRegistrationFormProps {
   invite: ResidentInvitePreview | null;
 }
 
-function getBlockedMessage(invite: ResidentInvitePreview | null) {
+function getBlockedMessage(
+  invite: ResidentInvitePreview | null,
+  t: ReturnType<typeof useTranslations<'resident'>>
+) {
   if (!invite) {
     return {
-      title: 'Registration Link Invalid',
-      description:
-        'This registration link is invalid or no longer exists. Contact your building management team for a new link.',
+      title: t('registrationInvalidTitle'),
+      description: t('registrationInvalidDesc'),
     };
   }
 
   if (invite.status === 'CONSUMED') {
     return {
-      title: 'Registration Already Completed',
-      description:
-        'This registration link has already been used. Sign in from the resident portal if you already created your account.',
+      title: t('registrationCompletedTitle'),
+      description: t('registrationCompletedDesc'),
     };
   }
 
   if (invite.status === 'REVOKED') {
     return {
-      title: 'Registration Link Revoked',
-      description:
-        invite.revokeReason ||
-        'This registration link was revoked. Contact your building management team for a new link.',
+      title: t('registrationRevokedTitle'),
+      description: invite.revokeReason || t('registrationRevokedDesc'),
     };
   }
 
   return {
-    title: 'Registration Link Expired',
-    description:
-      'This registration link expired. Contact your building management team to request a new registration pass.',
+    title: t('registrationExpiredTitle'),
+    description: t('registrationExpiredDesc'),
   };
 }
 
@@ -96,6 +95,7 @@ export function ResidentInviteRegistrationForm({
   token,
   invite,
 }: ResidentInviteRegistrationFormProps) {
+  const t = useTranslations('resident');
   const router = useRouter();
   const [recipientName, setRecipientName] = useState(invite?.recipientName ?? '');
   const [recipientEmail, setRecipientEmail] = useState(invite?.recipientEmail ?? '');
@@ -120,7 +120,7 @@ export function ResidentInviteRegistrationForm({
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const policyScrollRef = useRef<HTMLDivElement>(null);
 
-  const blockedContent = useMemo(() => getBlockedMessage(invite), [invite]);
+  const blockedContent = useMemo(() => getBlockedMessage(invite, t), [invite, t]);
   const requiresRecipientDetails = !invite?.recipientEmail || !invite?.recipientName;
   const cleanedRecipientName = recipientName.trim();
   const cleanedRecipientEmail = recipientEmail.trim().toLowerCase();
@@ -137,7 +137,7 @@ export function ResidentInviteRegistrationForm({
   const licensePlateErrors = hasVehicle
     ? cleanedPersonalLicensePlates.map((licensePlate) => {
         if (!licensePlate) {
-          return 'Personal license plate is required.';
+          return t('personalPlateRequired');
         }
 
         if (
@@ -145,7 +145,10 @@ export function ResidentInviteRegistrationForm({
             `^[A-Z0-9]{${LICENSE_PLATE_CONFIG.minLength},${LICENSE_PLATE_CONFIG.maxLength}}$`
           ).test(licensePlate)
         ) {
-          return `License plate must be ${LICENSE_PLATE_CONFIG.minLength} to ${LICENSE_PLATE_CONFIG.maxLength} alphanumeric characters.`;
+          return t('licensePlateLength', {
+            min: LICENSE_PLATE_CONFIG.minLength,
+            max: LICENSE_PLATE_CONFIG.maxLength,
+          });
         }
 
         return null;
@@ -154,13 +157,13 @@ export function ResidentInviteRegistrationForm({
   const hasLicensePlateErrors = licensePlateErrors.some(Boolean);
   const passwordError = getPasswordValidationError(password);
   const recipientNameError =
-    requiresRecipientDetails && !cleanedRecipientName ? 'Resident name is required.' : null;
+    requiresRecipientDetails && !cleanedRecipientName ? t('residentNameRequired') : null;
   const recipientEmailError =
     requiresRecipientDetails && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanedRecipientEmail)
-      ? 'A valid email is required.'
+      ? t('validEmailRequired')
       : null;
   const confirmPasswordError =
-    confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match.' : null;
+    confirmPassword.length > 0 && password !== confirmPassword ? t('passwordsDoNotMatch') : null;
   const showStrataLotError = Boolean(strataLotError && (hasAttemptedSubmit || strataLotTouched));
   const showRecipientNameError = Boolean(
     recipientNameError && (hasAttemptedSubmit || recipientNameTouched)
@@ -213,7 +216,7 @@ export function ResidentInviteRegistrationForm({
         </CardHeader>
         <CardFooter className="flex justify-center">
           <Button asChild variant="outline">
-            <Link href="/resident/login?showResidentLogin=1">Go to Resident Login</Link>
+            <Link href="/resident/login?showResidentLogin=1">{t('goToResidentLogin')}</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -265,16 +268,12 @@ export function ResidentInviteRegistrationForm({
     }
 
     if (cleanedAssignedStallNumbers.length === 0 || hasAssignedStallErrors) {
-      setError(
-        assignedStallErrors.find(Boolean) ?? 'At least one assigned stall number is required.'
-      );
+      setError(assignedStallErrors.find(Boolean) ?? t('assignedStallRequired'));
       return;
     }
 
     if (hasVehicle && (cleanedPersonalLicensePlates.length === 0 || hasLicensePlateErrors)) {
-      setError(
-        licensePlateErrors.find(Boolean) ?? 'At least one personal license plate is required.'
-      );
+      setError(licensePlateErrors.find(Boolean) ?? t('personalPlateOneRequired'));
       return;
     }
 
@@ -289,12 +288,12 @@ export function ResidentInviteRegistrationForm({
     }
 
     if (!hasScrolledPolicy) {
-      setError('Please scroll through the privacy policy before activating your account.');
+      setError(t('scrollPolicyRequired'));
       return;
     }
 
     if (!privacyAgreed) {
-      setError('You must review and accept the privacy policy before activating your account.');
+      setError(t('acceptPolicyRequired'));
       return;
     }
 
@@ -320,7 +319,7 @@ export function ResidentInviteRegistrationForm({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to complete registration');
+        throw new Error(data.error || t('failedCompleteRegistration'));
       }
 
       const signInResult = await signIn('resident-credentials', {
@@ -332,9 +331,7 @@ export function ResidentInviteRegistrationForm({
 
       if (signInResult?.error) {
         setSignedIn(true);
-        setError(
-          'Your account was created, but automatic sign-in failed. Use the resident login page to continue.'
-        );
+        setError(t('accountCreatedSignInFailed'));
         return;
       }
 
@@ -343,7 +340,7 @@ export function ResidentInviteRegistrationForm({
       router.refresh();
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : 'Failed to complete registration'
+        submitError instanceof Error ? submitError.message : t('failedCompleteRegistration')
       );
     } finally {
       setIsSubmitting(false);
@@ -357,8 +354,8 @@ export function ResidentInviteRegistrationForm({
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
             <CheckCircle2 className="h-7 w-7 text-success" />
           </div>
-          <CardTitle>Account Created</CardTitle>
-          <CardDescription>Signing you in to the resident portal.</CardDescription>
+          <CardTitle>{t('accountCreated')}</CardTitle>
+          <CardDescription>{t('signingIntoResidentPortal')}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -370,33 +367,34 @@ export function ResidentInviteRegistrationForm({
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
           <ShieldCheck className="h-7 w-7 text-primary" />
         </div>
-        <CardTitle>Complete Your Registration</CardTitle>
+        <CardTitle>{t('completeRegistration')}</CardTitle>
         <CardDescription>
-          Set the password for your resident account at {invite.building.name}, unit{' '}
-          {invite.unit.unitNumber}.
+          {t('completeRegistrationDesc', {
+            building: invite.building.name,
+            unit: invite.unit.unitNumber,
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Registration error</AlertTitle>
+            <AlertTitle>{t('registrationError')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
 
         <div className="rounded-lg bg-muted/40 p-4 text-sm">
-          <p className="font-medium">{invite.recipientName ?? 'Unit registration link'}</p>
+          <p className="font-medium">{invite.recipientName ?? t('unitRegistrationLink')}</p>
           {invite.recipientEmail ? (
             <p className="text-muted-foreground">{invite.recipientEmail}</p>
           ) : (
-            <p className="text-muted-foreground">
-              Enter your name and email to activate this unit.
-            </p>
+            <p className="text-muted-foreground">{t('enterNameEmailActivate')}</p>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
-            This one-time link expires{' '}
-            {formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}.
+            {t('inviteExpires', {
+              time: formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true }),
+            })}
           </p>
         </div>
 
@@ -404,7 +402,7 @@ export function ResidentInviteRegistrationForm({
           {requiresRecipientDetails ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="resident-registration-name">Full Name</Label>
+                <Label htmlFor="resident-registration-name">{t('fullName')}</Label>
                 <Input
                   id="resident-registration-name"
                   value={recipientName}
@@ -419,7 +417,7 @@ export function ResidentInviteRegistrationForm({
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="resident-registration-email">Email</Label>
+                <Label htmlFor="resident-registration-email">{t('email')}</Label>
                 <Input
                   id="resident-registration-email"
                   type="email"
@@ -438,7 +436,7 @@ export function ResidentInviteRegistrationForm({
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="resident-registration-strata-lot">Strata Lot #</Label>
+            <Label htmlFor="resident-registration-strata-lot">{t('strataLot')}</Label>
             <Input
               id="resident-registration-strata-lot"
               value={strataLotNumber}
@@ -459,10 +457,8 @@ export function ResidentInviteRegistrationForm({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <Label>Assigned Stall Number(s)</Label>
-                <p className="text-sm text-muted-foreground">
-                  Add each stall assigned to your home.
-                </p>
+                <Label>{t('assignedStalls')}</Label>
+                <p className="text-sm text-muted-foreground">{t('assignedStallsDesc')}</p>
               </div>
               <Button
                 type="button"
@@ -474,7 +470,7 @@ export function ResidentInviteRegistrationForm({
                 }}
               >
                 <Plus className="h-4 w-4" />
-                Add Stall
+                {t('addStall')}
               </Button>
             </div>
 
@@ -498,7 +494,7 @@ export function ResidentInviteRegistrationForm({
                       )
                     }
                     className="h-11 md:h-10"
-                    placeholder={`Stall #${index + 1}`}
+                    placeholder={t('stallPlaceholder', { number: index + 1 })}
                     inputMode="numeric"
                     maxLength={RESIDENT_INTEGER_FIELD_MAX_LENGTH}
                     pattern={`\\d{1,${RESIDENT_INTEGER_FIELD_MAX_LENGTH}}`}
@@ -517,7 +513,7 @@ export function ResidentInviteRegistrationForm({
                       );
                     }}
                     disabled={assignedStallNumbers.length === 1}
-                    aria-label={`Remove assigned stall ${index + 1}`}
+                    aria-label={t('removeAssignedStall', { number: index + 1 })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -537,10 +533,8 @@ export function ResidentInviteRegistrationForm({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <Label>Personal License Plate(s)</Label>
-                <p className="text-sm text-muted-foreground">
-                  Add every vehicle plate registered to your household.
-                </p>
+                <Label>{t('personalLicensePlates')}</Label>
+                <p className="text-sm text-muted-foreground">{t('personalLicensePlatesDesc')}</p>
               </div>
               <Button
                 type="button"
@@ -553,7 +547,7 @@ export function ResidentInviteRegistrationForm({
                 disabled={!hasVehicle}
               >
                 <Plus className="h-4 w-4" />
-                Add Plate
+                {t('addPlate')}
               </Button>
             </div>
 
@@ -572,11 +566,9 @@ export function ResidentInviteRegistrationForm({
               />
               <div className="space-y-1">
                 <Label htmlFor="resident-registration-no-vehicle" className="cursor-pointer">
-                  I don&apos;t have a vehicle
+                  {t('noVehicle')}
                 </Label>
-                <p className="text-sm text-muted-foreground">
-                  You can finish registration now without adding a vehicle.
-                </p>
+                <p className="text-sm text-muted-foreground">{t('noVehicleDesc')}</p>
               </div>
             </div>
 
@@ -600,7 +592,7 @@ export function ResidentInviteRegistrationForm({
                       )
                     }
                     className="h-11 uppercase md:h-10"
-                    placeholder={`License plate #${index + 1}`}
+                    placeholder={t('licensePlatePlaceholder', { number: index + 1 })}
                     maxLength={LICENSE_PLATE_CONFIG.maxLength}
                     autoCapitalize="characters"
                     autoCorrect="off"
@@ -620,7 +612,7 @@ export function ResidentInviteRegistrationForm({
                       );
                     }}
                     disabled={!hasVehicle || personalLicensePlates.length === 1}
-                    aria-label={`Remove license plate ${index + 1}`}
+                    aria-label={t('removeLicensePlate', { number: index + 1 })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -638,7 +630,7 @@ export function ResidentInviteRegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="resident-registration-password">Password</Label>
+            <Label htmlFor="resident-registration-password">{t('password')}</Label>
             <Input
               id="resident-registration-password"
               type="password"
@@ -647,7 +639,7 @@ export function ResidentInviteRegistrationForm({
               onBlur={() => setPasswordTouched(true)}
               className="h-11 md:h-10"
               autoComplete="new-password"
-              placeholder="Create a password"
+              placeholder={t('createPassword')}
               required
             />
             <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_TEXT}</p>
@@ -655,7 +647,7 @@ export function ResidentInviteRegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="resident-registration-password-confirm">Confirm Password</Label>
+            <Label htmlFor="resident-registration-password-confirm">{t('confirmPassword')}</Label>
             <Input
               id="resident-registration-password-confirm"
               type="password"
@@ -664,7 +656,7 @@ export function ResidentInviteRegistrationForm({
               onBlur={() => setConfirmPasswordTouched(true)}
               className="h-11 md:h-10"
               autoComplete="new-password"
-              placeholder="Confirm your password"
+              placeholder={t('confirmPasswordPlaceholder')}
               required
             />
             {showConfirmPasswordError && (
@@ -673,7 +665,7 @@ export function ResidentInviteRegistrationForm({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Privacy Policy</Label>
+            <Label className="text-sm font-medium">{t('privacyPolicy')}</Label>
             <div
               ref={policyScrollRef}
               onScroll={handlePolicyScroll}
@@ -683,9 +675,7 @@ export function ResidentInviteRegistrationForm({
               <PrivacyPolicyContent />
             </div>
             {!hasScrolledPolicy && (
-              <p className="text-center text-xs text-muted-foreground">
-                Scroll to the bottom to enable the consent checkbox.
-              </p>
+              <p className="text-center text-xs text-muted-foreground">{t('scrollPolicy')}</p>
             )}
             <div className="flex items-start gap-3">
               <Checkbox
@@ -703,9 +693,7 @@ export function ResidentInviteRegistrationForm({
                     : 'cursor-not-allowed text-muted-foreground/50'
                 }`}
               >
-                I have read and agree to the Privacy Policy. I consent to the collection, use, and
-                disclosure of my personal information for resident account setup and parking
-                administration.
+                {t('residentPrivacyConsent')}
               </Label>
             </div>
           </div>
@@ -714,17 +702,17 @@ export function ResidentInviteRegistrationForm({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Completing registration...
+                {t('completingRegistration')}
               </>
             ) : (
-              'Activate Account'
+              t('activateAccount')
             )}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="justify-center">
         <Button asChild variant="ghost">
-          <Link href="/?showAuthChooser=1">Back to Resident Login</Link>
+          <Link href="/?showAuthChooser=1">{t('backToResidentLogin')}</Link>
         </Button>
       </CardFooter>
     </Card>

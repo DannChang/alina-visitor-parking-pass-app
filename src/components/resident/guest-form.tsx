@@ -1,16 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Guest {
   id: string;
@@ -28,6 +24,7 @@ interface GuestFormProps {
 }
 
 export function GuestForm({ open, onOpenChange, guest, onSuccess }: GuestFormProps) {
+  const t = useTranslations('resident');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -92,27 +89,55 @@ export function GuestForm({ open, onOpenChange, guest, onSuccess }: GuestFormPro
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{guest ? 'Edit Guest' : 'Add Guest'}</DialogTitle>
+          <DialogTitle>{guest ? t('editGuest') : t('addGuest')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Name *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest name" className="h-11" />
+            <Label>{t('name')} *</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('guestName')}
+              className="h-11"
+            />
           </div>
           <div className="space-y-2">
-            <Label>Phone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-123-4567" type="tel" className="h-11" />
+            <Label>{t('phone')}</Label>
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="555-123-4567"
+              type="tel"
+              className="h-11"
+            />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="guest@email.com" type="email" className="h-11" />
+            <Label>{t('email')}</Label>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('emailPlaceholder')}
+              type="email"
+              className="h-11"
+            />
           </div>
           <div className="space-y-2">
-            <Label>License Plate</Label>
-            <Input value={licensePlate} onChange={(e) => setLicensePlate(e.target.value.toUpperCase())} placeholder="ABC1234" className="h-11 uppercase" />
+            <Label>{t('licensePlate')}</Label>
+            <Input
+              value={licensePlate}
+              onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+              placeholder="ABC1234"
+              className="h-11 uppercase"
+            />
           </div>
-          <Button type="submit" className="w-full min-h-[48px]" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (guest ? 'Save Changes' : 'Add Guest')}
+          <Button type="submit" className="min-h-[48px] w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : guest ? (
+              t('saveChanges')
+            ) : (
+              t('addGuest')
+            )}
           </Button>
         </form>
       </DialogContent>

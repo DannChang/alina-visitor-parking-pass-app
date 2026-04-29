@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useCountdown } from '@/hooks/use-countdown';
 import { cn } from '@/lib/utils';
 
@@ -9,13 +10,9 @@ interface CountdownTimerProps {
   showLabel?: boolean;
 }
 
-export function CountdownTimer({
-  endTime,
-  className,
-  showLabel = true,
-}: CountdownTimerProps) {
-  const { hours, minutes, seconds, isExpired, isExpiringSoon } =
-    useCountdown(endTime);
+export function CountdownTimer({ endTime, className, showLabel = true }: CountdownTimerProps) {
+  const t = useTranslations('resident');
+  const { hours, minutes, seconds, isExpired, isExpiringSoon } = useCountdown(endTime);
 
   const colorClass = isExpired
     ? 'text-red-600'
@@ -32,29 +29,17 @@ export function CountdownTimer({
   const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border p-4 text-center',
-        bgClass,
-        className
-      )}
-    >
+    <div className={cn('rounded-lg border p-4 text-center', bgClass, className)}>
       {showLabel && (
-        <p className={cn('text-sm font-medium mb-1', colorClass)}>
-          {isExpired ? 'Pass Expired' : 'Time Remaining'}
+        <p className={cn('mb-1 text-sm font-medium', colorClass)}>
+          {isExpired ? t('passExpired') : t('timeRemaining')}
         </p>
       )}
       <div className={cn('font-mono text-3xl font-bold tabular-nums', colorClass)}>
-        {isExpired ? (
-          '00:00:00'
-        ) : (
-          `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-        )}
+        {isExpired ? '00:00:00' : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`}
       </div>
       {!isExpired && isExpiringSoon && (
-        <p className="text-xs text-yellow-700 mt-1">
-          Your pass is expiring soon
-        </p>
+        <p className="mt-1 text-xs text-yellow-700">{t('passExpiringSoon')}</p>
       )}
     </div>
   );
