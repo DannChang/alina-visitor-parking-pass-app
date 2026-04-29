@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockPostRequest } from '@/test/mocks/next-request';
+import { createMockGetRequest, createMockPostRequest } from '@/test/mocks/next-request';
 import {
   createMockBuilding,
   createMockPass,
@@ -20,6 +20,8 @@ vi.mock('@/lib/prisma', () => ({
     },
     parkingPass: {
       create: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
     },
   },
 }));
@@ -39,7 +41,7 @@ vi.mock('@/services/notification-service', () => ({
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { validatePassRequest } from '@/services/validation-service';
-import { POST } from '../route';
+import { GET, POST } from '../route';
 
 const mockPrisma = prisma as unknown as {
   unit: { findUnique: ReturnType<typeof vi.fn> };
@@ -50,6 +52,8 @@ const mockPrisma = prisma as unknown as {
   };
   parkingPass: {
     create: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -66,6 +70,76 @@ describe('Resident passes API route', () => {
       residentId: 'resident-1',
       unitId: 'unit-1',
     });
+  });
+
+  it('filters the initial resident pass list to active passes', async () => {
+    const unit = {
+      ...createMockUnit(),
+      building: {
+        ...createMockBuilding(),
+        parkingRules: createMockParkingRule(),
+      },
+    };
+
+    mockPrisma.unit.findUnique.mockResolvedValue(unit);
+    mockPrisma.parkingPass.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ duration: 4 }]);
+    mockPrisma.parkingPass.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+    const request = createMockGetRequest('http://localhost:3000/api/resident/passes', {
+      scope: 'active',
+      limit: '100',
+    });
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.parkingPass.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          unitId: 'unit-1',
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'EXTENDED'] },
+          endTime: { gt: expect.any(Date) },
+        }),
+      })
+    );
+  });
+
+  it('filters resident pass history to expired passes only', async () => {
+    const unit = {
+      ...createMockUnit(),
+      building: {
+        ...createMockBuilding(),
+        parkingRules: createMockParkingRule(),
+      },
+    };
+
+    mockPrisma.unit.findUnique.mockResolvedValue(unit);
+    mockPrisma.parkingPass.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ duration: 4 }]);
+    mockPrisma.parkingPass.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+    const request = createMockGetRequest('http://localhost:3000/api/resident/passes', {
+      scope: 'expired',
+      limit: '100',
+    });
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.parkingPass.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          unitId: 'unit-1',
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'EXPIRED', 'EXTENDED'] },
+          endTime: { lte: expect.any(Date) },
+        }),
+      })
+    );
   });
 
   it('rejects a visitor pass for the current resident vehicle', async () => {

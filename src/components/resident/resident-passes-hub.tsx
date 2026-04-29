@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Building2,
   Car,
+  ChevronDown,
   ChevronRight,
   Clock3,
   Loader2,
@@ -220,9 +221,14 @@ export function ResidentPassesHub() {
   const t = useTranslations('resident');
   const locale = useLocale();
   const [passes, setPasses] = useState<ResidentPass[]>([]);
+  const [expiredPasses, setExpiredPasses] = useState<ResidentPass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExpiredLoading, setIsExpiredLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [hasLoadedExpired, setHasLoadedExpired] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [expiredLoadError, setExpiredLoadError] = useState<string | null>(null);
+  const [showExpiredPasses, setShowExpiredPasses] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedPassId, setSelectedPassId] = useState<string | null>(null);
   const [limits, setLimits] = useState<ResidentPassLimits>({
@@ -242,7 +248,7 @@ export function ResidentPassesHub() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/resident/passes?limit=100');
+      const res = await fetch('/api/resident/passes?scope=active&limit=100');
 
       if (!res.ok) {
         throw new Error(t('couldNotLoadPasses'));
@@ -268,9 +274,42 @@ export function ResidentPassesHub() {
     }
   }, [t]);
 
+  const fetchExpiredPasses = useCallback(async () => {
+    setIsExpiredLoading(true);
+
+    try {
+      const res = await fetch('/api/resident/passes?scope=expired&limit=100');
+
+      if (!res.ok) {
+        throw new Error(t('couldNotLoadPasses'));
+      }
+
+      const data = await res.json();
+      setExpiredPasses(data.passes);
+      setExpiredLoadError(null);
+      setHasLoadedExpired(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('couldNotLoadPasses');
+
+      setExpiredLoadError(message);
+      toast.error(message);
+    } finally {
+      setIsExpiredLoading(false);
+    }
+  }, [t]);
+
   useMountEffect(() => {
     fetchPasses();
   });
+
+  const handleExpiredToggle = () => {
+    const nextOpen = !showExpiredPasses;
+    setShowExpiredPasses(nextOpen);
+
+    if (nextOpen && !hasLoadedExpired && !isExpiredLoading) {
+      void fetchExpiredPasses();
+    }
+  };
 
   const sortedPasses = [...passes].sort((left, right) => {
     const leftActive = isActivePass(left) ? 1 : 0;
@@ -282,9 +321,13 @@ export function ResidentPassesHub() {
 
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
   });
+  const sortedExpiredPasses = [...expiredPasses].sort(
+    (left, right) => new Date(right.endTime).getTime() - new Date(left.endTime).getTime()
+  );
+  const allVisiblePasses = [...sortedPasses, ...sortedExpiredPasses];
 
   const selectedPass = selectedPassId
-    ? (sortedPasses.find((pass) => pass.id === selectedPassId) ?? null)
+    ? (allVisiblePasses.find((pass) => pass.id === selectedPassId) ?? null)
     : null;
   const timeBankPeriodLabel = t(
     limits.timeBankPeriod === 'DAILY'
@@ -511,6 +554,160 @@ export function ResidentPassesHub() {
               })}
             </div>
           )}
+
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={handleExpiredToggle}
+              className="flex w-full items-center justify-between rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+              aria-expanded={showExpiredPasses}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-950">{t('expiredPasses')}</p>
+                <p className="mt-1 text-sm text-slate-600">{t('expiredPassesDescription')}</p>
+              </div>
+              <div className="ml-4 flex items-center gap-2 text-slate-500">
+                {isExpiredLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                <ChevronDown
+                  className={cn(
+                    'h-5 w-5 transition-transform',
+                    showExpiredPasses && 'rotate-180'
+                  )}
+                />
+              </div>
+            </button>
+
+            {showExpiredPasses && (
+              <div className="space-y-4">
+                {isExpiredLoading && !hasLoadedExpired ? (
+                  <PassListSkeleton />
+                ) : expiredLoadError && sortedExpiredPasses.length === 0 ? (
+                  <Card className="rounded-[28px] border-rose-200 bg-rose-50 shadow-sm">
+                    <CardContent className="flex flex-col items-center gap-4 px-6 py-10 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-rose-600 shadow-sm">
+                        <AlertCircle className="h-7 w-7" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold text-slate-950">
+                          {t('couldNotLoadPasses')}
+                        </h3>
+                        <p className="text-sm text-slate-600">{expiredLoadError}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={fetchExpiredPasses}
+                        className="rounded-full px-6"
+                      >
+                        {t('tryAgain')}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : sortedExpiredPasses.length === 0 ? (
+                  <Card className="rounded-[28px] border-dashed border-slate-300 bg-white shadow-sm">
+                    <CardContent className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                        <Ticket className="h-6 w-6" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-700">{t('noExpiredPasses')}</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {sortedExpiredPasses.map((pass) => {
+                      const displayStatus = getDisplayStatus(pass);
+                      const vehicleDetails = formatVehicleDetails(pass);
+
+                      return (
+                        <button
+                          key={pass.id}
+                          type="button"
+                          onClick={() => setSelectedPassId(pass.id)}
+                          className="block w-full rounded-[28px] border border-slate-200 bg-white p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                        >
+                          <div className="space-y-4 p-5 sm:p-6">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                                  {t('passRecord')}
+                                </p>
+                                <div className="mt-2 flex items-center gap-3">
+                                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                                    <Car className="h-5 w-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-mono text-xl font-semibold text-slate-950">
+                                      {pass.vehicle.licensePlate}
+                                    </p>
+                                    <p className="truncate text-sm text-slate-600">
+                                      {formatPassContact(pass.visitorEmail, pass.visitorPhone)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'shrink-0 rounded-full px-3 py-1 text-xs',
+                                  getStatusClasses(displayStatus)
+                                )}
+                              >
+                                {formatStatusLabel(displayStatus, t)}
+                              </Badge>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-3">
+                              <div className="rounded-2xl bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                  {t('starts')}
+                                </p>
+                                <p className="mt-2 text-sm font-medium text-slate-900">
+                                  {formatShortDateTime(pass.startTime, locale)}
+                                </p>
+                              </div>
+                              <div className="rounded-2xl bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                  {t('ends')}
+                                </p>
+                                <p className="mt-2 text-sm font-medium text-slate-900">
+                                  {formatShortDateTime(pass.endTime, locale)}
+                                </p>
+                              </div>
+                              <div className="rounded-2xl bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                  {t('duration')}
+                                </p>
+                                <p className="mt-2 text-sm font-medium text-slate-900">
+                                  {t('durationHours', { count: pass.duration })}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-1 text-sm">
+                              <div className="min-w-0">
+                                <p className="truncate font-medium text-slate-900">
+                                  {vehicleDetails || t('vehicleDetailsInside')}
+                                </p>
+                                <p className="truncate text-slate-500">
+                                  {t('expiredRelative', {
+                                    time: formatRelativeTime(pass.endTime, locale),
+                                  })}
+                                </p>
+                              </div>
+                              <span className="flex items-center gap-1 font-medium text-slate-950">
+                                {t('details')}
+                                <ChevronRight className="h-4 w-4" />
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </section>
       </div>
 
