@@ -42,6 +42,16 @@ describe('LocaleSwitcher', () => {
     expect(screen.getByText('Tiếng Việt')).toBeInTheDocument();
   });
 
+  it('should omit excluded language options', async () => {
+    const user = userEvent.setup();
+    render(<LocaleSwitcher excludedLocales={['fa']} />);
+
+    await user.click(screen.getByRole('button'));
+
+    expect(screen.getByText('English')).toBeInTheDocument();
+    expect(screen.queryByText('فارسی')).not.toBeInTheDocument();
+  });
+
   it('should persist the selected locale when selecting a language', async () => {
     const { persistLocaleAndReload } = await import('@/i18n/client');
 

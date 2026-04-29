@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useMountEffect } from '@/hooks/use-mount-effect';
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PASSWORD_REQUIREMENTS_TEXT, getPasswordValidationError } from '@/lib/validation';
 
 export function ResidentSettingsForm() {
+  const t = useTranslations('resident');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,7 +28,7 @@ export function ResidentSettingsForm() {
 
   const isChangingPassword = Boolean(currentPassword || newPassword);
   const currentPasswordError =
-    isChangingPassword && !currentPassword.trim() ? 'Current password is required.' : null;
+    isChangingPassword && !currentPassword.trim() ? t('currentPasswordRequired') : null;
   const newPasswordError = newPassword ? getPasswordValidationError(newPassword) : null;
   const showCurrentPasswordError =
     (currentPasswordTouched || hasAttemptedSubmit) && Boolean(currentPasswordError);
@@ -86,7 +88,7 @@ export function ResidentSettingsForm() {
       });
 
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Settings saved successfully' });
+        setMessage({ type: 'success', text: t('settingsSaved') });
         setAccessCode('');
         setCurrentPassword('');
         setNewPassword('');
@@ -95,10 +97,10 @@ export function ResidentSettingsForm() {
         setNewPasswordTouched(false);
       } else {
         const data = await res.json();
-        setMessage({ type: 'error', text: data.error || 'Failed to save settings' });
+        setMessage({ type: 'error', text: data.error || t('failedToSaveSettings') });
       }
     } catch {
-      setMessage({ type: 'error', text: 'An error occurred' });
+      setMessage({ type: 'error', text: t('unexpectedError') });
     } finally {
       setIsSaving(false);
     }
@@ -106,8 +108,8 @@ export function ResidentSettingsForm() {
 
   if (isLoading) {
     return (
-      <div className="text-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+      <div className="py-8 text-center">
+        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
       </div>
     );
   }
@@ -122,36 +124,44 @@ export function ResidentSettingsForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Contact Info</CardTitle>
+          <CardTitle className="text-base">{t('contactInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label>Name</Label>
+            <Label>{t('name')}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="h-11" />
           </div>
           <div className="space-y-1">
-            <Label>Email</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="h-11" />
+            <Label>{t('email')}</Label>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              className="h-11"
+            />
           </div>
           <div className="space-y-1">
-            <Label>Phone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" className="h-11" />
+            <Label>{t('phone')}</Label>
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              type="tel"
+              className="h-11"
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Unit Access Code</CardTitle>
+          <CardTitle className="text-base">{t('unitAccessCode')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Set a PIN that visitors must enter to register for your unit.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('accessCodeDescription')}</p>
           <Input
             value={accessCode}
             onChange={(e) => setAccessCode(e.target.value)}
-            placeholder="Enter new access code"
+            placeholder={t('accessCodePlaceholder')}
             type="password"
             className="h-11"
           />
@@ -160,11 +170,11 @@ export function ResidentSettingsForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Change Password</CardTitle>
+          <CardTitle className="text-base">{t('changePassword')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label>Current Password</Label>
+            <Label>{t('currentPassword')}</Label>
             <Input
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -177,7 +187,7 @@ export function ResidentSettingsForm() {
             ) : null}
           </div>
           <div className="space-y-1">
-            <Label>New Password</Label>
+            <Label>{t('newPassword')}</Label>
             <Input
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -193,11 +203,15 @@ export function ResidentSettingsForm() {
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full min-h-[48px]" disabled={isSaving}>
+      <Button type="submit" className="min-h-[48px] w-full" disabled={isSaving}>
         {isSaving ? (
-          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('saving')}
+          </>
         ) : (
-          <><Save className="h-4 w-4 mr-2" /> Save Settings</>
+          <>
+            <Save className="mr-2 h-4 w-4" /> {t('saveSettings')}
+          </>
         )}
       </Button>
     </form>

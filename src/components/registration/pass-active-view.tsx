@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,11 +14,13 @@ interface PassActiveViewProps {
 }
 
 export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
+  const t = useTranslations('registration');
+  const locale = useLocale();
   const [isRemoving, setIsRemoving] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
 
   const handleRemovePass = async () => {
-    if (!confirm('Are you sure you want to end your parking pass?')) return;
+    if (!confirm(t('endPassConfirm'))) return;
 
     setIsRemoving(true);
     try {
@@ -36,17 +39,17 @@ export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
 
   if (isRemoved) {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="mx-auto w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
             <XCircle className="h-8 w-8 text-slate-500" />
           </div>
-          <CardTitle>Pass Ended</CardTitle>
-          <CardDescription>Your parking pass has been cancelled</CardDescription>
+          <CardTitle>{t('passEnded')}</CardTitle>
+          <CardDescription>{t('passCancelled')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={onReset} className="w-full min-h-[48px]">
-            Register Another Vehicle
+          <Button onClick={onReset} className="min-h-[48px] w-full">
+            {t('registerAnotherVehicle')}
           </Button>
         </CardContent>
       </Card>
@@ -54,13 +57,13 @@ export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="mx-auto w-full max-w-md">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
           <CheckCircle2 className="h-8 w-8 text-green-600" />
         </div>
-        <CardTitle className="text-green-700">Pass Active</CardTitle>
-        <CardDescription>Your visitor parking pass is registered</CardDescription>
+        <CardTitle className="text-green-700">{t('passActive')}</CardTitle>
+        <CardDescription>{t('passActiveDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Countdown Timer */}
@@ -68,8 +71,8 @@ export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
 
         {/* Confirmation Code */}
         <div className="rounded-lg bg-muted p-4 text-center">
-          <p className="text-sm text-muted-foreground">Confirmation Code</p>
-          <p className="text-2xl font-bold tracking-wider font-mono">
+          <p className="text-sm text-muted-foreground">{t('confirmationCode')}</p>
+          <p className="font-mono text-2xl font-bold tracking-wider">
             {pass.confirmationCode.slice(0, 8).toUpperCase()}
           </p>
         </div>
@@ -77,21 +80,21 @@ export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
         {/* Details */}
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Vehicle</span>
-            <span className="font-medium font-mono">{pass.licensePlate}</span>
+            <span className="text-muted-foreground">{t('vehicle')}</span>
+            <span className="font-mono font-medium">{pass.licensePlate}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Building</span>
+            <span className="text-muted-foreground">{t('building')}</span>
             <span className="font-medium">{pass.buildingName}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Unit</span>
+            <span className="text-muted-foreground">{t('unitNumber')}</span>
             <span className="font-medium">{pass.unitNumber}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Valid Until</span>
+            <span className="text-muted-foreground">{t('validUntil')}</span>
             <span className="font-medium">
-              {new Date(pass.endTime).toLocaleString('en-US', {
+              {new Date(pass.endTime).toLocaleString(locale, {
                 month: 'short',
                 day: 'numeric',
                 hour: 'numeric',
@@ -103,11 +106,11 @@ export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
 
         {/* Parking Rules */}
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-          <p className="text-xs font-medium text-yellow-800 mb-1">Parking Rules</p>
-          <ul className="text-xs text-yellow-700 space-y-1">
-            <li>Move your vehicle before the timer expires</li>
-            <li>Park only in designated visitor spots</li>
-            <li>Do not block emergency lanes or handicap spots</li>
+          <p className="mb-1 text-xs font-medium text-yellow-800">{t('parkingRules')}</p>
+          <ul className="space-y-1 text-xs text-yellow-700">
+            <li>{t('parkingRulesList1')}</li>
+            <li>{t('parkingRulesList2')}</li>
+            <li>{t('parkingRulesList3')}</li>
           </ul>
         </div>
 
@@ -116,20 +119,20 @@ export function PassActiveView({ pass, onReset }: PassActiveViewProps) {
           <Button
             onClick={handleRemovePass}
             variant="outline"
-            className="w-full min-h-[48px] text-destructive border-destructive/30 hover:bg-destructive/10"
+            className="min-h-[48px] w-full border-destructive/30 text-destructive hover:bg-destructive/10"
             disabled={isRemoving}
           >
             {isRemoving ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Removing...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t('removing')}
               </>
             ) : (
-              'End Parking Pass'
+              t('endPass')
             )}
           </Button>
-          <Button onClick={onReset} variant="ghost" className="w-full min-h-[48px]">
-            Register Another Vehicle
+          <Button onClick={onReset} variant="ghost" className="min-h-[48px] w-full">
+            {t('registerAnotherVehicle')}
           </Button>
         </div>
       </CardContent>

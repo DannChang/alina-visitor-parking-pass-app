@@ -14,9 +14,14 @@ import { persistLocaleAndReload } from '@/i18n/client';
 import { locales, localeNames, localeDisplayCodes, type Locale } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 
-export function LocaleSwitcher() {
+type LocaleSwitcherProps = {
+  excludedLocales?: readonly Locale[];
+};
+
+export function LocaleSwitcher({ excludedLocales = [] }: LocaleSwitcherProps) {
   const locale = useLocale() as Locale;
   const [isPending, setIsPending] = useState(false);
+  const selectableLocales = locales.filter((l) => !excludedLocales.includes(l));
 
   async function handleSelect(newLocale: Locale) {
     if (newLocale === locale || isPending) {
@@ -38,7 +43,7 @@ export function LocaleSwitcher() {
           variant="ghost"
           size="sm"
           className={cn(
-            'gap-1 px-2 text-xs font-medium touch-manipulation',
+            'touch-manipulation gap-1 px-2 text-xs font-medium',
             isPending && 'opacity-50'
           )}
           disabled={isPending}
@@ -49,7 +54,7 @@ export function LocaleSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {locales.map((l) => (
+        {selectableLocales.map((l) => (
           <DropdownMenuItem
             key={l}
             onSelect={() => void handleSelect(l)}

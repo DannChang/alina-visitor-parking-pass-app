@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Lock, ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +17,14 @@ interface StepAccessCodeProps {
 }
 
 export function StepAccessCode({ data, onUpdate, onNext, onBack }: StepAccessCodeProps) {
+  const t = useTranslations('registration');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const handleVerify = async () => {
     if (!code.trim()) {
-      setError('Please enter the access code');
+      setError(t('accessCodeRequired'));
       return;
     }
 
@@ -42,10 +44,10 @@ export function StepAccessCode({ data, onUpdate, onNext, onBack }: StepAccessCod
         onUpdate({ accessCodeVerified: true });
         onNext();
       } else {
-        setError('Invalid access code. Please check with the resident.');
+        setError(t('invalidAccessCode'));
       }
     } catch {
-      setError('Verification failed. Please try again.');
+      setError(t('verificationFailed'));
     } finally {
       setIsVerifying(false);
     }
@@ -57,42 +59,47 @@ export function StepAccessCode({ data, onUpdate, onNext, onBack }: StepAccessCod
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Lock className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>Access Code</CardTitle>
+        <CardTitle>{t('accessCode')}</CardTitle>
         <CardDescription>
-          Unit {data.unitNumber} requires an access code. Please enter the code provided by the resident.
+          {t('accessCodeUnitDesc', { unit: data.unitNumber ?? '' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="accessCode">Access Code</Label>
+          <Label htmlFor="accessCode">{t('accessCode')}</Label>
           <Input
             id="accessCode"
             type="password"
-            placeholder="Enter code"
+            placeholder={t('enterCode')}
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
               setError(null);
             }}
-            className="h-12 text-base text-center tracking-widest font-mono"
+            className="h-12 text-center font-mono text-base tracking-widest"
             autoFocus
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Button variant="outline" onClick={onBack} className="min-h-[48px]" disabled={isVerifying}>
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="min-h-[48px]"
+            disabled={isVerifying}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('back')}
           </Button>
-          <Button onClick={handleVerify} disabled={isVerifying} className="flex-1 min-h-[48px]">
+          <Button onClick={handleVerify} disabled={isVerifying} className="min-h-[48px] flex-1">
             {isVerifying ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Verifying...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t('verifying')}
               </>
             ) : (
-              'Verify & Continue'
+              t('verifyContinue')
             )}
           </Button>
         </div>

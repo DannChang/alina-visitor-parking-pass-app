@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   CheckCircle2,
   ChevronLeft,
@@ -23,6 +24,7 @@ interface StepConfirmProps {
 }
 
 export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
+  const t = useTranslations('registration');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +56,7 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
         const errorMsg =
           result.errors?.map((e: { message: string }) => e.message).join('. ') ||
           result.error ||
-          'Failed to create parking pass';
+          t('failedCreatePass');
         setError(errorMsg);
         return;
       }
@@ -69,7 +71,7 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
         buildingName: data.buildingName,
       });
     } catch {
-      setError('An unexpected error occurred. Please try again.');
+      setError(t('unexpectedError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -81,8 +83,8 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <CheckCircle2 className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>Review & Start Parking</CardTitle>
-        <CardDescription>Confirm your details before registering</CardDescription>
+        <CardTitle>{t('reviewStartTitle')}</CardTitle>
+        <CardDescription>{t('reviewStartDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
@@ -95,53 +97,48 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
           <div className="flex items-center gap-3">
             <Building className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Building</p>
+              <p className="text-xs text-muted-foreground">{t('building')}</p>
               <p className="font-medium">{data.buildingName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Building className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Unit</p>
+              <p className="text-xs text-muted-foreground">{t('unitNumber')}</p>
               <p className="font-medium">{data.unitNumber}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Car className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">License Plate</p>
+              <p className="text-xs text-muted-foreground">{t('licensePlate')}</p>
               <p className="font-mono font-medium">{data.licensePlate}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Phone</p>
+              <p className="text-xs text-muted-foreground">{t('phone')}</p>
               <p className="font-medium">{data.visitorPhone}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Email</p>
+              <p className="text-xs text-muted-foreground">{t('email')}</p>
               <p className="font-medium">{data.visitorEmail}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Duration</p>
-              <p className="font-medium">
-                {data.duration} hour{data.duration !== 1 ? 's' : ''}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('duration')}</p>
+              <p className="font-medium">{t('durationHours', { count: data.duration })}</p>
             </div>
           </div>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          By registering, you agree to follow all parking rules. Violations may result in citation
-          or towing.
-        </p>
+        <p className="text-center text-xs text-muted-foreground">{t('parkingAgreement')}</p>
 
         <div className="flex gap-2">
           <Button
@@ -151,7 +148,7 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
             disabled={isSubmitting}
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
-            Back
+            {t('back')}
           </Button>
           <Button
             onClick={handleStartParking}
@@ -161,10 +158,10 @@ export function StepConfirm({ data, onBack, onPassCreated }: StepConfirmProps) {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Registering...
+                {t('registering')}
               </>
             ) : (
-              'Start Parking'
+              t('startParking')
             )}
           </Button>
         </div>

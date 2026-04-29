@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ interface StepContactInfoProps {
 }
 
 export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactInfoProps) {
+  const t = useTranslations('registration');
   const [phone, setPhone] = useState(data.visitorPhone ?? '');
   const [email, setEmail] = useState(data.visitorEmail ?? '');
   const [duration, setDuration] = useState(data.duration ?? 2);
@@ -31,7 +33,7 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
 
   const handleContinue = () => {
     if (!phone.trim() || !email.trim()) {
-      setError('Phone and email are required');
+      setError(t('phoneEmailRequired'));
       return;
     }
     setError(null);
@@ -49,12 +51,12 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Mail className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>Contact Information</CardTitle>
-        <CardDescription>Enter the required contact details and duration</CardDescription>
+        <CardTitle>{t('contactInfoTitle')}</CardTitle>
+        <CardDescription>{t('contactInfoDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Parking Duration *</Label>
+          <Label>{t('parkingDuration')} *</Label>
           <div className="grid grid-cols-5 gap-2">
             {DURATION_OPTIONS.map((option) => (
               <Button
@@ -63,16 +65,16 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
                 variant={duration === option.value ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setDuration(option.value)}
-                className="text-xs min-h-[44px] touch-manipulation"
+                className="min-h-[44px] touch-manipulation text-xs"
               >
-                {option.label}
+                {t('durationHoursShort', { count: option.value })}
               </Button>
             ))}
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone *</Label>
+          <Label htmlFor="phone">{t('phone')} *</Label>
           <Input
             id="phone"
             type="tel"
@@ -86,7 +88,7 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
+          <Label htmlFor="email">{t('email')} *</Label>
           <Input
             id="email"
             type="email"
@@ -99,11 +101,11 @@ export function StepContactInfo({ data, onUpdate, onNext, onBack }: StepContactI
 
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={onBack} className="min-h-[48px]">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('back')}
           </Button>
-          <Button onClick={handleContinue} className="flex-1 min-h-[48px]">
-            Continue
+          <Button onClick={handleContinue} className="min-h-[48px] flex-1">
+            {t('continue')}
           </Button>
         </div>
       </CardContent>

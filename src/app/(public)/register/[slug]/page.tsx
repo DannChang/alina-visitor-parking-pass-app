@@ -3,6 +3,7 @@
 import { useState, use } from 'react';
 import { useMountEffect } from '@/hooks/use-mount-effect';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +28,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { LanguageSwitcherDock } from '@/components/language-switcher-dock';
 
 const registerSchema = z.object({
   licensePlate: z
@@ -91,6 +93,8 @@ const DURATION_OPTIONS = [
 ];
 
 export default function RegisterPage({ params }: { params: Promise<{ slug: string }> }) {
+  const t = useTranslations('registration');
+  const locale = useLocale();
   const { slug } = use(params);
   const router = useRouter();
   const [units, setUnits] = useState<Unit[]>([]);
@@ -125,13 +129,13 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
           return;
         }
         if (!response.ok) {
-          throw new Error('Failed to fetch units');
+          throw new Error(t('failedToFetchUnits'));
         }
         const data = await response.json();
         setUnits(data.units);
         setBuilding(data.building);
       } catch (err) {
-        setError('Failed to load building information. Please try again.');
+        setError(t('failedToLoadBuilding'));
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -161,14 +165,14 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
         if (result.errors && result.errors.length > 0) {
           setError(result.errors.map((e: { message: string }) => e.message).join('. '));
         } else {
-          setError(result.error || 'Failed to register parking pass');
+          setError(result.error || t('failedToRegisterPass'));
         }
         return;
       }
 
       setSuccess(result);
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      setError(t('unexpectedError'));
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -178,6 +182,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <LanguageSwitcherDock />
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -186,19 +191,18 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
   if (buildingNotFound) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
+        <LanguageSwitcherDock />
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
-            <CardTitle>Building Not Found</CardTitle>
-            <CardDescription>
-              The parking registration link you used is invalid or the building is no longer active.
-            </CardDescription>
+            <CardTitle>{t('buildingNotFound')}</CardTitle>
+            <CardDescription>{t('buildingNotFoundDesc')}</CardDescription>
           </CardHeader>
           <CardFooter>
             <Button onClick={() => router.push('/')} className="min-h-[48px] w-full">
-              Go Home
+              {t('goHome')}
             </Button>
           </CardFooter>
         </Card>
@@ -210,17 +214,18 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
     const endTime = new Date(success.pass.endTime);
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-8">
+        <LanguageSwitcherDock />
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
               <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
-            <CardTitle className="text-success">Pass Registered!</CardTitle>
-            <CardDescription>Your parking pass has been created</CardDescription>
+            <CardTitle className="text-success">{t('passRegistered')}</CardTitle>
+            <CardDescription>{t('passCreated')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted p-4 text-center">
-              <p className="text-sm text-muted-foreground">Confirmation Code</p>
+              <p className="text-sm text-muted-foreground">{t('confirmationCode')}</p>
               <p className="text-2xl font-bold tracking-wider">
                 {success.confirmationCode.slice(0, 8).toUpperCase()}
               </p>
@@ -228,17 +233,17 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Vehicle</span>
+                <span className="text-muted-foreground">{t('vehicle')}</span>
                 <span className="font-medium">{success.pass.vehicle.licensePlate}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Visiting Unit</span>
+                <span className="text-muted-foreground">{t('visitingUnit')}</span>
                 <span className="font-medium">{success.pass.unit.unitNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Valid Until</span>
+                <span className="text-muted-foreground">{t('validUntil')}</span>
                 <span className="font-medium">
-                  {endTime.toLocaleString('en-US', {
+                  {endTime.toLocaleString(locale, {
                     month: 'short',
                     day: 'numeric',
                     hour: 'numeric',
@@ -251,7 +256,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
             {success.warnings && success.warnings.length > 0 && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Note</AlertTitle>
+                <AlertTitle>{t('note')}</AlertTitle>
                 <AlertDescription>
                   {success.warnings.map((w, i) => (
                     <p key={i}>{w.message}</p>
@@ -269,7 +274,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
               variant="outline"
               className="min-h-[48px] w-full"
             >
-              Register Another Vehicle
+              {t('registerAnotherVehicle')}
             </Button>
           </CardFooter>
         </Card>
@@ -279,15 +284,14 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-8">
+      <LanguageSwitcherDock />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <Car className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle>Visitor Parking Registration</CardTitle>
-          <CardDescription>
-            {building?.name || 'Register your vehicle for temporary parking'}
-          </CardDescription>
+          <CardTitle>{t('visitorParkingRegistration')}</CardTitle>
+          <CardDescription>{building?.name || t('registerVehicleTemporary')}</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -300,7 +304,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="licensePlate">License Plate *</Label>
+              <Label htmlFor="licensePlate">{t('licensePlate')} *</Label>
               <Input
                 id="licensePlate"
                 placeholder="ABC1234"
@@ -316,19 +320,19 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="unitNumber">Unit You&apos;re Visiting *</Label>
+              <Label htmlFor="unitNumber">{t('unitVisiting')} *</Label>
               <Select
                 onValueChange={(value) => setValue('unitNumber', value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="h-11 md:h-10">
-                  <SelectValue placeholder="Select a unit" />
+                  <SelectValue placeholder={t('selectUnitPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {units.map((unit) => (
                     <SelectItem key={unit.id} value={unit.unitNumber}>
                       {unit.unitNumber}
-                      {unit.floor && ` (Floor ${unit.floor})`}
+                      {unit.floor && ` (${t('floor', { floor: unit.floor })})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -339,7 +343,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="duration">Parking Duration *</Label>
+              <Label htmlFor="duration">{t('parkingDuration')} *</Label>
               <div className="grid grid-cols-2 gap-2 xs:grid-cols-3 md:grid-cols-5">
                 {DURATION_OPTIONS.map((option) => (
                   <Button
@@ -351,7 +355,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
                     disabled={isSubmitting}
                     className="min-h-[44px] touch-manipulation text-xs"
                   >
-                    {option.label}
+                    {t('durationHoursShort', { count: option.value })}
                   </Button>
                 ))}
               </div>
@@ -359,7 +363,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="visitorPhone">Phone *</Label>
+                <Label htmlFor="visitorPhone">{t('phone')} *</Label>
                 <Input
                   id="visitorPhone"
                   type="tel"
@@ -373,7 +377,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="visitorEmail">Email *</Label>
+                <Label htmlFor="visitorEmail">{t('email')} *</Label>
                 <Input
                   id="visitorEmail"
                   type="email"
@@ -390,7 +394,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="vehicleMake">Make *</Label>
+                <Label htmlFor="vehicleMake">{t('make')} *</Label>
                 <Input
                   id="vehicleMake"
                   placeholder="Toyota"
@@ -403,7 +407,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vehicleModel">Model *</Label>
+                <Label htmlFor="vehicleModel">{t('model')} *</Label>
                 <Input
                   id="vehicleModel"
                   placeholder="Camry"
@@ -416,7 +420,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vehicleYear">Year *</Label>
+                <Label htmlFor="vehicleYear">{t('year')} *</Label>
                 <Input
                   id="vehicleYear"
                   placeholder="2024"
@@ -432,7 +436,7 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vehicleColor">Color</Label>
+                <Label htmlFor="vehicleColor">{t('color')}</Label>
                 <Input
                   id="vehicleColor"
                   placeholder="Blue"
@@ -449,20 +453,17 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registering...
+                  {t('registering')}
                 </>
               ) : (
                 <>
                   <Clock className="mr-2 h-4 w-4" />
-                  Register Parking Pass
+                  {t('registerParkingPass')}
                 </>
               )}
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground">
-              By registering, you agree to follow all parking rules and regulations. Violations may
-              result in citation or towing.
-            </p>
+            <p className="text-center text-xs text-muted-foreground">{t('parkingAgreement')}</p>
           </CardFooter>
         </form>
       </Card>

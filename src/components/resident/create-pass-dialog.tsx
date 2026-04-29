@@ -2,17 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import type { TimeBankPeriod } from '@prisma/client';
+import { useTranslations } from 'next-intl';
 import { Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  formatTimeBankPeriod,
-  formatTimeBankResetDescription,
-  formatTimeBankWindowLabel,
-} from '@/lib/parking-rules';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface CreatePassDialogProps {
@@ -38,6 +34,7 @@ export function CreatePassDialog({
   activePassCount,
   activePassLimit,
 }: CreatePassDialogProps) {
+  const t = useTranslations('resident');
   const [licensePlate, setLicensePlate] = useState('');
   const [visitorPhone, setVisitorPhone] = useState('');
   const [visitorEmail, setVisitorEmail] = useState('');
@@ -47,8 +44,27 @@ export function CreatePassDialog({
   const [duration, setDuration] = useState(allowedDurations[0] ?? 2);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timeBankPeriodLabel = formatTimeBankPeriod(timeBankPeriod);
-  const timeBankWindowLabel = formatTimeBankWindowLabel(timeBankPeriod);
+  const timeBankPeriodLabel = t(
+    timeBankPeriod === 'DAILY'
+      ? 'periodDaily'
+      : timeBankPeriod === 'WEEKLY'
+        ? 'periodWeekly'
+        : 'periodMonthly'
+  );
+  const timeBankWindowLabel = t(
+    timeBankPeriod === 'DAILY'
+      ? 'windowDay'
+      : timeBankPeriod === 'WEEKLY'
+        ? 'windowWeek'
+        : 'windowMonth'
+  );
+  const timeBankResetDescription = t(
+    timeBankPeriod === 'DAILY'
+      ? 'resetDaily'
+      : timeBankPeriod === 'WEEKLY'
+        ? 'resetWeekly'
+        : 'resetMonthly'
+  );
 
   useEffect(() => {
     if (!allowedDurations.includes(duration)) {
@@ -66,7 +82,7 @@ export function CreatePassDialog({
       !vehicleModel.trim() ||
       !vehicleYear.trim()
     ) {
-      setError('License plate, phone, email, make, model, and year are required');
+      setError(t('createPassErrorRequired'));
       return;
     }
 
@@ -92,7 +108,7 @@ export function CreatePassDialog({
         const data = await res.json();
         const validationMessage =
           Array.isArray(data.errors) && data.errors[0]?.message ? data.errors[0].message : null;
-        setError(validationMessage || data.error || 'Failed to create pass');
+        setError(validationMessage || data.error || t('createPassFailed'));
         return;
       }
 
@@ -106,7 +122,7 @@ export function CreatePassDialog({
       onOpenChange(false);
       onSuccess();
     } catch {
-      setError('An error occurred');
+      setError(t('createPassErrorGeneric'));
     } finally {
       setIsSubmitting(false);
     }
@@ -116,7 +132,7 @@ export function CreatePassDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="md:inset-x-0 md:bottom-0 md:left-0 md:top-auto md:max-h-[90vh] md:w-full md:max-w-none md:translate-x-0 md:translate-y-0 md:rounded-b-none md:rounded-t-[32px] md:border-x-0 md:border-b-0 md:border-t lg:inset-auto lg:left-[50%] lg:top-[50%] lg:max-h-[85vh] lg:w-full lg:max-w-sm lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-lg lg:border">
         <DialogHeader>
-          <DialogTitle>Create Parking Pass</DialogTitle>
+          <DialogTitle>{t('createPass')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -126,7 +142,7 @@ export function CreatePassDialog({
           )}
 
           <div className="space-y-2">
-            <Label>License Plate *</Label>
+            <Label>{t('licensePlate')} *</Label>
             <Input
               value={licensePlate}
               onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
@@ -136,7 +152,7 @@ export function CreatePassDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Phone *</Label>
+            <Label>{t('phone')} *</Label>
             <Input
               value={visitorPhone}
               onChange={(e) => setVisitorPhone(e.target.value)}
@@ -147,7 +163,7 @@ export function CreatePassDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Email *</Label>
+            <Label>{t('email')} *</Label>
             <Input
               value={visitorEmail}
               onChange={(e) => setVisitorEmail(e.target.value)}
@@ -159,7 +175,7 @@ export function CreatePassDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label>Make *</Label>
+              <Label>{t('make')} *</Label>
               <Input
                 value={vehicleMake}
                 onChange={(e) => setVehicleMake(e.target.value)}
@@ -168,7 +184,7 @@ export function CreatePassDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Model *</Label>
+              <Label>{t('model')} *</Label>
               <Input
                 value={vehicleModel}
                 onChange={(e) => setVehicleModel(e.target.value)}
@@ -177,7 +193,7 @@ export function CreatePassDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Year *</Label>
+              <Label>{t('year')} *</Label>
               <Input
                 value={vehicleYear}
                 onChange={(e) => setVehicleYear(e.target.value.replace(/[^0-9]/g, ''))}
@@ -190,30 +206,39 @@ export function CreatePassDialog({
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label>Duration</Label>
+              <Label>{t('duration')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
                     className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-500 transition hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-                    aria-label="Pass time bank info"
+                    aria-label={t('passTimeBankInfo')}
                   >
                     <Info className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-72 text-sm leading-6">
-                  Time is deducted from your unit&apos;s {monthlyHourBank}-hour{' '}
-                  {timeBankPeriodLabel} bank. {formatTimeBankResetDescription(timeBankPeriod)}
+                  {t('timeBankInfo', {
+                    hours: monthlyHourBank,
+                    period: timeBankPeriodLabel,
+                    reset: timeBankResetDescription,
+                  })}
                 </PopoverContent>
               </Popover>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
               <p>
-                {monthlyHoursRemaining} of {monthlyHourBank} hours remaining this{' '}
-                {timeBankWindowLabel}.
+                {t('hoursRemainingThisPeriod', {
+                  remaining: monthlyHoursRemaining,
+                  total: monthlyHourBank,
+                  period: timeBankWindowLabel,
+                })}
               </p>
               <p>
-                {activePassCount} of {activePassLimit} active passes currently in use.
+                {t('activePassesInUse', {
+                  count: activePassCount,
+                  limit: activePassLimit,
+                })}
               </p>
             </div>
             <div className="grid grid-cols-5 gap-2">
@@ -239,12 +264,12 @@ export function CreatePassDialog({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('creating')}
               </>
             ) : activePassCount >= activePassLimit ? (
-              'Active pass limit reached'
+              t('activePassLimitReached')
             ) : (
-              'Create Pass'
+              t('createPassShort')
             )}
           </Button>
         </form>

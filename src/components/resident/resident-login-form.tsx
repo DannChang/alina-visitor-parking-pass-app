@@ -15,11 +15,28 @@ import { APP_CONFIG } from '@/lib/constants';
 interface ResidentLoginFormProps {
   showResetSuccess?: boolean;
   callbackUrl?: string;
+  labels: {
+    login: string;
+    passwordUpdatedTitle: string;
+    passwordUpdatedDescription: string;
+    building: string;
+    unitNumber: string;
+    unitNumberPlaceholder: string;
+    password: string;
+    forgotPassword: string;
+    passwordPlaceholder: string;
+    signingIn: string;
+    signIn: string;
+    loginMissingFields: string;
+    invalidResidentCredentials: string;
+    unexpectedError: string;
+  };
 }
 
 export function ResidentLoginForm({
   showResetSuccess = false,
   callbackUrl = '/resident/passes',
+  labels,
 }: ResidentLoginFormProps) {
   const router = useRouter();
   const [unitNumber, setUnitNumber] = useState('');
@@ -30,7 +47,7 @@ export function ResidentLoginForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!unitNumber || !password) {
-      setError('Please fill in your unit number and password.');
+      setError(labels.loginMissingFields);
       return;
     }
 
@@ -47,7 +64,7 @@ export function ResidentLoginForm({
       });
 
       if (result?.error) {
-        setError('Invalid credentials. Please check your unit number and password.');
+        setError(labels.invalidResidentCredentials);
         return;
       }
 
@@ -55,7 +72,7 @@ export function ResidentLoginForm({
       router.replace(destination);
       router.refresh();
     } catch {
-      setError('An unexpected error occurred. Please try again.');
+      setError(labels.unexpectedError);
     } finally {
       setIsSubmitting(false);
     }
@@ -64,17 +81,15 @@ export function ResidentLoginForm({
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
-        <CardTitle>Resident Login</CardTitle>
+        <CardTitle>{labels.login}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {showResetSuccess ? (
             <Alert>
               <Mail className="h-4 w-4" />
-              <AlertTitle>Password Updated</AlertTitle>
-              <AlertDescription>
-                Your password has been changed. Sign in with your new password.
-              </AlertDescription>
+              <AlertTitle>{labels.passwordUpdatedTitle}</AlertTitle>
+              <AlertDescription>{labels.passwordUpdatedDescription}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -85,7 +100,7 @@ export function ResidentLoginForm({
           )}
 
           <div className="rounded-lg bg-muted/40 p-3 text-center text-sm text-muted-foreground">
-            Building:{' '}
+            {labels.building}:{' '}
             <span className="font-medium text-foreground">
               {APP_CONFIG.resident.defaultBuildingName}
             </span>
@@ -94,11 +109,11 @@ export function ResidentLoginForm({
           <div className="space-y-2">
             <Label htmlFor="unitNumber">
               <Home className="mr-1 inline h-3 w-3" />
-              Unit Number
+              {labels.unitNumber}
             </Label>
             <Input
               id="unitNumber"
-              placeholder="e.g. 101"
+              placeholder={labels.unitNumberPlaceholder}
               value={unitNumber}
               onChange={(e) => setUnitNumber(e.target.value)}
               className="h-11 text-base"
@@ -109,19 +124,19 @@ export function ResidentLoginForm({
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="password">
                 <Lock className="mr-1 inline h-3 w-3" />
-                Password
+                {labels.password}
               </Label>
               <Link
                 href="/resident/forgot-password"
                 className="text-xs font-medium text-primary hover:underline"
               >
-                Forgot Password?
+                {labels.forgotPassword}
               </Link>
             </div>
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder={labels.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-11 text-base"
@@ -132,10 +147,10 @@ export function ResidentLoginForm({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
+                {labels.signingIn}
               </>
             ) : (
-              'Sign In'
+              labels.signIn
             )}
           </Button>
         </form>
