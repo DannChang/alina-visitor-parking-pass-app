@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock3,
+  Info,
   Loader2,
   Phone,
   Plus,
@@ -20,7 +21,7 @@ import { toast } from 'sonner';
 import { CountdownTimer } from '@/components/pass/countdown-timer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -78,6 +79,22 @@ interface ResidentPassUsage {
 }
 
 const ACTIVE_STATUSES = new Set(['ACTIVE', 'EXTENDED']);
+const VISITOR_PARKING_RULES = [
+  {
+    key: 'visitorParkingRule1',
+    subRules: ['visitorParkingRule1a', 'visitorParkingRule1b', 'visitorParkingRule1c'],
+  },
+  { key: 'visitorParkingRule2' },
+  { key: 'visitorParkingRule3' },
+  {
+    key: 'visitorParkingRule4',
+    subRules: ['visitorParkingRule4a', 'visitorParkingRule4b'],
+  },
+  { key: 'visitorParkingRule5' },
+  { key: 'visitorParkingRule6' },
+  { key: 'visitorParkingRule7' },
+  { key: 'visitorParkingRule8' },
+] as const;
 
 function formatStatusLabel(status: string, t: ReturnType<typeof useTranslations<'resident'>>) {
   switch (status) {
@@ -230,6 +247,7 @@ export function ResidentPassesHub() {
   const [expiredLoadError, setExpiredLoadError] = useState<string | null>(null);
   const [showExpiredPasses, setShowExpiredPasses] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showRulesDialog, setShowRulesDialog] = useState(false);
   const [selectedPassId, setSelectedPassId] = useState<string | null>(null);
   const [limits, setLimits] = useState<ResidentPassLimits>({
     allowedDurations: [2, 4, 8, 12, 24],
@@ -336,21 +354,24 @@ export function ResidentPassesHub() {
         ? 'periodWeekly'
         : 'periodMonthly'
   );
-  const timeBankWindowLabel = t(
-    limits.timeBankPeriod === 'DAILY'
-      ? 'windowDay'
-      : limits.timeBankPeriod === 'WEEKLY'
-        ? 'windowWeek'
-        : 'windowMonth'
-  );
 
   return (
     <>
       <div className="space-y-6">
         <section className="overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-xl">
-          <div className="bg-[radial-gradient(circle_at_top_left,_rgba(148,163,184,0.28),_transparent_40%),linear-gradient(135deg,_#020617,_#0f172a_60%,_#1e293b)] px-6 py-7 sm:px-8">
+          <div className="relative bg-[radial-gradient(circle_at_top_left,_rgba(148,163,184,0.28),_transparent_40%),linear-gradient(135deg,_#020617,_#0f172a_60%,_#1e293b)] px-6 py-7 sm:px-8">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowRulesDialog(true)}
+              aria-label={t('visitorParkingRulesTitle')}
+              className="absolute right-5 top-5 h-11 w-11 rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition hover:bg-white/20 hover:text-white focus-visible:ring-white"
+            >
+              <Info className="h-5 w-5" />
+            </Button>
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
+              <div className="max-w-2xl pr-14">
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-300">
                   {t('parkingPassesTitle')}
                 </p>
@@ -709,6 +730,50 @@ export function ResidentPassesHub() {
         activePassCount={usage.activePassCount}
         activePassLimit={usage.activePassLimit}
       />
+
+      <Dialog open={showRulesDialog} onOpenChange={setShowRulesDialog}>
+        <DialogContent className="max-h-[85vh] overflow-auto rounded-[20px] border-0 bg-white p-0 sm:max-w-3xl">
+          <div className="px-6 py-8 pr-14 sm:px-10">
+            <DialogHeader>
+              <DialogTitle className="text-center text-3xl font-semibold tracking-normal text-slate-950 sm:text-5xl">
+                {t('visitorParkingRulesTitle')}
+              </DialogTitle>
+            </DialogHeader>
+
+            <ol className="mt-6 list-decimal space-y-3 pl-6 text-base leading-7 text-slate-950 sm:text-xl sm:leading-9">
+              {VISITOR_PARKING_RULES.map((rule) => (
+                <li key={rule.key} className="pl-2">
+                  {rule.key === 'visitorParkingRule2' ? (
+                    <p>
+                      {t('visitorParkingRule2Prefix')}{' '}
+                      <a
+                        href="https://alinaparking.com"
+                        className="font-medium underline underline-offset-4"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t('visitorParkingAppUrl')}
+                      </a>{' '}
+                      {t('visitorParkingRule2Suffix')}
+                    </p>
+                  ) : (
+                    <p>{t(rule.key)}</p>
+                  )}
+                  {'subRules' in rule && (
+                    <ol className="mt-1 list-[lower-alpha] space-y-1 pl-8">
+                      {rule.subRules.map((subRule) => (
+                        <li key={subRule} className="pl-2">
+                          {t(subRule)}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={selectedPass !== null}
