@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { prisma } from '@/lib/prisma';
+import { TIMEZONE_DEFAULT } from '@/lib/constants';
 import { NotificationType, NotificationStatus } from '@prisma/client';
 
 let resendClient: Resend | null = null;
@@ -29,6 +30,7 @@ interface PassConfirmationData {
   durationHours: number;
   confirmationCode: string;
   passId: string;
+  timezone: string;
 }
 
 interface PassExpirationWarningData {
@@ -83,6 +85,7 @@ interface PassNotificationContext {
     unitNumber: string;
     building: {
       name: string;
+      timezone: string;
     };
     residents: Array<{
       email: string | null;
@@ -156,6 +159,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
 export async function sendPassConfirmation(data: PassConfirmationData): Promise<boolean> {
   const formattedStart = data.startTime.toLocaleString('en-US', {
+    timeZone: data.timezone || TIMEZONE_DEFAULT,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -164,6 +168,7 @@ export async function sendPassConfirmation(data: PassConfirmationData): Promise<
   });
 
   const formattedEnd = data.endTime.toLocaleString('en-US', {
+    timeZone: data.timezone || TIMEZONE_DEFAULT,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -577,6 +582,7 @@ async function getPassNotificationContext(passId: string): Promise<PassNotificat
           building: {
             select: {
               name: true,
+              timezone: true,
             },
           },
           residents: {
@@ -628,6 +634,7 @@ export async function sendPassConfirmationNotifications(passId: string): Promise
         durationHours: pass.duration,
         confirmationCode: pass.confirmationCode,
         passId: pass.id,
+        timezone: pass.unit.building.timezone,
       })
     )
   );
