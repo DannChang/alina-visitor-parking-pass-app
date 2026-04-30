@@ -43,7 +43,7 @@ export function ResidentNav() {
               );
             })}
           </div>
-          <LocaleSwitcher excludedLocales={['fa']} />
+          <LocaleSwitcher />
         </div>
       </div>
     </nav>

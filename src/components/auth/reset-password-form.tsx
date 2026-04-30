@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PASSWORD_REQUIREMENTS_TEXT, getPasswordValidationError } from '@/lib/validation';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/validation';
 
 interface PasswordResetPreview {
   status: 'valid' | 'expired' | 'invalid';
@@ -37,6 +37,24 @@ interface ResetPasswordFormProps {
 
 function getRequestPath(loginPath?: '/login' | '/resident/login'): string {
   return loginPath === '/resident/login' ? '/resident/forgot-password' : '/forgot-password';
+}
+
+function getLocalizedPasswordError(value: string, t: ReturnType<typeof useTranslations<'auth'>>) {
+  if (!value.trim()) {
+    return t('passwordRequired');
+  }
+
+  const passwordLength = Array.from(value.normalize('NFC')).length;
+
+  if (passwordLength < PASSWORD_MIN_LENGTH) {
+    return t('passwordMinLength', { count: PASSWORD_MIN_LENGTH });
+  }
+
+  if (passwordLength > PASSWORD_MAX_LENGTH) {
+    return t('passwordMaxLength', { count: PASSWORD_MAX_LENGTH });
+  }
+
+  return null;
 }
 
 export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
@@ -66,7 +84,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
   }, [preview.status, t]);
   const requestPath = getRequestPath(preview.loginPath);
   const loginPath = preview.loginPath || '/login';
-  const passwordError = getPasswordValidationError(password);
+  const passwordError = getLocalizedPasswordError(password, t);
   const confirmPasswordError =
     confirmPassword.length > 0 && password !== confirmPassword ? t('passwordsDoNotMatch') : null;
   const showPasswordError = (passwordTouched || hasAttemptedSubmit) && Boolean(passwordError);
@@ -202,7 +220,7 @@ export function ResetPasswordForm({ token, preview }: ResetPasswordFormProps) {
               className="h-11 md:h-10"
               required
             />
-            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_TEXT}</p>
+            <p className="text-xs text-muted-foreground">{t('passwordRequirements')}</p>
             {showPasswordError ? <p className="text-sm text-destructive">{passwordError}</p> : null}
           </div>
 

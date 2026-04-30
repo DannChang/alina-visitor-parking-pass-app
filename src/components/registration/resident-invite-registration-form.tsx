@@ -5,8 +5,7 @@ import { useMemo, useRef, useState, useCallback } from 'react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useTranslations } from 'next-intl';
-import { formatDistanceToNow } from 'date-fns';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertCircle, CheckCircle2, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -25,11 +24,10 @@ import type { ResidentInviteStatus } from '@/components/dashboard/resident-invit
 import { PRIVACY_POLICY_VERSION } from '@/lib/privacy-policy';
 import { PrivacyPolicyContent } from './privacy-policy-content';
 import {
-  PASSWORD_REQUIREMENTS_TEXT,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
   RESIDENT_INTEGER_FIELD_MAX_LENGTH,
-  getAssignedStallValidationError,
-  getPasswordValidationError,
-  getStrataLotValidationError,
+  RESIDENT_INTEGER_FIELD_PATTERN,
   sanitizeIntegerFieldInput,
   sanitizeStrictLicensePlateInput,
 } from '@/lib/validation';
@@ -91,11 +89,69 @@ function getBlockedMessage(
   };
 }
 
+function getLocalizedIntegerFieldError(
+  value: string,
+  requiredMessage: string,
+  lengthMessage: string
+) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return requiredMessage;
+  }
+
+  if (!RESIDENT_INTEGER_FIELD_PATTERN.test(trimmed)) {
+    return lengthMessage;
+  }
+
+  return null;
+}
+
+function getLocalizedPasswordError(
+  value: string,
+  t: ReturnType<typeof useTranslations<'resident'>>
+) {
+  if (!value.trim()) {
+    return t('passwordRequired');
+  }
+
+  const passwordLength = Array.from(value.normalize('NFC')).length;
+
+  if (passwordLength < PASSWORD_MIN_LENGTH) {
+    return t('passwordMinLength', { count: PASSWORD_MIN_LENGTH });
+  }
+
+  if (passwordLength > PASSWORD_MAX_LENGTH) {
+    return t('passwordMaxLength', { count: PASSWORD_MAX_LENGTH });
+  }
+
+  return null;
+}
+
+function formatRelativeTime(value: string, locale: string) {
+  const deltaSeconds = Math.round((new Date(value).getTime() - Date.now()) / 1000);
+  const absSeconds = Math.abs(deltaSeconds);
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+  if (absSeconds < 60) {
+    return formatter.format(deltaSeconds, 'second');
+  }
+  if (absSeconds < 3600) {
+    return formatter.format(Math.round(deltaSeconds / 60), 'minute');
+  }
+  if (absSeconds < 86400) {
+    return formatter.format(Math.round(deltaSeconds / 3600), 'hour');
+  }
+
+  return formatter.format(Math.round(deltaSeconds / 86400), 'day');
+}
+
 export function ResidentInviteRegistrationForm({
   token,
   invite,
 }: ResidentInviteRegistrationFormProps) {
   const t = useTranslations('resident');
+  const locale = useLocale();
   const router = useRouter();
   const [recipientName, setRecipientName] = useState(invite?.recipientName ?? '');
   const [recipientEmail, setRecipientEmail] = useState(invite?.recipientEmail ?? '');
@@ -131,8 +187,18 @@ export function ResidentInviteRegistrationForm({
     ? personalLicensePlates.map((licensePlate) => licensePlate.trim().toUpperCase())
     : [];
 
-  const strataLotError = getStrataLotValidationError(cleanedStrataLotNumber);
-  const assignedStallErrors = cleanedAssignedStallNumbers.map(getAssignedStallValidationError);
+  const strataLotError = getLocalizedIntegerFieldError(
+    cleanedStrataLotNumber,
+    t('strataLotRequired'),
+    t('strataLotDigits', { count: RESIDENT_INTEGER_FIELD_MAX_LENGTH })
+  );
+  const assignedStallErrors = cleanedAssignedStallNumbers.map((stallNumber) =>
+    getLocalizedIntegerFieldError(
+      stallNumber,
+      t('assignedStallNumberRequired'),
+      t('assignedStallDigits', { count: RESIDENT_INTEGER_FIELD_MAX_LENGTH })
+    )
+  );
   const hasAssignedStallErrors = assignedStallErrors.some(Boolean);
   const licensePlateErrors = hasVehicle
     ? cleanedPersonalLicensePlates.map((licensePlate) => {
@@ -155,7 +221,7 @@ export function ResidentInviteRegistrationForm({
       })
     : [];
   const hasLicensePlateErrors = licensePlateErrors.some(Boolean);
-  const passwordError = getPasswordValidationError(password);
+  const passwordError = getLocalizedPasswordError(password, t);
   const recipientNameError =
     requiresRecipientDetails && !cleanedRecipientName ? t('residentNameRequired') : null;
   const recipientEmailError =
@@ -393,7 +459,7 @@ export function ResidentInviteRegistrationForm({
           )}
           <p className="mt-2 text-xs text-muted-foreground">
             {t('inviteExpires', {
-              time: formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true }),
+              time: formatRelativeTime(invite.expiresAt, locale),
             })}
           </p>
         </div>
@@ -642,7 +708,7 @@ export function ResidentInviteRegistrationForm({
               placeholder={t('createPassword')}
               required
             />
-            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_TEXT}</p>
+            <p className="text-xs text-muted-foreground">{t('passwordRequirements')}</p>
             {showPasswordError && <p className="text-sm text-destructive">{passwordError}</p>}
           </div>
 

@@ -356,7 +356,15 @@
     "acceptPolicyRequired": "You must review and accept the privacy policy before activating your account.",
     "failedCompleteRegistration": "Failed to complete registration",
     "accountCreatedSignInFailed": "Your account was created, but automatic sign-in failed. Use the resident login page to continue.",
-    "passwordsDoNotMatch": "两次输入的密码不一致。"
+    "passwordsDoNotMatch": "两次输入的密码不一致。",
+    "passwordRequirements": "请使用 8-64 个字符。建议使用较长的密码短语。",
+    "passwordRequired": "密码为必填项。",
+    "passwordMinLength": "密码至少需要 {count} 个字符。",
+    "passwordMaxLength": "密码不得超过 {count} 个字符。",
+    "strataLotRequired": "Strata lot 编号为必填项。",
+    "strataLotDigits": "Strata lot 编号必须为 1 到 {count} 位数字。",
+    "assignedStallNumberRequired": "指定车位编号为必填项。",
+    "assignedStallDigits": "指定车位编号必须为 1 到 {count} 位数字。"
   },
   "patrol": {
     "title": "巡逻模式",
@@ -773,7 +781,10 @@
     "failedResetPassword": "Failed to reset password",
     "updatingPassword": "Updating password...",
     "updatePassword": "Update Password",
-    "expiresOn": "This link expires on {date}."
+    "expiresOn": "This link expires on {date}.",
+    "passwordRequirements": "请使用 8-64 个字符。建议使用较长的密码短语。",
+    "passwordMinLength": "密码至少需要 {count} 个字符。",
+    "passwordMaxLength": "密码不得超过 {count} 个字符。"
   },
   "common": {
     "loading": "加载中...",

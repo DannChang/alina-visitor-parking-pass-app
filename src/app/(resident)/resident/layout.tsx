@@ -44,7 +44,7 @@ export default async function ResidentPortalLayout({ children }: { children: Rea
           </div>
 
           <div className="flex items-center gap-2">
-            <LocaleSwitcher excludedLocales={['fa']} />
+            <LocaleSwitcher />
             <form action={handleSignOut}>
               <Button
                 type="submit"

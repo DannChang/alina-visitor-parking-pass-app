@@ -356,7 +356,15 @@
     "acceptPolicyRequired": "You must review and accept the privacy policy before activating your account.",
     "failedCompleteRegistration": "Failed to complete registration",
     "accountCreatedSignInFailed": "Your account was created, but automatic sign-in failed. Use the resident login page to continue.",
-    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas."
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
+    "passwordRequirements": "Utilisez de 8 à 64 caractères. Les phrases de passe longues sont recommandées.",
+    "passwordRequired": "Le mot de passe est requis.",
+    "passwordMinLength": "Le mot de passe doit contenir au moins {count} caractères.",
+    "passwordMaxLength": "Le mot de passe ne doit pas dépasser {count} caractères.",
+    "strataLotRequired": "Le numéro de lot strata est requis.",
+    "strataLotDigits": "Le numéro de lot strata doit contenir de 1 à {count} chiffres.",
+    "assignedStallNumberRequired": "Le numéro de place assignée est requis.",
+    "assignedStallDigits": "Le numéro de place assignée doit contenir de 1 à {count} chiffres."
   },
   "patrol": {
     "title": "Mode Patrouille",
@@ -773,7 +781,10 @@
     "failedResetPassword": "Failed to reset password",
     "updatingPassword": "Updating password...",
     "updatePassword": "Update Password",
-    "expiresOn": "This link expires on {date}."
+    "expiresOn": "This link expires on {date}.",
+    "passwordRequirements": "Utilisez de 8 à 64 caractères. Les phrases de passe longues sont recommandées.",
+    "passwordMinLength": "Le mot de passe doit contenir au moins {count} caractères.",
+    "passwordMaxLength": "Le mot de passe ne doit pas dépasser {count} caractères."
   },
   "common": {
     "loading": "Chargement...",

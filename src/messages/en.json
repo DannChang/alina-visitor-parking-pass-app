@@ -356,7 +356,15 @@
     "acceptPolicyRequired": "You must review and accept the privacy policy before activating your account.",
     "failedCompleteRegistration": "Failed to complete registration",
     "accountCreatedSignInFailed": "Your account was created, but automatic sign-in failed. Use the resident login page to continue.",
-    "passwordsDoNotMatch": "Passwords do not match."
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "passwordRequirements": "Use 8-64 characters. Long passphrases are encouraged.",
+    "passwordRequired": "Password is required.",
+    "passwordMinLength": "Password must be at least {count} characters long.",
+    "passwordMaxLength": "Password must not exceed {count} characters.",
+    "strataLotRequired": "Strata lot number is required.",
+    "strataLotDigits": "Strata lot number must be 1 to {count} digits.",
+    "assignedStallNumberRequired": "Assigned stall number is required.",
+    "assignedStallDigits": "Assigned stall number must be 1 to {count} digits."
   },
   "patrol": {
     "title": "Patrol Mode",
@@ -773,7 +781,10 @@
     "failedResetPassword": "Failed to reset password",
     "updatingPassword": "Updating password...",
     "updatePassword": "Update Password",
-    "expiresOn": "This link expires on {date}."
+    "expiresOn": "This link expires on {date}.",
+    "passwordRequirements": "Use 8-64 characters. Long passphrases are encouraged.",
+    "passwordMinLength": "Password must be at least {count} characters long.",
+    "passwordMaxLength": "Password must not exceed {count} characters."
   },
   "common": {
     "loading": "Loading...",

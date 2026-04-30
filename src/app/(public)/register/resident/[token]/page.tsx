@@ -12,7 +12,7 @@ export default async function ResidentInviteRegisterPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-10">
-      <LanguageSwitcherDock excludedLocales={['fa']} />
+      <LanguageSwitcherDock />
       <ResidentInviteRegistrationForm token={token} invite={invite} />
     </main>
   );

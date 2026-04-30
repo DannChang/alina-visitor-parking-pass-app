@@ -356,7 +356,15 @@
     "acceptPolicyRequired": "You must review and accept the privacy policy before activating your account.",
     "failedCompleteRegistration": "Failed to complete registration",
     "accountCreatedSignInFailed": "Your account was created, but automatic sign-in failed. Use the resident login page to continue.",
-    "passwordsDoNotMatch": "비밀번호가 일치하지 않습니다."
+    "passwordsDoNotMatch": "비밀번호가 일치하지 않습니다.",
+    "passwordRequirements": "8-64자를 사용하세요. 긴 암호문 사용을 권장합니다.",
+    "passwordRequired": "비밀번호는 필수입니다.",
+    "passwordMinLength": "비밀번호는 최소 {count}자 이상이어야 합니다.",
+    "passwordMaxLength": "비밀번호는 {count}자를 초과할 수 없습니다.",
+    "strataLotRequired": "스트라타 로트 번호는 필수입니다.",
+    "strataLotDigits": "스트라타 로트 번호는 1-{count}자리 숫자여야 합니다.",
+    "assignedStallNumberRequired": "배정 주차면 번호는 필수입니다.",
+    "assignedStallDigits": "배정 주차면 번호는 1-{count}자리 숫자여야 합니다."
   },
   "patrol": {
     "title": "순찰 모드",
@@ -773,7 +781,10 @@
     "failedResetPassword": "Failed to reset password",
     "updatingPassword": "Updating password...",
     "updatePassword": "Update Password",
-    "expiresOn": "This link expires on {date}."
+    "expiresOn": "This link expires on {date}.",
+    "passwordRequirements": "8-64자를 사용하세요. 긴 암호문 사용을 권장합니다.",
+    "passwordMinLength": "비밀번호는 최소 {count}자 이상이어야 합니다.",
+    "passwordMaxLength": "비밀번호는 {count}자를 초과할 수 없습니다."
   },
   "common": {
     "loading": "불러오는 중...",

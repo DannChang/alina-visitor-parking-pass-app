@@ -356,7 +356,15 @@
     "acceptPolicyRequired": "You must review and accept the privacy policy before activating your account.",
     "failedCompleteRegistration": "Failed to complete registration",
     "accountCreatedSignInFailed": "Your account was created, but automatic sign-in failed. Use the resident login page to continue.",
-    "passwordsDoNotMatch": "Mật khẩu không khớp."
+    "passwordsDoNotMatch": "Mật khẩu không khớp.",
+    "passwordRequirements": "Sử dụng 8-64 ký tự. Nên dùng cụm mật khẩu dài.",
+    "passwordRequired": "Mật khẩu là bắt buộc.",
+    "passwordMinLength": "Mật khẩu phải có ít nhất {count} ký tự.",
+    "passwordMaxLength": "Mật khẩu không được vượt quá {count} ký tự.",
+    "strataLotRequired": "Số lô strata là bắt buộc.",
+    "strataLotDigits": "Số lô strata phải có từ 1 đến {count} chữ số.",
+    "assignedStallNumberRequired": "Số chỗ đỗ được chỉ định là bắt buộc.",
+    "assignedStallDigits": "Số chỗ đỗ được chỉ định phải có từ 1 đến {count} chữ số."
   },
   "patrol": {
     "title": "Chế Độ Tuần Tra",
@@ -773,7 +781,10 @@
     "failedResetPassword": "Failed to reset password",
     "updatingPassword": "Updating password...",
     "updatePassword": "Update Password",
-    "expiresOn": "This link expires on {date}."
+    "expiresOn": "This link expires on {date}.",
+    "passwordRequirements": "Sử dụng 8-64 ký tự. Nên dùng cụm mật khẩu dài.",
+    "passwordMinLength": "Mật khẩu phải có ít nhất {count} ký tự.",
+    "passwordMaxLength": "Mật khẩu không được vượt quá {count} ký tự."
   },
   "common": {
     "loading": "Đang tải...",
