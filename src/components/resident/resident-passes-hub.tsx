@@ -357,9 +357,6 @@ export function ResidentPassesHub() {
                 <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
                   {t('passHubTitle')}
                 </h1>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                  {t('passHubDescription')}
-                </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -398,12 +395,6 @@ export function ResidentPassesHub() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">{t('yourPasses')}</h2>
-              <p className="text-sm text-slate-600">
-                {t('passesSummary', {
-                  hours: usage.monthlyHoursRemaining,
-                  period: timeBankWindowLabel,
-                })}
-              </p>
             </div>
             {isLoading && hasLoadedOnce && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -564,15 +555,11 @@ export function ResidentPassesHub() {
             >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-950">{t('expiredPasses')}</p>
-                <p className="mt-1 text-sm text-slate-600">{t('expiredPassesDescription')}</p>
               </div>
               <div className="ml-4 flex items-center gap-2 text-slate-500">
                 {isExpiredLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 <ChevronDown
-                  className={cn(
-                    'h-5 w-5 transition-transform',
-                    showExpiredPasses && 'rotate-180'
-                  )}
+                  className={cn('h-5 w-5 transition-transform', showExpiredPasses && 'rotate-180')}
                 />
               </div>
             </button>
@@ -769,7 +756,6 @@ export function ResidentPassesHub() {
                       <Phone className="h-4 w-4 text-slate-500" />
                       {t('contactInfo')}
                     </CardTitle>
-                    <CardDescription>{t('contactDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div>
@@ -811,7 +797,6 @@ export function ResidentPassesHub() {
                       <Building2 className="h-4 w-4 text-slate-500" />
                       {t('location')}
                     </CardTitle>
-                    <CardDescription>{t('locationDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div>
