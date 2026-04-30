@@ -3,10 +3,17 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { startOfDay, subDays, subMonths } from 'date-fns';
 import { Car, AlertTriangle, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  TopOffendersChart,
+  type OffenderTimeScale,
+  type TopOffender,
+  type TopOffenderChartData,
+} from '@/components/dashboard/top-offenders-chart';
 import { getTranslations } from 'next-intl/server';
 
 async function getStats() {
@@ -87,6 +94,283 @@ async function getRecentViolations() {
   });
 }
 
+function getVehicleDescription(vehicle: {
+  year: number | null;
+  color: string | null;
+  make: string | null;
+  model: string | null;
+}) {
+  return (
+    [vehicle.year, vehicle.color, vehicle.make, vehicle.model].filter(Boolean).join(' ') ||
+    'Vehicle details not provided'
+  );
+}
+
+function getOffenderAction(offender: {
+  violations: number;
+  unresolvedViolations: number;
+  severeViolations: number;
+  patrolSightings: number;
+  isBlacklisted: boolean;
+  riskScore: number;
+  hasTowNotice: boolean;
+}): TopOffender['action'] {
+  if (
+    offender.isBlacklisted ||
+    offender.hasTowNotice ||
+    offender.riskScore >= 75 ||
+    offender.severeViolations >= 2
+  ) {
+    return 'tow_review';
+  }
+
+  if (
+    offender.unresolvedViolations >= 2 ||
+    offender.violations >= 3 ||
+    offender.severeViolations >= 1
+  ) {
+    return 'escalate';
+  }
+
+  if (offender.patrolSightings >= 2 || offender.violations >= 1) {
+    return 'issue_violation';
+  }
+
+  return 'monitor';
+}
+
+async function getTopOffendersForPeriod(startDate: Date | null): Promise<TopOffender[]> {
+  const violationWhere = {
+    deletedAt: null,
+    ...(startDate ? { createdAt: { gte: startDate } } : {}),
+  };
+  const patrolWhere = {
+    ...(startDate ? { createdAt: { gte: startDate } } : {}),
+  };
+
+  const [violationGroups, openViolationGroups, severeViolationGroups, patrolGroups] =
+    await Promise.all([
+      prisma.violation.groupBy({
+        by: ['vehicleId'],
+        where: violationWhere,
+        _count: { _all: true },
+      }),
+      prisma.violation.groupBy({
+        by: ['vehicleId'],
+        where: { ...violationWhere, isResolved: false },
+        _count: { _all: true },
+      }),
+      prisma.violation.groupBy({
+        by: ['vehicleId'],
+        where: { ...violationWhere, severity: { in: ['HIGH', 'CRITICAL'] } },
+        _count: { _all: true },
+      }),
+      prisma.patrolLogEntry.groupBy({
+        by: ['normalizedPlate'],
+        where: patrolWhere,
+        _count: { _all: true },
+      }),
+    ]);
+
+  const vehicleIds = violationGroups.map((group) => group.vehicleId);
+  const normalizedPlates = patrolGroups.map((group) => group.normalizedPlate);
+
+  if (vehicleIds.length === 0 && normalizedPlates.length === 0) {
+    return [];
+  }
+
+  const vehicles = await prisma.vehicle.findMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        vehicleIds.length > 0 ? { id: { in: vehicleIds } } : undefined,
+        normalizedPlates.length > 0 ? { normalizedPlate: { in: normalizedPlates } } : undefined,
+      ].filter(Boolean) as Array<Record<string, unknown>>,
+    },
+    select: {
+      id: true,
+      licensePlate: true,
+      normalizedPlate: true,
+      year: true,
+      color: true,
+      make: true,
+      model: true,
+      isBlacklisted: true,
+      riskScore: true,
+    },
+  });
+
+  const knownVehicleIds = vehicles.map((vehicle) => vehicle.id);
+  const knownNormalizedPlates = vehicles.map((vehicle) => vehicle.normalizedPlate);
+
+  const [latestViolations, latestPatrolLogs] = await Promise.all([
+    knownVehicleIds.length > 0
+      ? prisma.violation.findMany({
+          where: { ...violationWhere, vehicleId: { in: knownVehicleIds } },
+          select: {
+            vehicleId: true,
+            type: true,
+            location: true,
+            createdAt: true,
+            escalationLevel: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : Promise.resolve([]),
+    normalizedPlates.length > 0
+      ? prisma.patrolLogEntry.findMany({
+          where: { ...patrolWhere, normalizedPlate: { in: normalizedPlates } },
+          select: {
+            normalizedPlate: true,
+            licensePlate: true,
+            location: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const violationCountByVehicle = new Map(
+    violationGroups.map((group) => [group.vehicleId, group._count._all])
+  );
+  const openCountByVehicle = new Map(
+    openViolationGroups.map((group) => [group.vehicleId, group._count._all])
+  );
+  const severeCountByVehicle = new Map(
+    severeViolationGroups.map((group) => [group.vehicleId, group._count._all])
+  );
+  const patrolCountByPlate = new Map(
+    patrolGroups.map((group) => [group.normalizedPlate, group._count._all])
+  );
+  const latestViolationByVehicle = new Map<string, (typeof latestViolations)[number]>();
+  const hasTowNoticeByVehicle = new Map<string, boolean>();
+  const latestPatrolByPlate = new Map<string, (typeof latestPatrolLogs)[number]>();
+
+  latestViolations.forEach((violation) => {
+    if (!latestViolationByVehicle.has(violation.vehicleId)) {
+      latestViolationByVehicle.set(violation.vehicleId, violation);
+    }
+    if (violation.escalationLevel === 'TOW_NOTICE') {
+      hasTowNoticeByVehicle.set(violation.vehicleId, true);
+    }
+  });
+
+  latestPatrolLogs.forEach((entry) => {
+    if (!latestPatrolByPlate.has(entry.normalizedPlate)) {
+      latestPatrolByPlate.set(entry.normalizedPlate, entry);
+    }
+  });
+
+  const offendersByPlate = new Map<string, TopOffender>();
+
+  vehicles.forEach((vehicle) => {
+    const latestViolation = latestViolationByVehicle.get(vehicle.id);
+    const latestPatrol = latestPatrolByPlate.get(vehicle.normalizedPlate);
+    const violations = violationCountByVehicle.get(vehicle.id) ?? 0;
+    const unresolvedViolations = openCountByVehicle.get(vehicle.id) ?? 0;
+    const severeViolations = severeCountByVehicle.get(vehicle.id) ?? 0;
+    const patrolSightings = patrolCountByPlate.get(vehicle.normalizedPlate) ?? 0;
+    const latestActivity =
+      latestViolation && latestPatrol
+        ? latestViolation.createdAt > latestPatrol.createdAt
+          ? latestViolation.createdAt
+          : latestPatrol.createdAt
+        : (latestViolation?.createdAt ?? latestPatrol?.createdAt ?? null);
+    const actionInput = {
+      violations,
+      unresolvedViolations,
+      severeViolations,
+      patrolSightings,
+      isBlacklisted: vehicle.isBlacklisted,
+      riskScore: vehicle.riskScore,
+      hasTowNotice: hasTowNoticeByVehicle.get(vehicle.id) ?? false,
+    };
+
+    offendersByPlate.set(vehicle.normalizedPlate, {
+      vehicleId: vehicle.id,
+      licensePlate: vehicle.licensePlate,
+      vehicleDescription: getVehicleDescription(vehicle),
+      violations,
+      unresolvedViolations,
+      severeViolations,
+      patrolSightings,
+      score:
+        violations * 10 +
+        unresolvedViolations * 6 +
+        severeViolations * 8 +
+        Math.min(patrolSightings, 10) * 2 +
+        Math.min(vehicle.riskScore, 100) / 10 +
+        (vehicle.isBlacklisted ? 20 : 0),
+      latestActivity: latestActivity?.toISOString() ?? null,
+      latestLocation: latestViolation?.location ?? latestPatrol?.location ?? null,
+      latestViolationType: latestViolation?.type ?? null,
+      isBlacklisted: vehicle.isBlacklisted,
+      riskScore: vehicle.riskScore,
+      action: getOffenderAction(actionInput),
+    });
+  });
+
+  patrolGroups.forEach((group) => {
+    if (knownNormalizedPlates.includes(group.normalizedPlate)) {
+      return;
+    }
+
+    const latestPatrol = latestPatrolByPlate.get(group.normalizedPlate);
+    const patrolSightings = patrolCountByPlate.get(group.normalizedPlate) ?? 0;
+    const actionInput = {
+      violations: 0,
+      unresolvedViolations: 0,
+      severeViolations: 0,
+      patrolSightings,
+      isBlacklisted: false,
+      riskScore: 0,
+      hasTowNotice: false,
+    };
+
+    offendersByPlate.set(group.normalizedPlate, {
+      vehicleId: null,
+      licensePlate: latestPatrol?.licensePlate ?? group.normalizedPlate,
+      vehicleDescription: 'Unregistered or unmatched patrol plate',
+      violations: 0,
+      unresolvedViolations: 0,
+      severeViolations: 0,
+      patrolSightings,
+      score: Math.min(patrolSightings, 10) * 2,
+      latestActivity: latestPatrol?.createdAt.toISOString() ?? null,
+      latestLocation: latestPatrol?.location ?? null,
+      latestViolationType: null,
+      isBlacklisted: false,
+      riskScore: 0,
+      action: getOffenderAction(actionInput),
+    });
+  });
+
+  return Array.from(offendersByPlate.values())
+    .filter((offender) => offender.violations > 0 || offender.patrolSightings > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+}
+
+async function getTopOffenders(): Promise<TopOffenderChartData> {
+  const now = new Date();
+  const periods: Record<OffenderTimeScale, Date | null> = {
+    today: startOfDay(now),
+    week: subDays(now, 7),
+    month: subMonths(now, 1),
+    overall: null,
+  };
+
+  const [today, week, month, overall] = await Promise.all([
+    getTopOffendersForPeriod(periods.today),
+    getTopOffendersForPeriod(periods.week),
+    getTopOffendersForPeriod(periods.month),
+    getTopOffendersForPeriod(periods.overall),
+  ]);
+
+  return { today, week, month, overall };
+}
+
 function StatCard({
   title,
   value,
@@ -111,14 +395,14 @@ function StatCard({
 
   return (
     <Link href={href} className="block focus-visible:outline-none">
-      <Card className="h-full transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
-          <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
+      <Card className="h-full transition-shadow focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 md:p-6 md:pb-2">
+          <CardTitle className="text-xs font-medium md:text-sm">{title}</CardTitle>
           <Icon className={`h-4 w-4 ${iconColors[variant]}`} />
         </CardHeader>
         <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-          <div className="text-xl md:text-2xl font-bold">{value}</div>
-          <p className="text-xs text-muted-foreground truncate">{description}</p>
+          <div className="text-xl font-bold md:text-2xl">{value}</div>
+          <p className="truncate text-xs text-muted-foreground">{description}</p>
         </CardContent>
       </Card>
     </Link>
@@ -127,15 +411,15 @@ function StatCard({
 
 function StatsLoading() {
   return (
-    <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       {[...Array(4)].map((_, i) => (
         <Card key={i}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 md:p-6 md:pb-2">
             <Skeleton className="h-4 w-16 md:w-24" />
             <Skeleton className="h-4 w-4" />
           </CardHeader>
           <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-            <Skeleton className="h-7 md:h-8 w-12 md:w-16" />
+            <Skeleton className="h-7 w-12 md:h-8 md:w-16" />
             <Skeleton className="mt-1 h-3 w-20 md:w-32" />
           </CardContent>
         </Card>
@@ -148,7 +432,7 @@ async function StatsSection() {
   const [stats, t] = await Promise.all([getStats(), getTranslations('dashboard.home')]);
 
   return (
-    <div className="grid gap-3 grid-cols-2 md:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       <StatCard
         title={t('activePassesTitle')}
         value={stats.activePasses}
@@ -206,7 +490,7 @@ async function RecentPassesSection() {
                 <Link
                   key={pass.id}
                   href={`/dashboard/passes?passId=${pass.id}`}
-                  className="flex items-center justify-between rounded-md p-1 -mx-1 hover:bg-accent transition-colors"
+                  className="-mx-1 flex items-center justify-between rounded-md p-1 transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
@@ -280,6 +564,25 @@ async function RecentViolationsSection() {
   );
 }
 
+async function TopOffendersSection() {
+  const offenders = await getTopOffenders();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Top offender plates</CardTitle>
+        <CardDescription>
+          Prioritized from violation severity, unresolved enforcement, patrol sightings, and vehicle
+          risk.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <TopOffendersChart data={offenders} />
+      </CardContent>
+    </Card>
+  );
+}
+
 export default async function DashboardPage() {
   const session = await auth();
 
@@ -297,8 +600,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           {t('welcomeBack', { name: session.user.name || 'Manager' })} {t('todaySummary')}
         </p>
       </div>
@@ -307,7 +610,23 @@ export default async function DashboardPage() {
         <StatsSection />
       </Suspense>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+      <Suspense
+        fallback={
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-72" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[420px]" />
+            </CardContent>
+          </Card>
+        }
+      >
+        <TopOffendersSection />
+      </Suspense>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Suspense
           fallback={
             <Card>

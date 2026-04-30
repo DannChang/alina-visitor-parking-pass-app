@@ -54,8 +54,10 @@ function ViolationsLoading() {
 
 export function ViolationsClientPage({
   initialDateFilter,
+  initialSearch,
 }: {
   initialDateFilter: string | null;
+  initialSearch: string;
 }) {
   const t = useTranslations('dashboard.violationsPage');
   const tc = useTranslations('common');
@@ -67,40 +69,43 @@ export function ViolationsClientPage({
     totalPages: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState(initialSearch);
   const debouncedSearch = useDebouncedValue(searchValue, 350);
   const [selectedViolation, setSelectedViolation] = useState<ViolationDetails | null>(null);
 
-  const fetchViolations = useCallback(async (search: string, page: number) => {
-    setIsLoading(true);
+  const fetchViolations = useCallback(
+    async (search: string, page: number) => {
+      setIsLoading(true);
 
-    try {
-      const params = new URLSearchParams({
-        limit: String(pagination.limit),
-        page: String(page),
-      });
-      if (initialDateFilter) {
-        params.set('date', initialDateFilter);
+      try {
+        const params = new URLSearchParams({
+          limit: String(pagination.limit),
+          page: String(page),
+        });
+        if (initialDateFilter) {
+          params.set('date', initialDateFilter);
+        }
+        if (search) {
+          params.set('search', search);
+        }
+
+        const response = await fetch(`/api/violations?${params.toString()}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to load violations');
+        }
+
+        setViolations(data.violations || []);
+        setPagination(data.pagination);
+      } catch {
+        setViolations([]);
+      } finally {
+        setIsLoading(false);
       }
-      if (search) {
-        params.set('search', search);
-      }
-
-      const response = await fetch(`/api/violations?${params.toString()}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load violations');
-      }
-
-      setViolations(data.violations || []);
-      setPagination(data.pagination);
-    } catch {
-      setViolations([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [initialDateFilter, pagination.limit]);
+    },
+    [initialDateFilter, pagination.limit]
+  );
 
   useFetchOnChange(() => {
     fetchViolations(debouncedSearch, pagination.page);
@@ -110,14 +115,14 @@ export function ViolationsClientPage({
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground md:text-base">{t('description')}</p>
         </div>
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
-            className="pl-9 h-11 md:h-10 text-base md:text-sm"
+            className="h-11 pl-9 text-base md:h-10 md:text-sm"
             value={searchValue}
             onChange={(event) => {
               setPagination((current) => ({ ...current, page: 1 }));
@@ -161,7 +166,7 @@ export function ViolationsClientPage({
                     <TableRow
                       key={violation.id}
                       tabIndex={0}
-                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       onClick={() => setSelectedViolation(violation)}
                       onKeyDown={(event) =>
                         handleClickableRowKeyDown(event, () => setSelectedViolation(violation))
@@ -199,7 +204,7 @@ export function ViolationsClientPage({
                             </span>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-sm">None</span>
+                          <span className="text-sm text-muted-foreground">None</span>
                         )}
                       </TableCell>
                       <TableCell>
