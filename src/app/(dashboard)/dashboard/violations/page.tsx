@@ -6,7 +6,7 @@ import { ViolationsClientPage } from '@/components/dashboard/violations-client-p
 export default async function ViolationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; search?: string }>;
 }) {
   const session = await auth();
   const params = await searchParams;
@@ -20,5 +20,10 @@ export default async function ViolationsPage({
     redirect('/dashboard?error=access_denied');
   }
 
-  return <ViolationsClientPage initialDateFilter={params.date || null} />;
+  return (
+    <ViolationsClientPage
+      initialDateFilter={params.date || null}
+      initialSearch={params.search || ''}
+    />
+  );
 }

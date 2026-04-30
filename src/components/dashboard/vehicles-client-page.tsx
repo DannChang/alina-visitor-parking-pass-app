@@ -50,7 +50,7 @@ function VehiclesLoading() {
   );
 }
 
-export function VehiclesClientPage() {
+export function VehiclesClientPage({ initialSearch }: { initialSearch: string }) {
   const t = useTranslations('dashboard.vehicles');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [pagination, setPagination] = useState<ListPaginationState>({
@@ -60,37 +60,40 @@ export function VehiclesClientPage() {
     totalPages: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const debouncedSearch = useDebouncedValue(search, 350);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
-  const fetchVehicles = useCallback(async (searchValue: string, page: number) => {
-    setLoading(true);
+  const fetchVehicles = useCallback(
+    async (searchValue: string, page: number) => {
+      setLoading(true);
 
-    try {
-      const params = new URLSearchParams({
-        limit: String(pagination.limit),
-        page: String(page),
-      });
-      if (searchValue.trim()) {
-        params.set('search', searchValue.trim());
+      try {
+        const params = new URLSearchParams({
+          limit: String(pagination.limit),
+          page: String(page),
+        });
+        if (searchValue.trim()) {
+          params.set('search', searchValue.trim());
+        }
+
+        const response = await fetch(`/api/vehicles?${params.toString()}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to load vehicles');
+        }
+
+        setVehicles(data.vehicles || []);
+        setPagination(data.pagination);
+      } catch {
+        setVehicles([]);
+      } finally {
+        setLoading(false);
       }
-
-      const response = await fetch(`/api/vehicles?${params.toString()}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load vehicles');
-      }
-
-      setVehicles(data.vehicles || []);
-      setPagination(data.pagination);
-    } catch {
-      setVehicles([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.limit]);
+    },
+    [pagination.limit]
+  );
 
   useFetchOnChange(() => {
     fetchVehicles(debouncedSearch, pagination.page);
@@ -100,8 +103,8 @@ export function VehiclesClientPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground md:text-base">{t('description')}</p>
         </div>
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -149,7 +152,7 @@ export function VehiclesClientPage() {
                     <TableRow
                       key={vehicle.id}
                       tabIndex={0}
-                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       onClick={() => setSelectedVehicle(vehicle)}
                       onKeyDown={(event) =>
                         handleClickableRowKeyDown(event, () => setSelectedVehicle(vehicle))

@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status') as PassStatus | null;
+  const scope = searchParams.get('scope');
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
   const skip = (page - 1) * limit;
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
       unit.building.timezone
     );
 
+    const now = new Date();
     const where: Record<string, unknown> = {
       unitId,
       deletedAt: null,
@@ -71,6 +73,12 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       where.status = status;
+    } else if (scope === 'active') {
+      where.status = { in: [PassStatus.ACTIVE, PassStatus.EXTENDED] };
+      where.endTime = { gt: now };
+    } else if (scope === 'expired') {
+      where.status = { in: [PassStatus.ACTIVE, PassStatus.EXPIRED, PassStatus.EXTENDED] };
+      where.endTime = { lte: now };
     }
 
     const [passes, total, activePassCount, timeBankPasses] = await Promise.all([
@@ -110,7 +118,7 @@ export async function GET(request: NextRequest) {
         where: {
           unitId,
           deletedAt: null,
-          endTime: { gt: new Date() },
+          endTime: { gt: now },
           status: { in: [PassStatus.ACTIVE, PassStatus.EXTENDED] },
         },
       }),
