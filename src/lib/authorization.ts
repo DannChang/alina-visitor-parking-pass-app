@@ -45,7 +45,8 @@ export type Permission =
 
 /**
  * Role-to-permissions mapping.
- * SUPER_ADMIN and ADMIN have full access.
+ * SUPER_ADMIN has system-level access.
+ * ADMIN has administrative access without super-admin-only system control.
  * MANAGER has operational access without system administration.
  * SECURITY has limited view/log access for day-to-day operations.
  * RESIDENT can only view/manage their own passes.
@@ -189,6 +190,47 @@ export function hasAllPermissions(role: UserRole, permissions: Permission[]): bo
  */
 export function getPermissions(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] ?? [];
+}
+
+const ROLE_RANK: Record<UserRole, number> = {
+  SUPER_ADMIN: 4,
+  ADMIN: 3,
+  MANAGER: 2,
+  SECURITY: 1,
+  RESIDENT: 0,
+};
+
+const STAFF_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY'];
+
+/**
+ * Get staff roles an actor can assign to another staff account.
+ * SUPER_ADMIN can assign every staff role. Other roles can only assign roles below their own.
+ */
+export function getAssignableStaffRoles(actorRole: UserRole): UserRole[] {
+  if (actorRole === 'SUPER_ADMIN') {
+    return STAFF_ROLES;
+  }
+
+  const actorRank = ROLE_RANK[actorRole];
+  return STAFF_ROLES.filter((role) => ROLE_RANK[role] < actorRank);
+}
+
+/**
+ * Check if a role can create or assign another staff role.
+ */
+export function canAssignStaffRole(actorRole: UserRole, targetRole: UserRole): boolean {
+  return getAssignableStaffRoles(actorRole).includes(targetRole);
+}
+
+/**
+ * Check if a role can manage an existing staff account.
+ */
+export function canManageStaffRole(actorRole: UserRole, targetRole: UserRole): boolean {
+  if (targetRole === 'RESIDENT') {
+    return false;
+  }
+
+  return actorRole === 'SUPER_ADMIN' || ROLE_RANK[targetRole] < ROLE_RANK[actorRole];
 }
 
 /**

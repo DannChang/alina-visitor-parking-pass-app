@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { useSession } from 'next-auth/react';
 import {
   handleClickableRowKeyDown,
   stopClickableRowPropagation,
@@ -43,6 +44,13 @@ import { ListPagination, type ListPaginationState } from '@/components/dashboard
 import { useTranslations } from 'next-intl';
 
 const DEFAULT_PAGE_SIZE = 10;
+const STAFF_ROLE_ORDER = ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SECURITY'] as const;
+const ROLE_RANK: Record<(typeof STAFF_ROLE_ORDER)[number], number> = {
+  SUPER_ADMIN: 4,
+  ADMIN: 3,
+  MANAGER: 2,
+  SECURITY: 1,
+};
 
 interface User {
   id: string;
@@ -72,12 +80,32 @@ function UsersLoading() {
 export default function UsersPage() {
   const t = useTranslations('dashboard.usersPage');
   const tc = useTranslations('common');
+  const { data: session } = useSession();
+  const currentRole = session?.user?.role;
   const roleLabels: Record<string, { label: string; color: string }> = {
     SUPER_ADMIN: { label: t('superAdmin'), color: 'destructive' },
     ADMIN: { label: t('admin'), color: 'default' },
     MANAGER: { label: t('manager'), color: 'secondary' },
     SECURITY: { label: t('security'), color: 'outline' },
   };
+  const assignableRoles =
+    currentRole === 'SUPER_ADMIN'
+      ? STAFF_ROLE_ORDER
+      : STAFF_ROLE_ORDER.filter(
+          (role) =>
+            currentRole &&
+            currentRole in ROLE_RANK &&
+            ROLE_RANK[role] < ROLE_RANK[currentRole as keyof typeof ROLE_RANK]
+        );
+  const defaultRole = assignableRoles.includes('MANAGER')
+    ? 'MANAGER'
+    : (assignableRoles[0] ?? 'SECURITY');
+  const canManageRole = (role: string) =>
+    currentRole === 'SUPER_ADMIN' ||
+    (currentRole &&
+      currentRole in ROLE_RANK &&
+      role in ROLE_RANK &&
+      ROLE_RANK[role as keyof typeof ROLE_RANK] < ROLE_RANK[currentRole as keyof typeof ROLE_RANK]);
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<ListPaginationState>({
     page: 1,
@@ -141,7 +169,7 @@ export default function UsersPage() {
         email: '',
         name: '',
         password: '',
-        role: 'MANAGER',
+        role: defaultRole,
         isActive: true,
       });
     }
@@ -224,17 +252,21 @@ export default function UsersPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">{t('description')}</p>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground md:text-base">{t('description')}</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto min-h-[44px] md:min-h-0">
+        <Button
+          onClick={() => handleOpenDialog()}
+          className="min-h-[44px] w-full md:min-h-0 md:w-auto"
+          disabled={assignableRoles.length === 0}
+        >
           <Plus className="mr-2 h-4 w-4" />
           {t('addUser')}
         </Button>
       </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-        <div className="relative w-full md:flex-1 md:max-w-sm">
+        <div className="relative w-full md:max-w-sm md:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
@@ -243,7 +275,7 @@ export default function UsersPage() {
               setPagination((current) => ({ ...current, page: 1 }));
               setSearch(e.target.value);
             }}
-            className="pl-9 h-11 md:h-10 text-base md:text-sm"
+            className="h-11 pl-9 text-base md:h-10 md:text-sm"
           />
         </div>
         <Select
@@ -253,7 +285,7 @@ export default function UsersPage() {
             setRoleFilter(value);
           }}
         >
-          <SelectTrigger className="w-full md:w-[180px] h-11 md:h-10">
+          <SelectTrigger className="h-11 w-full md:h-10 md:w-[180px]">
             <SelectValue placeholder={t('allRoles')} />
           </SelectTrigger>
           <SelectContent>
@@ -294,103 +326,126 @@ export default function UsersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => (
-                    <TableRow
-                      key={user.id}
-                      tabIndex={0}
-                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                      onClick={() => handleOpenDialog(user)}
-                      onKeyDown={(event) =>
-                        handleClickableRowKeyDown(event, () => handleOpenDialog(user))
-                      }
-                    >
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                            <Users className="h-4 w-4 text-primary" />
+                  users.map((user) => {
+                    const isManageable = canManageRole(user.role);
+
+                    return (
+                      <TableRow
+                        key={user.id}
+                        tabIndex={isManageable ? 0 : undefined}
+                        className={
+                          isManageable
+                            ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
+                            : undefined
+                        }
+                        onClick={() => {
+                          if (isManageable) handleOpenDialog(user);
+                        }}
+                        onKeyDown={(event) => {
+                          if (isManageable) {
+                            handleClickableRowKeyDown(event, () => handleOpenDialog(user));
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                              <Users className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{user.name || 'No name'}</p>
+                              <p className="text-xs text-muted-foreground">{user.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{user.name || 'No name'}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={roleLabels[user.role]?.color as 'default' | 'secondary' | 'destructive' | 'outline'}>
-                          {roleLabels[user.role]?.label || user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={user.isActive ? 'default' : 'secondary'}>
-                            {user.isActive ? t('active') : tc('inactive')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              roleLabels[user.role]?.color as
+                                | 'default'
+                                | 'secondary'
+                                | 'destructive'
+                                | 'outline'
+                            }
+                          >
+                            {roleLabels[user.role]?.label || user.role}
                           </Badge>
-                          {user.isSuspended && (
-                            <Badge variant="destructive">{t('suspended')}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {user.lastLoginAt ? (
-                          <span className="text-sm">
-                            {formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">{t('never')}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1 text-xs">
-                          <span>{user._count.violations} violations logged</span>
-                          <span>{user._count.managedBuildings} buildings</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(event) => {
-                              stopClickableRowPropagation(event);
-                              handleOpenDialog(user);
-                            }}
-                            title="Edit user"
-                            onKeyDown={stopClickableRowPropagation}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(event) => {
-                              stopClickableRowPropagation(event);
-                              handleToggleSuspend(user);
-                            }}
-                            title={user.isSuspended ? 'Unsuspend user' : 'Suspend user'}
-                            onKeyDown={stopClickableRowPropagation}
-                          >
-                            {user.isSuspended ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Ban className="h-4 w-4 text-orange-600" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={user.isActive ? 'default' : 'secondary'}>
+                              {user.isActive ? t('active') : tc('inactive')}
+                            </Badge>
+                            {user.isSuspended && (
+                              <Badge variant="destructive">{t('suspended')}</Badge>
                             )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(event) => {
-                              stopClickableRowPropagation(event);
-                              handleDelete(user);
-                            }}
-                            title="Delete user"
-                            onKeyDown={stopClickableRowPropagation}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {user.lastLoginAt ? (
+                            <span className="text-sm">
+                              {formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">{t('never')}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span>{user._count.violations} violations logged</span>
+                            <span>{user._count.managedBuildings} buildings</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(event) => {
+                                stopClickableRowPropagation(event);
+                                handleOpenDialog(user);
+                              }}
+                              title="Edit user"
+                              onKeyDown={stopClickableRowPropagation}
+                              disabled={!isManageable}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(event) => {
+                                stopClickableRowPropagation(event);
+                                handleToggleSuspend(user);
+                              }}
+                              title={user.isSuspended ? 'Unsuspend user' : 'Suspend user'}
+                              onKeyDown={stopClickableRowPropagation}
+                              disabled={!isManageable}
+                            >
+                              {user.isSuspended ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Ban className="h-4 w-4 text-orange-600" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(event) => {
+                                stopClickableRowPropagation(event);
+                                handleDelete(user);
+                              }}
+                              title="Delete user"
+                              onKeyDown={stopClickableRowPropagation}
+                              disabled={!isManageable}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -421,7 +476,7 @@ export default function UsersPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   required
                   disabled={!!editingUser}
                 />
@@ -432,7 +487,7 @@ export default function UsersPage() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -442,7 +497,7 @@ export default function UsersPage() {
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="h-11 md:h-10 text-base md:text-sm"
+                  className="h-11 text-base md:h-10 md:text-sm"
                   placeholder={editingUser ? 'Leave blank to keep current' : 'Required'}
                   required={!editingUser}
                 />
@@ -457,9 +512,11 @@ export default function UsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MANAGER">{t('manager')}</SelectItem>
-                    <SelectItem value="ADMIN">{t('admin')}</SelectItem>
-                    <SelectItem value="SECURITY">{t('security')}</SelectItem>
+                    {assignableRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {roleLabels[role]?.label || role}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -478,7 +535,12 @@ export default function UsersPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="min-h-[44px] md:min-h-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="min-h-[44px] md:min-h-0"
+              >
                 {tc('cancel')}
               </Button>
               <Button type="submit" className="min-h-[44px] md:min-h-0">

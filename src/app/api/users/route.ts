@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { strongPasswordSchema } from '@/lib/validation';
+import { canAssignStaffRole, canManageStaffRole } from '@/lib/authorization';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -124,10 +125,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 });
     }
 
-    // Prevent non-super admins from creating super admins
-    if (validatedData.role === 'SUPER_ADMIN' && authResult.request.role !== 'SUPER_ADMIN') {
+    if (!canAssignStaffRole(authResult.request.role, validatedData.role)) {
       return NextResponse.json(
-        { error: 'Only super admins can create super admin accounts' },
+        { error: 'You can only create accounts for roles below your own' },
         { status: 403 }
       );
     }
@@ -207,10 +207,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Prevent non-super admins from modifying super admin accounts
-    if (existingUser.role === 'SUPER_ADMIN' && authResult.request.role !== 'SUPER_ADMIN') {
+    if (!canManageStaffRole(authResult.request.role, existingUser.role)) {
       return NextResponse.json(
-        { error: 'Only super admins can modify super admin accounts' },
+        { error: 'You can only manage accounts for roles below your own' },
         { status: 403 }
       );
     }
@@ -223,6 +222,16 @@ export async function PATCH(request: NextRequest) {
       if (validatedData.isSuspended === true) {
         return NextResponse.json({ error: 'Cannot suspend your own account' }, { status: 400 });
       }
+    }
+
+    if (
+      validatedData.role !== undefined &&
+      !canAssignStaffRole(authResult.request.role, validatedData.role)
+    ) {
+      return NextResponse.json(
+        { error: 'You can only assign roles below your own' },
+        { status: 403 }
+      );
     }
 
     const updateData: Record<string, unknown> = {};
@@ -315,10 +324,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Prevent non-super admins from deleting super admin accounts
-    if (user.role === 'SUPER_ADMIN' && authResult.request.role !== 'SUPER_ADMIN') {
+    if (!canManageStaffRole(authResult.request.role, user.role)) {
       return NextResponse.json(
-        { error: 'Only super admins can delete super admin accounts' },
+        { error: 'You can only delete accounts for roles below your own' },
         { status: 403 }
       );
     }
